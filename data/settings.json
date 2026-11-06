@@ -1,0 +1,8 @@
+{
+  "scale": 65,
+  "defaultAutoHide": 5,
+  "queue": {
+    "leftId": "pres-1",
+    "rightId": "pres-2"
+  }
+}

@@ -1,12 +1,12 @@
-// admin.js - Manejo con Soporte para Preparación (Queue / Preview)
+// admin.js - Manejo Integral con Persistencia Total (Server + LocalStorage + Backup/Restore)
 const socket = io();
 
-// Conexión
+// Elementos DOM de Conexión
 const socketDot = document.getElementById('socket-dot');
 const socketDotMobile = document.getElementById('socket-dot-mobile');
 const socketStatus = document.getElementById('socket-status');
 
-// Escala y Auto-hide
+// Elementos DOM de Ajustes y Acciones Maestras
 const scalePills = document.getElementById('scale-pills');
 const autohidePills = document.getElementById('autohide-pills');
 const btnLaunchBothPrepared = document.getElementById('btn-launch-both-prepared');
@@ -55,7 +55,7 @@ const previewIframe = document.getElementById('preview-iframe');
 const btnRefreshPreview = document.getElementById('btn-refresh-preview');
 const btnCopyObs = document.getElementById('btn-copy-obs');
 
-// Deck de presentadores y Modales
+// Deck de Presentadores y Modales
 const presentersGrid = document.getElementById('presenters-grid');
 const btnOpenCreateModal = document.getElementById('btn-open-create-modal');
 const presenterModal = document.getElementById('presenter-modal');
@@ -79,16 +79,111 @@ const btnCloseObsModal = document.getElementById('btn-close-obs-modal');
 const obsUrlInput = document.getElementById('obs-url-input');
 const btnCopyUrlInside = document.getElementById('btn-copy-url-inside');
 
-// Estado local
+// Backup & Restore
+const btnExportBackup = document.getElementById('btn-export-backup');
+const inputImportBackup = document.getElementById('input-import-backup');
+const toastContainer = document.getElementById('toast-container');
+
+// Claves de LocalStorage
+const LS_PRESENTERS_KEY = 'birraverde_stream_presenters_v1';
+const LS_SETTINGS_KEY = 'birraverde_stream_settings_v1';
+
+// Estado local reactivo
 let presentersList = [];
 let currentLiveState = {
   left: { isVisible: false, presenter: null },
   right: { isVisible: false, presenter: null },
   queue: { left: null, right: null },
-  scale: 65
+  scale: 65,
+  defaultAutoHide: 5
 };
-let currentAutoHide = 5; // Predeterminado: 5 segundos al cargar
+let currentAutoHide = 5;
 
+// ============================================================
+// SISTEMA DE NOTIFICACIONES TOAST
+// ============================================================
+function showToast(message, type = 'success') {
+  if (!toastContainer) return;
+  const toast = document.createElement('div');
+  const bgClass = type === 'error' 
+    ? 'bg-red-950/90 border-red-500 text-red-200' 
+    : 'bg-black/90 border-cyber-green text-white shadow-[0_0_15px_rgba(0,255,102,0.3)]';
+
+  toast.className = `pointer-events-auto flex items-center justify-between gap-3 px-4 py-3 rounded-xl border ${bgClass} text-xs font-chakra font-bold tracking-wide backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0`;
+  toast.innerHTML = `
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full ${type === 'error' ? 'bg-red-400' : 'bg-cyber-green animate-pulse'}"></span>
+      <span>${message}</span>
+    </div>
+  `;
+
+  toastContainer.appendChild(toast);
+
+  // Animación de entrada
+  requestAnimationFrame(() => {
+    toast.classList.remove('translate-y-2', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+  });
+
+  // Salida automática en 3.5 segundos
+  setTimeout(() => {
+    toast.classList.add('opacity-0', 'translate-y-2');
+    setTimeout(() => {
+      if (toast.parentElement) toast.parentElement.removeChild(toast);
+    }, 300);
+  }, 3500);
+}
+
+// ============================================================
+// CARGA INICIAL DESDE LOCALSTORAGE (Cero parpadeo al recargar)
+// ============================================================
+function loadFromLocalStorage() {
+  try {
+    const rawPres = localStorage.getItem(LS_PRESENTERS_KEY);
+    if (rawPres) {
+      const parsedPres = JSON.parse(rawPres);
+      if (Array.isArray(parsedPres) && parsedPres.length > 0) {
+        presentersList = parsedPres;
+      }
+    }
+
+    const rawSettings = localStorage.getItem(LS_SETTINGS_KEY);
+    if (rawSettings) {
+      const parsedSettings = JSON.parse(rawSettings);
+      if (typeof parsedSettings.scale === 'number') {
+        currentLiveState.scale = parsedSettings.scale;
+        updateScaleUI(parsedSettings.scale);
+      }
+      if (typeof parsedSettings.defaultAutoHide === 'number') {
+        currentAutoHide = parsedSettings.defaultAutoHide;
+        currentLiveState.defaultAutoHide = parsedSettings.defaultAutoHide;
+        updateAutoHideUI(currentAutoHide);
+      }
+    }
+  } catch (err) {
+    console.warn('Error leyendo LocalStorage:', err);
+  }
+}
+
+function saveToLocalStorage() {
+  try {
+    localStorage.setItem(LS_PRESENTERS_KEY, JSON.stringify(presentersList));
+    localStorage.setItem(LS_SETTINGS_KEY, JSON.stringify({
+      scale: currentLiveState.scale,
+      defaultAutoHide: currentAutoHide,
+      queue: {
+        leftId: currentLiveState.queue?.left?.id || null,
+        rightId: currentLiveState.queue?.right?.id || null
+      }
+    }));
+  } catch (err) {
+    console.warn('Error guardando en LocalStorage:', err);
+  }
+}
+
+// ============================================================
+// RENDERIZADO Y CONTROL DE UI
+// ============================================================
 function refreshIcons() {
   if (window.lucide) window.lucide.createIcons();
 }
@@ -104,17 +199,34 @@ window.addEventListener('resize', adjustPreviewScale);
 window.addEventListener('load', adjustPreviewScale);
 setTimeout(adjustPreviewScale, 150);
 
+function updateScaleUI(scale) {
+  document.querySelectorAll('.scale-btn').forEach(b => {
+    const match = parseInt(b.dataset.scale, 10) === scale;
+    b.className = match
+      ? 'scale-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap transition-all'
+      : 'scale-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap transition-all';
+  });
+}
+
+function updateAutoHideUI(seconds) {
+  document.querySelectorAll('.autohide-btn').forEach(b => {
+    const match = parseInt(b.dataset.sec, 10) === seconds;
+    b.className = match
+      ? 'autohide-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap transition-all'
+      : 'autohide-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap transition-all';
+  });
+}
+
 // Selector de Tamaño (Escala)
 scalePills.addEventListener('click', (e) => {
   const btn = e.target.closest('.scale-btn');
   if (!btn) return;
   const scale = parseInt(btn.dataset.scale, 10);
+  currentLiveState.scale = scale;
+  updateScaleUI(scale);
+  saveToLocalStorage();
   socket.emit('set-scale', scale);
-
-  document.querySelectorAll('.scale-btn').forEach(b => {
-    b.className = 'scale-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap transition-all';
-  });
-  btn.className = 'scale-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap transition-all';
+  showToast(`📐 Tamaño de overlay guardado: ${scale}%`);
 });
 
 // Selector de Auto-Ocultar
@@ -122,21 +234,23 @@ autohidePills.addEventListener('click', (e) => {
   const btn = e.target.closest('.autohide-btn');
   if (!btn) return;
   currentAutoHide = parseInt(btn.dataset.sec, 10);
-
-  document.querySelectorAll('.autohide-btn').forEach(b => {
-    b.className = 'autohide-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap transition-all';
-  });
-  btn.className = 'autohide-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap transition-all';
+  currentLiveState.defaultAutoHide = currentAutoHide;
+  updateAutoHideUI(currentAutoHide);
+  saveToLocalStorage();
+  socket.emit('set-autohide', currentAutoHide);
+  showToast(currentAutoHide === 0 ? `⏱️ Ocultar configurado a: Modo Manual` : `⏱️ Auto-ocultar guardado en: ${currentAutoHide} segundos`);
 });
 
-// Presets de colores
+// Presets de colores en modal
 document.querySelectorAll('.preset-color').forEach(btn => {
   btn.addEventListener('click', () => {
     formAccentColor.value = btn.dataset.color;
   });
 });
 
-// Sockets
+// ============================================================
+// CONEXIÓN SOCKET Y EVENTOS DE SERVIDOR
+// ============================================================
 socket.on('connect', () => {
   if (socketDot) socketDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse';
   if (socketDotMobile) socketDotMobile.className = 'w-2 h-2 rounded-full bg-cyber-green animate-pulse';
@@ -155,18 +269,20 @@ socket.on('disconnect', () => {
   }
 });
 
+// Actualización de estado en vivo recibida del servidor
 socket.on('state-update', (state) => {
   if (!state) return;
   currentLiveState = state;
 
   // Escala
-  if (state.scale) {
-    document.querySelectorAll('.scale-btn').forEach(b => {
-      const match = parseInt(b.dataset.scale, 10) === state.scale;
-      b.className = match
-        ? 'scale-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap transition-all'
-        : 'scale-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap transition-all';
-    });
+  if (typeof state.scale === 'number') {
+    updateScaleUI(state.scale);
+  }
+
+  // Auto-Hide
+  if (typeof state.defaultAutoHide === 'number') {
+    currentAutoHide = state.defaultAutoHide;
+    updateAutoHideUI(state.defaultAutoHide);
   }
 
   // Estado EN VIVO Slot Izquierdo
@@ -259,11 +375,34 @@ socket.on('state-update', (state) => {
     sceneActiveText.textContent = 'SIN ESCENA (STREAM EN VIVO)';
   }
 
+  saveToLocalStorage();
   renderPresentersGrid();
 });
 
+// Lista de presentadores actualizada desde el servidor
 socket.on('presenters-updated', (list) => {
-  presentersList = list || [];
+  const incoming = list || [];
+
+  // Si el servidor solo tiene 2 default pero el cliente tiene más en localStorage (ej: reinicio en Railway),
+  // enviamos los de localStorage al servidor para rehidratarlo sin perder nada.
+  const cachedRaw = localStorage.getItem(LS_PRESENTERS_KEY);
+  if (cachedRaw) {
+    try {
+      const cachedList = JSON.parse(cachedRaw);
+      if (Array.isArray(cachedList) && cachedList.length > incoming.length) {
+        const incomingIds = new Set(incoming.map(p => p.id));
+        const missingInServer = cachedList.filter(p => !incomingIds.has(p.id));
+        if (missingInServer.length > 0) {
+          socket.emit('sync-all-presenters', cachedList);
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+
+  presentersList = incoming;
+  saveToLocalStorage();
   updateSelectOptions();
   renderPresentersGrid();
 });
@@ -296,7 +435,10 @@ selectQueueLeft.addEventListener('change', (e) => {
   if (!id) return;
   const p = presentersList.find(x => x.id === id);
   if (p) {
+    currentLiveState.queue.left = p;
+    saveToLocalStorage();
     socket.emit('prepare-slot', { slot: 'left', presenter: p });
+    showToast(`👈 Preparado en lado izquierdo: ${p.name}`);
   }
 });
 
@@ -305,7 +447,10 @@ selectQueueRight.addEventListener('change', (e) => {
   if (!id) return;
   const p = presentersList.find(x => x.id === id);
   if (p) {
+    currentLiveState.queue.right = p;
+    saveToLocalStorage();
     socket.emit('prepare-slot', { slot: 'right', presenter: p });
+    showToast(`👉 Preparado en lado derecho: ${p.name}`);
   }
 });
 
@@ -360,9 +505,23 @@ btnRefreshPreview.addEventListener('click', () => {
   previewIframe.src = '/overlay?t=' + Date.now();
 });
 
-// Renderizar Deck de Presentadores
+// ============================================================
+// RENDERIZAR DECK DE PRESENTADORES
+// ============================================================
 function renderPresentersGrid() {
   presentersGrid.innerHTML = '';
+
+  if (presentersList.length === 0) {
+    presentersGrid.innerHTML = `
+      <div class="col-span-full p-8 text-center bg-cyber-dark border border-dashed border-cyber-border rounded-xl text-gray-400">
+        <i data-lucide="users" class="w-8 h-8 mx-auto mb-2 text-gray-500"></i>
+        <p class="font-chakra text-sm uppercase">No hay overlays guardados.</p>
+        <p class="text-xs text-gray-500 mt-1">Haz clic en "CREAR NUEVO" para agregar a tus presentadores o casters.</p>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
 
   presentersList.forEach((p) => {
     const isLiveLeft = currentLiveState.left && currentLiveState.left.isVisible && currentLiveState.left.presenter && currentLiveState.left.presenter.id === p.id;
@@ -481,12 +640,18 @@ function renderPresentersGrid() {
     // Listeners
     const btnQLeft = card.querySelector('.btn-queue-left');
     btnQLeft.addEventListener('click', () => {
+      currentLiveState.queue.left = p;
+      saveToLocalStorage();
       socket.emit('prepare-slot', { slot: 'left', presenter: p });
+      showToast(`👈 Preparado en lado izquierdo: ${p.name}`);
     });
 
     const btnQRight = card.querySelector('.btn-queue-right');
     btnQRight.addEventListener('click', () => {
+      currentLiveState.queue.right = p;
+      saveToLocalStorage();
       socket.emit('prepare-slot', { slot: 'right', presenter: p });
+      showToast(`👉 Preparado en lado derecho: ${p.name}`);
     });
 
     const btnDLeft = card.querySelector('.btn-direct-left');
@@ -504,8 +669,14 @@ function renderPresentersGrid() {
 
     const btnDelete = card.querySelector('.btn-card-delete');
     btnDelete.addEventListener('click', () => {
-      if (confirm(`¿Eliminar a "${p.name}"?`)) {
-        socket.emit('delete-presenter', p.id);
+      if (confirm(`¿Eliminar definitivamente a "${p.name}"?`)) {
+        presentersList = presentersList.filter(x => x.id !== p.id);
+        saveToLocalStorage();
+        socket.emit('delete-presenter', p.id, (res) => {
+          showToast(`🗑️ Presentador "${p.name}" eliminado`);
+        });
+        renderPresentersGrid();
+        updateSelectOptions();
       }
     });
 
@@ -515,7 +686,9 @@ function renderPresentersGrid() {
   refreshIcons();
 }
 
-// Modal
+// ============================================================
+// MODAL: CREAR / EDITAR PRESENTADOR
+// ============================================================
 function openCreateModal() {
   modalTitle.innerHTML = `<i data-lucide="user-plus" class="w-5 h-5 text-cyber-green"></i> CREAR NUEVO PRESENTADOR`;
   formId.value = '';
@@ -577,11 +750,101 @@ presenterForm.addEventListener('submit', (e) => {
     defaultSide: formDefaultSide.value
   };
 
-  socket.emit('save-presenter', presenterData);
+  // 1. Guardar de inmediato en estado local y LocalStorage
+  const existingIdx = presentersList.findIndex(p => p.id === presenterData.id);
+  if (existingIdx !== -1) {
+    presentersList[existingIdx] = presenterData;
+  } else {
+    presentersList.push(presenterData);
+  }
+  saveToLocalStorage();
+  updateSelectOptions();
+  renderPresentersGrid();
+
+  // 2. Emitir a Socket y servidor
+  socket.emit('save-presenter', presenterData, (res) => {
+    // Confirmación del servidor
+  });
+
+  showToast(`💾 Presentador "${presenterData.name}" guardado exitosamente`);
   closeModal();
 });
 
-// Modal OBS
+// ============================================================
+// RESPALDO Y RESTAURACIÓN (EXPORTAR / IMPORTAR JSON)
+// ============================================================
+if (btnExportBackup) {
+  btnExportBackup.addEventListener('click', () => {
+    const backupData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      presenters: presentersList,
+      settings: {
+        scale: currentLiveState.scale,
+        defaultAutoHide: currentAutoHide,
+        queue: {
+          leftId: currentLiveState.queue?.left?.id || null,
+          rightId: currentLiveState.queue?.right?.id || null
+        }
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `birraverde-stream-overlays-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('📦 Respaldo descargado correctamente');
+  });
+}
+
+if (inputImportBackup) {
+  inputImportBackup.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (!data || !Array.isArray(data.presenters)) {
+          throw new Error('El archivo no tiene el formato válido de presentadores.');
+        }
+
+        presentersList = data.presenters;
+        if (data.settings) {
+          if (typeof data.settings.scale === 'number') currentLiveState.scale = data.settings.scale;
+          if (typeof data.settings.defaultAutoHide === 'number') currentAutoHide = data.settings.defaultAutoHide;
+        }
+
+        saveToLocalStorage();
+        updateSelectOptions();
+        renderPresentersGrid();
+        updateScaleUI(currentLiveState.scale);
+        updateAutoHideUI(currentAutoHide);
+
+        socket.emit('import-backup', data, (res) => {
+          showToast('✅ Copia de seguridad restaurada y sincronizada en el servidor');
+        });
+      } catch (err) {
+        alert('Error al importar el archivo: ' + err.message);
+        showToast('❌ Error al importar respaldo', 'error');
+      }
+      inputImportBackup.value = '';
+    };
+    reader.readAsText(file);
+  });
+}
+
+// ============================================================
+// MODAL: OBS URL
+// ============================================================
 btnCopyObs.addEventListener('click', () => {
   const overlayUrl = `${window.location.protocol}//${window.location.host}/overlay`;
   obsUrlInput.value = overlayUrl;
@@ -606,5 +869,9 @@ btnCopyUrlInside.addEventListener('click', () => {
   });
 });
 
+// Inicialización
+loadFromLocalStorage();
+updateSelectOptions();
+renderPresentersGrid();
 setTimeout(adjustPreviewScale, 100);
 refreshIcons();

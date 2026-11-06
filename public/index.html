@@ -401,17 +401,38 @@
     <section class="space-y-4 pt-2">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-base sm:text-xl font-bold font-chakra tracking-wide flex items-center gap-2 text-white">
-            <i data-lucide="users" class="w-5 h-5 text-cyber-green"></i>
-            DECK DE PRESENTADORES GUARDADOS
-          </h2>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base sm:text-xl font-bold font-chakra tracking-wide flex items-center gap-2 text-white">
+              <i data-lucide="users" class="w-5 h-5 text-cyber-green"></i>
+              DECK DE PRESENTADORES GUARDADOS
+            </h2>
+            <span class="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyber-green/10 border border-cyber-green/30 text-[10px] text-cyber-green font-mono">
+              <i data-lucide="database" class="w-3 h-3"></i> Guardado automático
+            </span>
+          </div>
           <p class="text-xs text-gray-400">Prepara para el próximo cambio o lánzalos directamente al stream</p>
         </div>
 
-        <button id="btn-open-create-modal" class="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-cyber-green text-black font-bold font-chakra hover:bg-emerald-400 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)] text-xs sm:text-sm">
-          <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
-          <span>CREAR NUEVO PRESENTADOR</span>
-        </button>
+        <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          <!-- Botón Respaldar JSON -->
+          <button id="btn-export-backup" type="button" class="px-3 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-gray-500 text-gray-300 hover:text-white text-xs font-chakra font-bold flex items-center gap-1.5 transition-colors" title="Descargar copia de seguridad en JSON">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-cyber-green"></i>
+            <span>Respaldar</span>
+          </button>
+
+          <!-- Botón Restaurar JSON -->
+          <label class="px-3 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-gray-500 text-gray-300 hover:text-white text-xs font-chakra font-bold flex items-center gap-1.5 transition-colors cursor-pointer" title="Cargar copia de seguridad desde un archivo JSON">
+            <i data-lucide="upload" class="w-3.5 h-3.5 text-cyber-green"></i>
+            <span>Restaurar</span>
+            <input type="file" id="input-import-backup" accept=".json" class="hidden">
+          </label>
+
+          <!-- Botón Crear Nuevo -->
+          <button id="btn-open-create-modal" type="button" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-cyber-green text-black font-bold font-chakra hover:bg-emerald-400 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)] text-xs sm:text-sm">
+            <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
+            <span>CREAR NUEVO</span>
+          </button>
+        </div>
       </div>
 
       <!-- Grid Cards (Responsive: 1 col móvil, 2 col tablet, 3 col desktop) -->
@@ -578,6 +599,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Toast Notification Flotante -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/admin.js"></script>

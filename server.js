@@ -14,8 +14,9 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data', 'presenters.json');
-const SETTINGS_FILE = path.join(__dirname, 'data', 'settings.json');
+const DATA_DIR = path.join(__dirname, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'presenters.json');
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
 // Middleware
 app.use(express.json());
@@ -26,13 +27,13 @@ let liveState = {
   left: {
     isVisible: false,
     presenter: null,
-    autoHideSeconds: 0,
+    autoHideSeconds: 5,
     shownAt: null
   },
   right: {
     isVisible: false,
     presenter: null,
-    autoHideSeconds: 0,
+    autoHideSeconds: 5,
     shownAt: null
   },
   queue: {
@@ -40,6 +41,7 @@ let liveState = {
     right: null
   },
   scale: 65,
+  defaultAutoHide: 5,
   scene: {
     isActive: false,
     type: null, // 'starting' | 'brb' | 'ended' | 'custom'
@@ -54,7 +56,10 @@ function loadPresenters() {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
     }
   } catch (err) {
     console.error('Error al cargar presentadores:', err);
@@ -62,10 +67,10 @@ function loadPresenters() {
   return [];
 }
 
-function savePresenters(presenters) {
+function savePresenters(presentersList) {
   try {
-    fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(presenters, null, 2), 'utf-8');
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(presentersList, null, 2), 'utf-8');
     return true;
   } catch (err) {
     console.error('Error al guardar presentadores:', err);
@@ -77,25 +82,44 @@ function loadSettings() {
   try {
     if (fs.existsSync(SETTINGS_FILE)) {
       const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
-      if (data.scale) liveState.scale = data.scale;
+      if (typeof data.scale === 'number') {
+        liveState.scale = data.scale;
+      }
+      if (typeof data.defaultAutoHide === 'number') {
+        liveState.defaultAutoHide = data.defaultAutoHide;
+      }
+      return data;
     }
   } catch (err) {
     console.error('Error al cargar settings:', err);
   }
+  return {};
 }
 
 function saveSettings() {
   try {
-    fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ scale: liveState.scale }, null, 2), 'utf-8');
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const payload = {
+      scale: liveState.scale,
+      defaultAutoHide: liveState.defaultAutoHide,
+      queue: {
+        leftId: liveState.queue.left ? liveState.queue.left.id : null,
+        rightId: liveState.queue.right ? liveState.queue.right.id : null
+      }
+    };
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+    return true;
   } catch (err) {
     console.error('Error al guardar settings:', err);
+    return false;
   }
 }
 
-loadSettings();
-
+// Inicialización de datos
+let savedSettings = loadSettings();
 let presenters = loadPresenters();
+
+// Si no hay presentadores por primera vez, creamos los por defecto
 if (presenters.length === 0) {
   presenters = [
     {
@@ -113,27 +137,41 @@ if (presenters.length === 0) {
       id: "pres-2",
       name: "CARLOS MENDOZA",
       nickname: "“CHARLIE”",
-      platform: "twitch",
-      platformName: "TWITCH",
+      platform: "kick",
+      platformName: "KICK",
       handle: "@CHARLIE_STREAM",
       role: "CASTER",
-      accentColor: "#9146FF",
+      accentColor: "#00ff66",
       defaultSide: "right"
     }
   ];
   savePresenters(presenters);
 }
 
-if (presenters.length > 0) {
+// Rehidratar Cola (Queue) desde settings guardados o defaults
+if (savedSettings && savedSettings.queue) {
+  if (savedSettings.queue.leftId) {
+    liveState.queue.left = presenters.find(p => p.id === savedSettings.queue.leftId) || presenters[0] || null;
+  }
+  if (savedSettings.queue.rightId) {
+    liveState.queue.right = presenters.find(p => p.id === savedSettings.queue.rightId) || presenters[1] || presenters[0] || null;
+  }
+}
+
+if (!liveState.queue.left && presenters.length > 0) {
   liveState.queue.left = presenters[0];
+}
+if (!liveState.queue.right && presenters.length > 0) {
   liveState.queue.right = presenters[1] || presenters[0];
 }
+
+saveSettings();
 
 // Timers independientes para auto-ocultar
 let timerLeft = null;
 let timerRight = null;
 
-function triggerShowSlot(slot, presenter, autoHideSeconds = 5) {
+function triggerShowSlot(slot, presenter, autoHideSeconds = null) {
   const targetSlot = (slot === 'right') ? 'right' : 'left';
 
   if (targetSlot === 'left' && timerLeft) {
@@ -145,19 +183,23 @@ function triggerShowSlot(slot, presenter, autoHideSeconds = 5) {
     timerRight = null;
   }
 
+  const duration = (autoHideSeconds !== null && autoHideSeconds !== undefined) 
+    ? Number(autoHideSeconds) 
+    : liveState.defaultAutoHide;
+
   liveState[targetSlot] = {
     isVisible: true,
     presenter: presenter,
-    autoHideSeconds: Number(autoHideSeconds) || 0,
+    autoHideSeconds: duration,
     shownAt: Date.now()
   };
 
   io.emit('state-update', liveState);
 
-  if (liveState[targetSlot].autoHideSeconds > 0) {
+  if (duration > 0) {
     const t = setTimeout(() => {
       triggerHideSlot(targetSlot);
-    }, liveState[targetSlot].autoHideSeconds * 1000);
+    }, duration * 1000);
 
     if (targetSlot === 'left') timerLeft = t;
     if (targetSlot === 'right') timerRight = t;
@@ -192,6 +234,20 @@ function triggerHideSlot(slot) {
 // Rutas API REST
 app.get('/api/state', (req, res) => res.json(liveState));
 app.get('/api/presenters', (req, res) => res.json(presenters));
+app.get('/api/settings', (req, res) => res.json({
+  scale: liveState.scale,
+  defaultAutoHide: liveState.defaultAutoHide,
+  queue: liveState.queue
+}));
+
+app.post('/api/settings', (req, res) => {
+  const { scale, defaultAutoHide } = req.body;
+  if (typeof scale === 'number') liveState.scale = scale;
+  if (typeof defaultAutoHide === 'number') liveState.defaultAutoHide = defaultAutoHide;
+  saveSettings();
+  io.emit('state-update', liveState);
+  res.json({ success: true, settings: { scale: liveState.scale, defaultAutoHide: liveState.defaultAutoHide } });
+});
 
 app.post('/api/presenters', (req, res) => {
   const newPres = { ...req.body, id: req.body.id || `pres-${Date.now()}` };
@@ -222,6 +278,7 @@ app.put('/api/presenters/:id', (req, res) => {
     liveState.queue.right = presenters[index];
   }
 
+  saveSettings();
   io.emit('state-update', liveState);
   io.emit('presenters-updated', presenters);
   res.json(presenters[index]);
@@ -231,6 +288,24 @@ app.delete('/api/presenters/:id', (req, res) => {
   const { id } = req.params;
   presenters = presenters.filter(p => p.id !== id);
   savePresenters(presenters);
+
+  if (liveState.left.presenter && liveState.left.presenter.id === id) {
+    liveState.left.isVisible = false;
+    liveState.left.presenter = null;
+  }
+  if (liveState.right.presenter && liveState.right.presenter.id === id) {
+    liveState.right.isVisible = false;
+    liveState.right.presenter = null;
+  }
+  if (liveState.queue.left && liveState.queue.left.id === id) {
+    liveState.queue.left = presenters[0] || null;
+  }
+  if (liveState.queue.right && liveState.queue.right.id === id) {
+    liveState.queue.right = presenters[1] || presenters[0] || null;
+  }
+
+  saveSettings();
+  io.emit('state-update', liveState);
   io.emit('presenters-updated', presenters);
   res.json({ success: true });
 });
@@ -257,13 +332,14 @@ io.on('connection', (socket) => {
     }
     const targetSlot = (data.slot === 'right') ? 'right' : 'left';
     liveState.queue[targetSlot] = target || null;
+    saveSettings();
     io.emit('state-update', liveState);
   });
 
   // 2. Lanzar a en vivo lo que ya está preparado
   socket.on('launch-prepared', (data) => {
     const slot = data.slot || 'both';
-    const autoHide = data.autoHideSeconds || 0;
+    const autoHide = (data.autoHideSeconds !== undefined) ? data.autoHideSeconds : liveState.defaultAutoHide;
 
     if (slot === 'left' || slot === 'both') {
       if (liveState.queue.left) {
@@ -284,16 +360,18 @@ io.on('connection', (socket) => {
       target = presenters.find(p => p.id === data.id);
     }
     if (target) {
-      triggerShowSlot(data.slot || 'left', target, data.autoHideSeconds);
+      const autoHide = (data.autoHideSeconds !== undefined) ? data.autoHideSeconds : liveState.defaultAutoHide;
+      triggerShowSlot(data.slot || 'left', target, autoHide);
     }
   });
 
   socket.on('show-both', (data) => {
+    const autoHide = (data.autoHideSeconds !== undefined) ? data.autoHideSeconds : liveState.defaultAutoHide;
     if (data.leftPresenter) {
-      triggerShowSlot('left', data.leftPresenter, data.autoHideSeconds);
+      triggerShowSlot('left', data.leftPresenter, autoHide);
     }
     if (data.rightPresenter) {
-      triggerShowSlot('right', data.rightPresenter, data.autoHideSeconds);
+      triggerShowSlot('right', data.rightPresenter, autoHide);
     }
   });
 
@@ -308,7 +386,6 @@ io.on('connection', (socket) => {
 
   // 5. Escenas de pantalla completa (Ya volvemos, Empezando, Finalizado)
   socket.on('show-scene', (data) => {
-    // data: { type, title, subtitle }
     liveState.scene = {
       isActive: true,
       type: data.type || 'brb',
@@ -324,7 +401,7 @@ io.on('connection', (socket) => {
     io.emit('state-update', liveState);
   });
 
-  // 6. Escala
+  // 6. Configuración: Escala y Auto-Hide (Persistencia total)
   socket.on('set-scale', (scalePercent) => {
     const s = Math.min(100, Math.max(40, Number(scalePercent) || 65));
     liveState.scale = s;
@@ -332,8 +409,17 @@ io.on('connection', (socket) => {
     io.emit('state-update', liveState);
   });
 
-  // 7. Guardar / Eliminar
-  socket.on('save-presenter', (presData) => {
+  socket.on('set-autohide', (seconds) => {
+    const sec = Math.max(0, parseInt(seconds, 10) || 0);
+    liveState.defaultAutoHide = sec;
+    saveSettings();
+    io.emit('state-update', liveState);
+  });
+
+  // 7. Guardar / Editar / Eliminar / Sincronizar Presentadores
+  socket.on('save-presenter', (presData, callback) => {
+    if (!presData) return;
+
     if (!presData.id) {
       presData.id = `pres-${Date.now()}`;
       presenters.push(presData);
@@ -346,13 +432,107 @@ io.on('connection', (socket) => {
       }
     }
     savePresenters(presenters);
+
+    // Si el presentador guardado está en vivo o en cola, actualizarlo de inmediato
+    let stateChanged = false;
+    if (liveState.left.presenter && liveState.left.presenter.id === presData.id) {
+      liveState.left.presenter = { ...liveState.left.presenter, ...presData };
+      stateChanged = true;
+    }
+    if (liveState.right.presenter && liveState.right.presenter.id === presData.id) {
+      liveState.right.presenter = { ...liveState.right.presenter, ...presData };
+      stateChanged = true;
+    }
+    if (liveState.queue.left && liveState.queue.left.id === presData.id) {
+      liveState.queue.left = { ...liveState.queue.left, ...presData };
+      stateChanged = true;
+    }
+    if (liveState.queue.right && liveState.queue.right.id === presData.id) {
+      liveState.queue.right = { ...liveState.queue.right, ...presData };
+      stateChanged = true;
+    }
+
+    if (stateChanged) {
+      saveSettings();
+      io.emit('state-update', liveState);
+    }
     io.emit('presenters-updated', presenters);
+
+    if (typeof callback === 'function') {
+      callback({ success: true, presenter: presData });
+    }
   });
 
-  socket.on('delete-presenter', (id) => {
+  socket.on('delete-presenter', (id, callback) => {
     presenters = presenters.filter(p => p.id !== id);
     savePresenters(presenters);
+
+    let stateChanged = false;
+    if (liveState.left.presenter && liveState.left.presenter.id === id) {
+      liveState.left.isVisible = false;
+      liveState.left.presenter = null;
+      stateChanged = true;
+    }
+    if (liveState.right.presenter && liveState.right.presenter.id === id) {
+      liveState.right.isVisible = false;
+      liveState.right.presenter = null;
+      stateChanged = true;
+    }
+    if (liveState.queue.left && liveState.queue.left.id === id) {
+      liveState.queue.left = presenters[0] || null;
+      stateChanged = true;
+    }
+    if (liveState.queue.right && liveState.queue.right.id === id) {
+      liveState.queue.right = presenters[1] || presenters[0] || null;
+      stateChanged = true;
+    }
+
+    if (stateChanged) {
+      saveSettings();
+      io.emit('state-update', liveState);
+    }
     io.emit('presenters-updated', presenters);
+
+    if (typeof callback === 'function') {
+      callback({ success: true, id });
+    }
+  });
+
+  // 8. Sincronización masiva (para respaldos o auto-recuperación de localStorage)
+  socket.on('sync-all-presenters', (list, callback) => {
+    if (Array.isArray(list) && list.length > 0) {
+      // Merge preservando IDs únicos
+      const map = new Map();
+      presenters.forEach(p => map.set(p.id, p));
+      list.forEach(p => map.set(p.id, p));
+      presenters = Array.from(map.values());
+      savePresenters(presenters);
+      io.emit('presenters-updated', presenters);
+      if (typeof callback === 'function') callback({ success: true, count: presenters.length });
+    }
+  });
+
+  socket.on('import-backup', (backupData, callback) => {
+    try {
+      if (backupData.presenters && Array.isArray(backupData.presenters)) {
+        presenters = backupData.presenters;
+        savePresenters(presenters);
+      }
+      if (backupData.settings) {
+        if (typeof backupData.settings.scale === 'number') liveState.scale = backupData.settings.scale;
+        if (typeof backupData.settings.defaultAutoHide === 'number') liveState.defaultAutoHide = backupData.settings.defaultAutoHide;
+      }
+      if (presenters.length > 0) {
+        liveState.queue.left = presenters[0];
+        liveState.queue.right = presenters[1] || presenters[0];
+      }
+      saveSettings();
+      io.emit('state-update', liveState);
+      io.emit('presenters-updated', presenters);
+      if (typeof callback === 'function') callback({ success: true });
+    } catch (err) {
+      if (typeof callback === 'function') callback({ success: false, error: err.message });
+    }
   });
 });
 
@@ -361,5 +541,6 @@ server.listen(PORT, () => {
   console.log(`🚀 Stream Overlay App corriendo en puerto ${PORT}`);
   console.log(`🎮 Panel de Host:      http://localhost:${PORT}/`);
   console.log(`🎥 Fuente OBS Overlay: http://localhost:${PORT}/overlay`);
+  console.log(`💾 Persistencia:       ACTIVA (data/presenters.json y data/settings.json)`);
   console.log(`===============================================`);
 });
