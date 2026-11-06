@@ -1,17 +1,28 @@
-// overlay.js - Manejo del OBS Browser Source en tiempo real
+// overlay.js - Manejo simultáneo de Lado Izquierdo y Lado Derecho
 const socket = io();
 
-const overlayWrapper = document.getElementById('overlay-wrapper');
-const nameEl = document.getElementById('presenter-name');
-const nickEl = document.getElementById('presenter-nickname');
-const roleEl = document.getElementById('presenter-role');
-const badgeEl = document.getElementById('platform-badge');
-const handleEl = document.getElementById('presenter-handle');
+const slots = {
+  left: {
+    el: document.getElementById('slot-left'),
+    name: document.querySelector('#slot-left .presenter-name'),
+    nick: document.querySelector('#slot-left .presenter-nickname'),
+    role: document.querySelector('#slot-left .presenter-role'),
+    badge: document.querySelector('#slot-left .platform-badge'),
+    handle: document.querySelector('#slot-left .presenter-handle'),
+    hideTimeout: null
+  },
+  right: {
+    el: document.getElementById('slot-right'),
+    name: document.querySelector('#slot-right .presenter-name'),
+    nick: document.querySelector('#slot-right .presenter-nickname'),
+    role: document.querySelector('#slot-right .presenter-role'),
+    badge: document.querySelector('#slot-right .platform-badge'),
+    handle: document.querySelector('#slot-right .presenter-handle'),
+    hideTimeout: null
+  }
+};
 
-let currentHideTimeout = null;
-let currentAnim = 'slide-left';
-
-// Iconos SVG para plataformas
+// Iconos oficiales
 const PLATFORM_ICONS = {
   kick: `
     <span class="platform-badge kick-style">
@@ -75,93 +86,84 @@ function formatNickname(nick) {
   return nick;
 }
 
-function updatePresenterUI(p) {
-  if (!p) return;
+function renderSlot(slotKey, presenter) {
+  const s = slots[slotKey];
+  if (!s || !presenter) return;
 
-  nameEl.textContent = p.name || 'PRESENTER';
-  nickEl.textContent = formatNickname(p.nickname || '');
-  roleEl.textContent = p.role || '';
-  handleEl.textContent = p.handle || '';
+  s.name.textContent = presenter.name || 'PRESENTER';
+  s.nick.textContent = formatNickname(presenter.nickname || '');
+  s.role.textContent = presenter.role || '';
+  s.handle.textContent = presenter.handle || '';
 
-  // Plataforma badge
-  const platKey = (p.platform || 'kick').toLowerCase();
+  // Plataforma
+  const platKey = (presenter.platform || 'kick').toLowerCase();
   if (PLATFORM_ICONS[platKey]) {
-    badgeEl.innerHTML = PLATFORM_ICONS[platKey];
+    s.badge.innerHTML = PLATFORM_ICONS[platKey];
   } else {
-    badgeEl.innerHTML = `
-      <span class="platform-badge modern-badge" style="border: 1px solid var(--accent-color); color: #fff;">
-        ${(p.platformName || p.platform || 'LIVE').toUpperCase()}
+    s.badge.innerHTML = `
+      <span class="platform-badge modern-badge" style="border: 1px solid var(--accent-color, #00ff66); color: #fff;">
+        ${(presenter.platformName || presenter.platform || 'LIVE').toUpperCase()}
       </span>
     `;
   }
 
-  // Color de acento
-  const accentColor = p.accentColor || '#00ff66';
-  document.documentElement.style.setProperty('--accent-color', accentColor);
-  document.documentElement.style.setProperty('--accent-glow', `${accentColor}B3`);
-
-  // Posición
-  overlayWrapper.className = 'overlay-wrapper';
-  const posClass = `pos-${p.position || 'bottom-left'}`;
-  overlayWrapper.classList.add(posClass);
-
-  // Animación elegida
-  currentAnim = p.animation || 'slide-left';
-  overlayWrapper.classList.add(`anim-${currentAnim}`);
+  // Colores específicos para este slot
+  const accent = presenter.accentColor || '#00ff66';
+  s.el.style.setProperty('--accent-color', accent);
+  s.el.style.setProperty('--accent-glow', `${accent}B3`);
 }
 
-function showOverlay(state) {
-  if (!state || !state.activePresenter) return;
+function showSlot(slotKey, presenter) {
+  const s = slots[slotKey];
+  if (!s || !presenter) return;
 
-  if (currentHideTimeout) {
-    clearTimeout(currentHideTimeout);
-    currentHideTimeout = null;
+  if (s.hideTimeout) {
+    clearTimeout(s.hideTimeout);
+    s.hideTimeout = null;
   }
 
-  updatePresenterUI(state.activePresenter);
+  renderSlot(slotKey, presenter);
 
-  // Forzar reflow para reiniciar animación si ya estaba visible
-  overlayWrapper.classList.remove('is-hiding');
-  overlayWrapper.classList.remove('is-visible');
-  void overlayWrapper.offsetWidth; // Trigger reflow
+  s.el.classList.remove('is-hiding');
+  s.el.classList.remove('is-visible');
+  void s.el.offsetWidth; // Trigger reflow
 
-  overlayWrapper.classList.add('is-visible');
+  s.el.classList.add('is-visible');
 }
 
-function hideOverlay() {
-  if (!overlayWrapper.classList.contains('is-visible')) return;
+function hideSlot(slotKey) {
+  const s = slots[slotKey];
+  if (!s || !s.el.classList.contains('is-visible')) return;
 
-  overlayWrapper.classList.remove('is-visible');
-  overlayWrapper.classList.add('is-hiding');
+  s.el.classList.remove('is-visible');
+  s.el.classList.add('is-hiding');
 
-  currentHideTimeout = setTimeout(() => {
-    overlayWrapper.classList.remove('is-hiding');
-  }, 500);
+  s.hideTimeout = setTimeout(() => {
+    s.el.classList.remove('is-hiding');
+  }, 450);
 }
 
-// Escuchar eventos Socket.io
-socket.on('connect', () => {
-  console.log('OBS Overlay conectado a Socket.io en tiempo real');
-});
-
+// Sincronizar estado global
 socket.on('state-update', (state) => {
-  if (state.isVisible && state.activePresenter) {
-    showOverlay(state);
-  } else {
-    hideOverlay();
+  if (!state) return;
+
+  // Actualizar escala dinámica
+  if (state.scale) {
+    const scaleVal = state.scale / 100;
+    document.documentElement.style.setProperty('--overlay-scale', scaleVal);
   }
-});
 
-socket.on('overlay-show', (state) => {
-  showOverlay(state);
-});
+  // Slot Izquierdo
+  if (state.left && state.left.isVisible && state.left.presenter) {
+    showSlot('left', state.left.presenter);
+  } else {
+    hideSlot('left');
+  }
 
-socket.on('overlay-hide', () => {
-  hideOverlay();
-});
-
-socket.on('overlay-update', (state) => {
-  if (state.activePresenter) {
-    updatePresenterUI(state.activePresenter);
+  // Slot Derecho
+  if (state.right && state.right.isVisible && state.right.presenter) {
+    showSlot('right', state.right.presenter);
+  } else {
+    hideSlot('right');
   }
 });

@@ -1,9 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Rajdhani:wght@600;700;800&family=VT323&display=swap');
 
 :root {
-  --accent-color: #00ff66;
-  --accent-glow: rgba(0, 255, 102, 0.7);
-  --accent-dim: rgba(0, 255, 102, 0.2);
+  --overlay-scale: 0.65;
 }
 
 * {
@@ -21,7 +19,7 @@ html, body {
   user-select: none;
 }
 
-/* Canvas de OBS (1920x1080 o cualquier resolución) */
+/* Canvas de OBS (1920x1080) */
 #overlay-stage {
   position: relative;
   width: 100vw;
@@ -29,42 +27,33 @@ html, body {
   pointer-events: none;
 }
 
-/* Contenedor del Overlay posicionado */
-.overlay-wrapper {
+/* ============================================================
+   CONTENEDORES DE SLOTS (IZQUIERDA Y DERECHA)
+   ============================================================ */
+.slot-wrapper {
   position: absolute;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
 }
 
-/* Posiciones en pantalla */
-.pos-bottom-left {
-  bottom: 50px;
-  left: 60px;
+/* Slot Izquierdo */
+#slot-left {
+  bottom: 40px;
+  left: 45px;
+  transform-origin: bottom left;
+  transform: scale(var(--overlay-scale));
 }
 
-.pos-bottom-center {
-  bottom: 50px;
-  left: 50%;
-  transform: translateX(-50%);
+/* Slot Derecho */
+#slot-right {
+  bottom: 40px;
+  right: 45px;
+  transform-origin: bottom right;
+  transform: scale(var(--overlay-scale));
 }
 
-.pos-bottom-right {
-  bottom: 50px;
-  right: 60px;
-}
-
-.pos-top-left {
-  top: 50px;
-  left: 60px;
-}
-
-.pos-top-right {
-  top: 50px;
-  right: 60px;
-}
-
-/* El Marco Principal del Streamer (Base 1024 x 275) */
+/* El Marco Principal (Base 1024 x 275) */
 .overlay-card {
   position: relative;
   width: 1024px;
@@ -72,10 +61,11 @@ html, body {
   background-image: url('/assets/overlay-frame-clean.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.8));
+  /* Sombra limpia y elegante sin manchas gigantes */
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
 }
 
-/* Línea de brillo cyber que recorre el marco periódicamente */
+/* Brillo cyber dinámico */
 .cyber-shimmer {
   position: absolute;
   top: 60px;
@@ -107,15 +97,9 @@ html, body {
 }
 
 @keyframes shimmerSweep {
-  0% {
-    left: -120%;
-  }
-  25% {
-    left: 200%;
-  }
-  100% {
-    left: 200%;
-  }
+  0% { left: -120%; }
+  25% { left: 200%; }
+  100% { left: 200%; }
 }
 
 /* ============================================================
@@ -134,7 +118,6 @@ html, body {
   z-index: 10;
 }
 
-/* Nombre completo (ej: LUIS MIGUEL ARRIETA) */
 .presenter-name {
   color: #FFFFFF;
   font-family: 'Rajdhani', sans-serif;
@@ -150,22 +133,21 @@ html, body {
   max-width: 630px;
 }
 
-/* Apodo / Nick entre comillas (ej: "LUISMI") */
 .presenter-nickname {
-  color: var(--accent-color);
+  color: var(--accent-color, #00ff66);
   font-family: 'Rajdhani', sans-serif;
   font-weight: 800;
   font-size: 46px;
   line-height: 1;
   text-transform: uppercase;
   letter-spacing: 2px;
-  text-shadow: 0 0 12px var(--accent-glow), 0 0 25px var(--accent-glow), 0 2px 4px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 0 12px var(--accent-glow, rgba(0, 255, 102, 0.7)), 0 0 25px var(--accent-glow, rgba(0, 255, 102, 0.4)), 0 2px 4px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
   margin-left: 20px;
 }
 
 /* ============================================================
-   SECCIÓN INFERIOR IZQUIERDA: BADGE DE PLATAFORMA + HANDLE
+   SECCIÓN INFERIOR IZQUIERDA: BADGE + HANDLE
    ============================================================ */
 .overlay-bottom-left {
   position: absolute;
@@ -179,7 +161,6 @@ html, body {
   z-index: 10;
 }
 
-/* Badges de Plataformas */
 .platform-badge {
   display: inline-flex;
   align-items: center;
@@ -189,7 +170,6 @@ html, body {
   user-select: none;
 }
 
-/* Badge estilo Kick original pixel / blocky */
 .platform-badge.kick-style {
   font-family: 'Chakra Petch', 'VT323', monospace;
   font-weight: 900;
@@ -210,7 +190,6 @@ html, body {
   filter: drop-shadow(0 0 8px rgba(0, 255, 102, 0.8));
 }
 
-/* Badges con SVG para Twitch, YouTube, Kick, etc. */
 .platform-badge.modern-badge {
   display: flex;
   align-items: center;
@@ -252,7 +231,6 @@ html, body {
   color: #FFFFFF;
 }
 
-/* Handle / Usuario (@LUISMISHIT) */
 .presenter-handle {
   color: #FFFFFF;
   font-family: 'Rajdhani', sans-serif;
@@ -269,7 +247,7 @@ html, body {
 }
 
 /* ============================================================
-   SECCIÓN INFERIOR DERECHA: ROL / CARGO (DESIG, CASTER, ETC)
+   SECCIÓN INFERIOR DERECHA: ROL / CARGO
    ============================================================ */
 .overlay-bottom-right {
   position: absolute;
@@ -298,140 +276,81 @@ html, body {
 }
 
 /* ============================================================
-   ANIMACIONES DE ENTRADA Y SALIDA
+   ANIMACIONES ESPECÍFICAS PARA CADA LADO
    ============================================================ */
 
-/* Estado Activo / Visible */
-.overlay-wrapper.is-visible {
+/* Slot Izquierdo: Entrada y Salida por la izquierda */
+#slot-left.is-visible {
   opacity: 1;
   visibility: visible;
+  animation: enterLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Animación: Slide Left (Deslizar desde la izquierda con impacto) */
-.anim-slide-left.is-visible {
-  animation: enterSlideLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+#slot-left.is-hiding {
+  animation: exitLeft 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
 }
 
-.anim-slide-left.is-hiding {
-  animation: exitSlideLeft 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
-}
-
-@keyframes enterSlideLeft {
+@keyframes enterLeft {
   0% {
     opacity: 0;
-    transform: translateX(-150px) skewX(-4deg);
-    filter: brightness(2) drop-shadow(0 0 30px var(--accent-color));
+    transform: scale(var(--overlay-scale)) translateX(-180px) skewX(-4deg);
+    filter: brightness(1.8);
   }
   70% {
-    transform: translateX(10px) skewX(1deg);
-    filter: brightness(1.2);
+    transform: scale(var(--overlay-scale)) translateX(10px) skewX(1deg);
   }
   100% {
     opacity: 1;
-    transform: translateX(0) skewX(0);
-    filter: brightness(1) drop-shadow(0 15px 30px rgba(0, 0, 0, 0.8));
-  }
-}
-
-@keyframes exitSlideLeft {
-  0% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(-120px) skewX(-3deg);
-  }
-}
-
-/* Animación: Slide Up */
-.anim-slide-up.is-visible {
-  animation: enterSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.anim-slide-up.is-hiding {
-  animation: exitSlideUp 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
-}
-
-@keyframes enterSlideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(120px) scale(0.95);
-    filter: brightness(2);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scale(var(--overlay-scale)) translateX(0) skewX(0);
     filter: brightness(1);
   }
 }
 
-@keyframes exitSlideUp {
+@keyframes exitLeft {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scale(var(--overlay-scale)) translateX(0);
   }
   100% {
     opacity: 0;
-    transform: translateY(100px) scale(0.95);
+    transform: scale(var(--overlay-scale)) translateX(-150px) skewX(-3deg);
   }
 }
 
-/* Animación: Cyber Glitch Fade */
-.anim-fade.is-visible {
-  animation: enterCyberFade 0.4s ease-out forwards;
+/* Slot Derecho: Entrada y Salida por la derecha */
+#slot-right.is-visible {
+  opacity: 1;
+  visibility: visible;
+  animation: enterRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.anim-fade.is-hiding {
-  animation: exitCyberFade 0.3s ease-in forwards;
+#slot-right.is-hiding {
+  animation: exitRight 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
 }
 
-@keyframes enterCyberFade {
+@keyframes enterRight {
   0% {
     opacity: 0;
-    filter: blur(10px) brightness(2);
+    transform: scale(var(--overlay-scale)) translateX(180px) skewX(4deg);
+    filter: brightness(1.8);
+  }
+  70% {
+    transform: scale(var(--overlay-scale)) translateX(-10px) skewX(-1deg);
   }
   100% {
     opacity: 1;
-    filter: blur(0px) brightness(1);
+    transform: scale(var(--overlay-scale)) translateX(0) skewX(0);
+    filter: brightness(1);
   }
 }
 
-@keyframes exitCyberFade {
+@keyframes exitRight {
   0% {
     opacity: 1;
-    filter: blur(0px);
+    transform: scale(var(--overlay-scale)) translateX(0);
   }
   100% {
     opacity: 0;
-    filter: blur(8px) brightness(0.5);
-  }
-}
-
-/* Si la posición es bottom-center, mantener el centrado en la animación */
-.pos-bottom-center.anim-slide-up.is-visible {
-  animation: enterSlideUpCenter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.pos-bottom-center.anim-slide-up.is-hiding {
-  animation: exitSlideUpCenter 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
-}
-@keyframes enterSlideUpCenter {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 120px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-@keyframes exitSlideUpCenter {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, 100px) scale(0.95);
+    transform: scale(var(--overlay-scale)) translateX(150px) skewX(3deg);
   }
 }
