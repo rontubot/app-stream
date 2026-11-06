@@ -1,0 +1,437 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Rajdhani:wght@600;700;800&family=VT323&display=swap');
+
+:root {
+  --accent-color: #00ff66;
+  --accent-glow: rgba(0, 255, 102, 0.7);
+  --accent-dim: rgba(0, 255, 102, 0.2);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: transparent !important;
+  font-family: 'Rajdhani', sans-serif;
+  user-select: none;
+}
+
+/* Canvas de OBS (1920x1080 o cualquier resolución) */
+#overlay-stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+/* Contenedor del Overlay posicionado */
+.overlay-wrapper {
+  position: absolute;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Posiciones en pantalla */
+.pos-bottom-left {
+  bottom: 50px;
+  left: 60px;
+}
+
+.pos-bottom-center {
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pos-bottom-right {
+  bottom: 50px;
+  right: 60px;
+}
+
+.pos-top-left {
+  top: 50px;
+  left: 60px;
+}
+
+.pos-top-right {
+  top: 50px;
+  right: 60px;
+}
+
+/* El Marco Principal del Streamer (Base 1024 x 275) */
+.overlay-card {
+  position: relative;
+  width: 1024px;
+  height: 275px;
+  background-image: url('/assets/overlay-frame-clean.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.8));
+}
+
+/* Línea de brillo cyber que recorre el marco periódicamente */
+.cyber-shimmer {
+  position: absolute;
+  top: 60px;
+  left: 70px;
+  width: 890px;
+  height: 110px;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 4px;
+}
+
+.cyber-shimmer::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -150%;
+  width: 60%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(255, 255, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0.05) 60%,
+    transparent 100%
+  );
+  transform: rotate(25deg);
+  animation: shimmerSweep 6s infinite ease-in-out;
+}
+
+@keyframes shimmerSweep {
+  0% {
+    left: -120%;
+  }
+  25% {
+    left: 200%;
+  }
+  100% {
+    left: 200%;
+  }
+}
+
+/* ============================================================
+   SECCIÓN SUPERIOR: NOMBRE Y ALIAS
+   ============================================================ */
+.overlay-top-row {
+  position: absolute;
+  top: 72px;
+  left: 82px;
+  width: 885px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  z-index: 10;
+}
+
+/* Nombre completo (ej: LUIS MIGUEL ARRIETA) */
+.presenter-name {
+  color: #FFFFFF;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 800;
+  font-size: 46px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 0 3px 6px rgba(0, 0, 0, 0.9), 0 0 15px rgba(255, 255, 255, 0.25);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 630px;
+}
+
+/* Apodo / Nick entre comillas (ej: "LUISMI") */
+.presenter-nickname {
+  color: var(--accent-color);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 800;
+  font-size: 46px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px var(--accent-glow), 0 0 25px var(--accent-glow), 0 2px 4px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  margin-left: 20px;
+}
+
+/* ============================================================
+   SECCIÓN INFERIOR IZQUIERDA: BADGE DE PLATAFORMA + HANDLE
+   ============================================================ */
+.overlay-bottom-left {
+  position: absolute;
+  top: 180px;
+  left: 78px;
+  width: 440px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+/* Badges de Plataformas */
+.platform-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+/* Badge estilo Kick original pixel / blocky */
+.platform-badge.kick-style {
+  font-family: 'Chakra Petch', 'VT323', monospace;
+  font-weight: 900;
+  font-size: 32px;
+  letter-spacing: 1px;
+  color: #00ff66;
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.platform-badge.kick-style .kick-svg {
+  height: 28px;
+  width: auto;
+  fill: #00ff66;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 102, 0.8));
+}
+
+/* Badges con SVG para Twitch, YouTube, Kick, etc. */
+.platform-badge.modern-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 15px;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+.platform-badge.twitch-badge {
+  background: rgba(145, 70, 255, 0.25);
+  border: 1px solid #9146FF;
+  color: #FFFFFF;
+}
+
+.platform-badge.youtube-badge {
+  background: rgba(255, 0, 51, 0.25);
+  border: 1px solid #FF0033;
+  color: #FFFFFF;
+}
+
+.platform-badge.x-badge {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid #FFFFFF;
+  color: #FFFFFF;
+}
+
+.platform-badge.instagram-badge {
+  background: linear-gradient(45deg, rgba(245, 133, 41, 0.3), rgba(221, 42, 123, 0.3), rgba(129, 52, 175, 0.3));
+  border: 1px solid #DD2A7B;
+  color: #FFFFFF;
+}
+
+.platform-badge.tiktok-badge {
+  background: rgba(0, 242, 234, 0.2);
+  border: 1px solid #00F2EA;
+  color: #FFFFFF;
+}
+
+/* Handle / Usuario (@LUISMISHIT) */
+.presenter-handle {
+  color: #FFFFFF;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 330px;
+}
+
+/* ============================================================
+   SECCIÓN INFERIOR DERECHA: ROL / CARGO (DESIG, CASTER, ETC)
+   ============================================================ */
+.overlay-bottom-right {
+  position: absolute;
+  top: 180px;
+  left: 815px;
+  width: 140px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.presenter-role {
+  color: #E2E8F0;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   ANIMACIONES DE ENTRADA Y SALIDA
+   ============================================================ */
+
+/* Estado Activo / Visible */
+.overlay-wrapper.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Animación: Slide Left (Deslizar desde la izquierda con impacto) */
+.anim-slide-left.is-visible {
+  animation: enterSlideLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-slide-left.is-hiding {
+  animation: exitSlideLeft 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@keyframes enterSlideLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-150px) skewX(-4deg);
+    filter: brightness(2) drop-shadow(0 0 30px var(--accent-color));
+  }
+  70% {
+    transform: translateX(10px) skewX(1deg);
+    filter: brightness(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) skewX(0);
+    filter: brightness(1) drop-shadow(0 15px 30px rgba(0, 0, 0, 0.8));
+  }
+}
+
+@keyframes exitSlideLeft {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-120px) skewX(-3deg);
+  }
+}
+
+/* Animación: Slide Up */
+.anim-slide-up.is-visible {
+  animation: enterSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-slide-up.is-hiding {
+  animation: exitSlideUp 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@keyframes enterSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(120px) scale(0.95);
+    filter: brightness(2);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes exitSlideUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100px) scale(0.95);
+  }
+}
+
+/* Animación: Cyber Glitch Fade */
+.anim-fade.is-visible {
+  animation: enterCyberFade 0.4s ease-out forwards;
+}
+
+.anim-fade.is-hiding {
+  animation: exitCyberFade 0.3s ease-in forwards;
+}
+
+@keyframes enterCyberFade {
+  0% {
+    opacity: 0;
+    filter: blur(10px) brightness(2);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px) brightness(1);
+  }
+}
+
+@keyframes exitCyberFade {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(8px) brightness(0.5);
+  }
+}
+
+/* Si la posición es bottom-center, mantener el centrado en la animación */
+.pos-bottom-center.anim-slide-up.is-visible {
+  animation: enterSlideUpCenter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.pos-bottom-center.anim-slide-up.is-hiding {
+  animation: exitSlideUpCenter 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+@keyframes enterSlideUpCenter {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 120px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+@keyframes exitSlideUpCenter {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 100px) scale(0.95);
+  }
+}

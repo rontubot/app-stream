@@ -1,0 +1,44 @@
+[
+  {
+    "id": "pres-1",
+    "name": "LUIS MIGUEL ARRIETA",
+    "nickname": "“LUISMI”",
+    "platform": "kick",
+    "platformName": "KICK",
+    "handle": "@LUISMISHIT",
+    "role": "DESIG",
+    "accentColor": "#00ff66",
+    "theme": "kick-green",
+    "position": "bottom-left",
+    "animation": "slide-left",
+    "autoHideSeconds": 0
+  },
+  {
+    "id": "pres-2",
+    "name": "CARLOS MENDOZA",
+    "nickname": "“CHARLIE”",
+    "platform": "twitch",
+    "platformName": "TWITCH",
+    "handle": "@CHARLIE_STREAM",
+    "role": "CASTER",
+    "accentColor": "#9146FF",
+    "theme": "twitch-purple",
+    "position": "bottom-left",
+    "animation": "slide-left",
+    "autoHideSeconds": 0
+  },
+  {
+    "id": "pres-3",
+    "name": "ANDREA GOMEZ",
+    "nickname": "“ANDY”",
+    "platform": "youtube",
+    "platformName": "YOUTUBE",
+    "handle": "@ANDYGAMING",
+    "role": "HOST",
+    "accentColor": "#FF0033",
+    "theme": "cyber-red",
+    "position": "bottom-left",
+    "animation": "slide-left",
+    "autoHideSeconds": 0
+  }
+]
