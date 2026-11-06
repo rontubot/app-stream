@@ -68,7 +68,6 @@ const modalTitle = document.getElementById('modal-title');
 const formId = document.getElementById('form-id');
 const formName = document.getElementById('form-name');
 const formNick = document.getElementById('form-nick');
-const formPlatform = document.getElementById('form-platform');
 const formHandle = document.getElementById('form-handle');
 const formRole = document.getElementById('form-role');
 const formAccentColor = document.getElementById('form-accent-color');
@@ -380,20 +379,14 @@ function renderPresentersGrid() {
           : 'border-cyber-border hover:border-gray-600'
     }`;
 
-    let platLabel = (p.platform || 'kick').toUpperCase();
-    let platColor = 'border-cyber-green/40 text-cyber-green bg-cyber-green/10';
-    if (p.platform === 'twitch') platColor = 'border-purple-500/40 text-purple-400 bg-purple-500/10';
-    if (p.platform === 'youtube') platColor = 'border-red-500/40 text-red-400 bg-red-500/10';
-    if (p.platform === 'x') platColor = 'border-white/40 text-white bg-white/10';
-
     card.innerHTML = `
       <div>
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs px-2 py-0.5 rounded border font-mono font-bold ${platColor}">
-              ${platLabel}
+            <span class="px-2 py-0.5 rounded border border-cyber-green/40 bg-cyber-green/10 flex items-center gap-1 shadow-[0_0_8px_rgba(0,255,102,0.15)]">
+              <img src="/assets/logo-kick.png" class="h-3.5 w-auto object-contain" alt="KICK">
             </span>
-            <span class="text-xs text-gray-400 font-mono">${p.handle || ''}</span>
+            <span class="text-xs text-gray-300 font-mono">${p.handle || ''}</span>
           </div>
 
           <!-- Badges de estado -->
@@ -528,7 +521,6 @@ function openCreateModal() {
   formId.value = '';
   formName.value = '';
   formNick.value = '';
-  formPlatform.value = 'kick';
   formHandle.value = '@';
   formRole.value = 'HOST';
   formAccentColor.value = '#00ff66';
@@ -545,7 +537,6 @@ function openEditModal(p) {
   formId.value = p.id || '';
   formName.value = p.name || '';
   formNick.value = (p.nickname || '').replace(/[“”"]/g, '');
-  formPlatform.value = p.platform || 'kick';
   formHandle.value = p.handle || '';
   formRole.value = p.role || '';
   formAccentColor.value = p.accentColor || '#00ff66';
@@ -578,8 +569,8 @@ presenterForm.addEventListener('submit', (e) => {
     id: formId.value || `pres-${Date.now()}`,
     name: formName.value.trim().toUpperCase(),
     nickname: nick.toUpperCase(),
-    platform: formPlatform.value,
-    platformName: formPlatform.options[formPlatform.selectedIndex].text,
+    platform: 'kick',
+    platformName: 'KICK',
     handle: formHandle.value.trim(),
     role: formRole.value.trim().toUpperCase(),
     accentColor: formAccentColor.value,

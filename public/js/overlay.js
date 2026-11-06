@@ -99,16 +99,8 @@ function renderSlot(slotKey, presenter) {
   s.role.textContent = presenter.role || '';
   s.handle.textContent = presenter.handle || '';
 
-  const platKey = (presenter.platform || 'kick').toLowerCase();
-  if (PLATFORM_ICONS[platKey]) {
-    s.badge.innerHTML = PLATFORM_ICONS[platKey];
-  } else {
-    s.badge.innerHTML = `
-      <span class="platform-badge modern-badge" style="border: 1px solid var(--accent-color, #00ff66); color: #fff;">
-        ${(presenter.platformName || presenter.platform || 'LIVE').toUpperCase()}
-      </span>
-    `;
-  }
+  // Todos los overlays usan obligatoriamente el logo real oficial de Kick
+  s.badge.innerHTML = `<img src="/assets/logo-kick.png" class="kick-logo-img" alt="KICK">`;
 
   const accent = presenter.accentColor || '#00ff66';
   s.el.style.setProperty('--accent-color', accent);

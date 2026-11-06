@@ -165,70 +165,18 @@ html, body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  text-transform: uppercase;
   user-select: none;
 }
 
-.platform-badge.kick-style {
-  font-family: 'Chakra Petch', 'VT323', monospace;
-  font-weight: 900;
-  font-size: 32px;
-  letter-spacing: 1px;
-  color: #00ff66;
-  text-shadow: 0 0 10px rgba(0, 255, 102, 0.7);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 4px;
-}
-
-.platform-badge.kick-style .kick-svg {
-  height: 28px;
+/* Logo oficial real de Kick */
+.kick-logo-img {
+  height: 35px;
   width: auto;
-  fill: #00ff66;
-  filter: drop-shadow(0 0 8px rgba(0, 255, 102, 0.8));
-}
-
-.platform-badge.modern-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 15px;
-  letter-spacing: 1px;
-  font-weight: 700;
-}
-
-.platform-badge.twitch-badge {
-  background: rgba(145, 70, 255, 0.25);
-  border: 1px solid #9146FF;
-  color: #FFFFFF;
-}
-
-.platform-badge.youtube-badge {
-  background: rgba(255, 0, 51, 0.25);
-  border: 1px solid #FF0033;
-  color: #FFFFFF;
-}
-
-.platform-badge.x-badge {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid #FFFFFF;
-  color: #FFFFFF;
-}
-
-.platform-badge.instagram-badge {
-  background: linear-gradient(45deg, rgba(245, 133, 41, 0.3), rgba(221, 42, 123, 0.3), rgba(129, 52, 175, 0.3));
-  border: 1px solid #DD2A7B;
-  color: #FFFFFF;
-}
-
-.platform-badge.tiktok-badge {
-  background: rgba(0, 242, 234, 0.2);
-  border: 1px solid #00F2EA;
-  color: #FFFFFF;
+  max-width: 125px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(83, 252, 24, 0.75));
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .presenter-handle {
