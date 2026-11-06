@@ -135,12 +135,18 @@ function hideSlot(slotKey) {
   const s = slots[slotKey];
   if (!s || !s.el.classList.contains('is-visible')) return;
 
+  if (s.hideTimeout) {
+    clearTimeout(s.hideTimeout);
+    s.hideTimeout = null;
+  }
+
   s.el.classList.remove('is-visible');
   s.el.classList.add('is-hiding');
 
   s.hideTimeout = setTimeout(() => {
     s.el.classList.remove('is-hiding');
-  }, 450);
+    s.hideTimeout = null;
+  }, 560);
 }
 
 // Sincronizar estado global

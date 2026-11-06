@@ -276,33 +276,34 @@ html, body {
 }
 
 /* ============================================================
-   ANIMACIONES ESPECÍFICAS PARA CADA LADO
+   ANIMACIONES SUTILES Y ELEGANTES (ENTRADA Y SALIDA SIMÉTRICAS)
    ============================================================ */
 
-/* Slot Izquierdo: Entrada y Salida por la izquierda */
+.slot-wrapper.is-hiding {
+  visibility: visible !important;
+  pointer-events: none;
+}
+
+/* Slot Izquierdo: Entrada sutil por la izquierda y salida sutil por la izquierda */
 #slot-left.is-visible {
   opacity: 1;
   visibility: visible;
-  animation: enterLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: enterLeft 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 #slot-left.is-hiding {
-  animation: exitLeft 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  visibility: visible !important;
+  animation: exitLeft 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes enterLeft {
   0% {
     opacity: 0;
-    transform: scale(var(--overlay-scale)) translateX(-180px) skewX(-4deg);
-    filter: brightness(1.8);
-  }
-  70% {
-    transform: scale(var(--overlay-scale)) translateX(10px) skewX(1deg);
+    transform: scale(var(--overlay-scale)) translateX(-120px);
   }
   100% {
     opacity: 1;
-    transform: scale(var(--overlay-scale)) translateX(0) skewX(0);
-    filter: brightness(1);
+    transform: scale(var(--overlay-scale)) translateX(0);
   }
 }
 
@@ -313,34 +314,30 @@ html, body {
   }
   100% {
     opacity: 0;
-    transform: scale(var(--overlay-scale)) translateX(-150px) skewX(-3deg);
+    transform: scale(var(--overlay-scale)) translateX(-120px);
   }
 }
 
-/* Slot Derecho: Entrada y Salida por la derecha */
+/* Slot Derecho: Entrada sutil por la derecha y salida sutil por la derecha */
 #slot-right.is-visible {
   opacity: 1;
   visibility: visible;
-  animation: enterRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: enterRight 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 #slot-right.is-hiding {
-  animation: exitRight 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  visibility: visible !important;
+  animation: exitRight 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes enterRight {
   0% {
     opacity: 0;
-    transform: scale(var(--overlay-scale)) translateX(180px) skewX(4deg);
-    filter: brightness(1.8);
-  }
-  70% {
-    transform: scale(var(--overlay-scale)) translateX(-10px) skewX(-1deg);
+    transform: scale(var(--overlay-scale)) translateX(120px);
   }
   100% {
     opacity: 1;
-    transform: scale(var(--overlay-scale)) translateX(0) skewX(0);
-    filter: brightness(1);
+    transform: scale(var(--overlay-scale)) translateX(0);
   }
 }
 
@@ -351,6 +348,6 @@ html, body {
   }
   100% {
     opacity: 0;
-    transform: scale(var(--overlay-scale)) translateX(150px) skewX(3deg);
+    transform: scale(var(--overlay-scale)) translateX(120px);
   }
 }
