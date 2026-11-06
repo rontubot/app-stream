@@ -21,7 +21,7 @@ const SETTINGS_FILE = path.join(__dirname, 'data', 'settings.json');
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Estado actual del overlay en vivo (Lado Izquierdo y Lado Derecho independientes)
+// Estado actual del overlay en vivo y de preparación (Queue / Preview)
 let liveState = {
   left: {
     isVisible: false,
@@ -35,7 +35,11 @@ let liveState = {
     autoHideSeconds: 0,
     shownAt: null
   },
-  scale: 65 // Tamaño reducido por defecto (~665px de ancho)
+  queue: {
+    left: null,   // Presentador preparado para el lado izquierdo
+    right: null   // Presentador preparado para el lado derecho
+  },
+  scale: 65
 };
 
 // Cargar presentadores del archivo
@@ -51,7 +55,6 @@ function loadPresenters() {
   return [];
 }
 
-// Guardar presentadores en disco
 function savePresenters(presenters) {
   try {
     fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
@@ -63,7 +66,6 @@ function savePresenters(presenters) {
   }
 }
 
-// Cargar / Guardar settings (escala, etc.)
 function loadSettings() {
   try {
     if (fs.existsSync(SETTINGS_FILE)) {
@@ -86,7 +88,6 @@ function saveSettings() {
 
 loadSettings();
 
-// Inicializar lista en memoria
 let presenters = loadPresenters();
 if (presenters.length === 0) {
   presenters = [
@@ -99,10 +100,7 @@ if (presenters.length === 0) {
       handle: "@LUISMISHIT",
       role: "DESIG",
       accentColor: "#00ff66",
-      theme: "kick-green",
-      defaultSide: "left",
-      animation: "slide",
-      autoHideSeconds: 0
+      defaultSide: "left"
     },
     {
       id: "pres-2",
@@ -113,13 +111,16 @@ if (presenters.length === 0) {
       handle: "@CHARLIE_STREAM",
       role: "CASTER",
       accentColor: "#9146FF",
-      theme: "twitch-purple",
-      defaultSide: "right",
-      animation: "slide",
-      autoHideSeconds: 0
+      defaultSide: "right"
     }
   ];
   savePresenters(presenters);
+}
+
+// Inicializar cola con los primeros presentadores
+if (presenters.length > 0) {
+  liveState.queue.left = presenters[0];
+  liveState.queue.right = presenters[1] || presenters[0];
 }
 
 // Timers independientes para auto-ocultar
@@ -183,19 +184,11 @@ function triggerHideSlot(slot) {
 }
 
 // Rutas API REST
-app.get('/api/state', (req, res) => {
-  res.json(liveState);
-});
-
-app.get('/api/presenters', (req, res) => {
-  res.json(presenters);
-});
+app.get('/api/state', (req, res) => res.json(liveState));
+app.get('/api/presenters', (req, res) => res.json(presenters));
 
 app.post('/api/presenters', (req, res) => {
-  const newPres = {
-    ...req.body,
-    id: req.body.id || `pres-${Date.now()}`
-  };
+  const newPres = { ...req.body, id: req.body.id || `pres-${Date.now()}` };
   presenters.push(newPres);
   savePresenters(presenters);
   io.emit('presenters-updated', presenters);
@@ -205,26 +198,25 @@ app.post('/api/presenters', (req, res) => {
 app.put('/api/presenters/:id', (req, res) => {
   const { id } = req.params;
   const index = presenters.findIndex(p => p.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: 'Presentador no encontrado' });
-  }
+  if (index === -1) return res.status(404).json({ error: 'No encontrado' });
+
   presenters[index] = { ...presenters[index], ...req.body, id };
   savePresenters(presenters);
 
-  // Si está actualmente activo en algún slot, actualizarlo
-  let updatedAny = false;
   if (liveState.left.presenter && liveState.left.presenter.id === id) {
     liveState.left.presenter = presenters[index];
-    updatedAny = true;
   }
   if (liveState.right.presenter && liveState.right.presenter.id === id) {
     liveState.right.presenter = presenters[index];
-    updatedAny = true;
   }
-  if (updatedAny) {
-    io.emit('state-update', liveState);
+  if (liveState.queue.left && liveState.queue.left.id === id) {
+    liveState.queue.left = presenters[index];
+  }
+  if (liveState.queue.right && liveState.queue.right.id === id) {
+    liveState.queue.right = presenters[index];
   }
 
+  io.emit('state-update', liveState);
   io.emit('presenters-updated', presenters);
   res.json(presenters[index]);
 });
@@ -235,30 +227,6 @@ app.delete('/api/presenters/:id', (req, res) => {
   savePresenters(presenters);
   io.emit('presenters-updated', presenters);
   res.json({ success: true });
-});
-
-// Control API
-app.post('/api/control/show', (req, res) => {
-  const { slot = 'left', presenterId, presenter, autoHideSeconds } = req.body;
-  let target = presenter;
-  if (!target && presenterId) {
-    target = presenters.find(p => p.id === presenterId);
-  }
-  if (!target && presenters.length > 0) {
-    target = presenters[0];
-  }
-  if (!target) {
-    return res.status(400).json({ error: 'No hay presentador disponible' });
-  }
-
-  triggerShowSlot(slot, target, autoHideSeconds);
-  res.json({ success: true, liveState });
-});
-
-app.post('/api/control/hide', (req, res) => {
-  const { slot = 'all' } = req.body;
-  triggerHideSlot(slot);
-  res.json({ success: true, liveState });
 });
 
 // Rutas directas para OBS y Host
@@ -272,13 +240,41 @@ app.get(['/', '/admin', '/host'], (req, res) => {
 
 // WebSockets en tiempo real
 io.on('connection', (socket) => {
-  // Enviar estado actual
   socket.emit('state-update', liveState);
   socket.emit('presenters-updated', presenters);
 
-  // Mostrar slot individual o ambos
+  // 1. Preparar un slot (Queue / Preview sin mostrarlo en stream)
+  socket.on('prepare-slot', (data) => {
+    // data: { slot: 'left' | 'right', presenter, id }
+    let target = data.presenter;
+    if (!target && data.id) {
+      target = presenters.find(p => p.id === data.id);
+    }
+    const targetSlot = (data.slot === 'right') ? 'right' : 'left';
+    liveState.queue[targetSlot] = target || null;
+    io.emit('state-update', liveState);
+  });
+
+  // 2. Lanzar a en vivo lo que ya está preparado
+  socket.on('launch-prepared', (data) => {
+    // data: { slot: 'left' | 'right' | 'both', autoHideSeconds }
+    const slot = data.slot || 'both';
+    const autoHide = data.autoHideSeconds || 0;
+
+    if (slot === 'left' || slot === 'both') {
+      if (liveState.queue.left) {
+        triggerShowSlot('left', liveState.queue.left, autoHide);
+      }
+    }
+    if (slot === 'right' || slot === 'both') {
+      if (liveState.queue.right) {
+        triggerShowSlot('right', liveState.queue.right, autoHide);
+      }
+    }
+  });
+
+  // 3. Lanzar directo
   socket.on('show-slot', (data) => {
-    // data: { slot: 'left'|'right', presenter, id, autoHideSeconds }
     let target = data.presenter;
     if (!target && data.id) {
       target = presenters.find(p => p.id === data.id);
@@ -289,7 +285,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('show-both', (data) => {
-    // data: { leftPresenter, rightPresenter, autoHideSeconds }
     if (data.leftPresenter) {
       triggerShowSlot('left', data.leftPresenter, data.autoHideSeconds);
     }
@@ -298,7 +293,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Ocultar slot o ambos
+  // 4. Ocultar
   socket.on('hide-slot', (slot) => {
     triggerHideSlot(slot || 'left');
   });
@@ -307,7 +302,7 @@ io.on('connection', (socket) => {
     triggerHideSlot('all');
   });
 
-  // Cambiar escala
+  // 5. Escala
   socket.on('set-scale', (scalePercent) => {
     const s = Math.min(100, Math.max(40, Number(scalePercent) || 65));
     liveState.scale = s;
@@ -315,7 +310,7 @@ io.on('connection', (socket) => {
     io.emit('state-update', liveState);
   });
 
-  // Guardar o actualizar
+  // 6. Guardar / Eliminar
   socket.on('save-presenter', (presData) => {
     if (!presData.id) {
       presData.id = `pres-${Date.now()}`;
@@ -332,7 +327,6 @@ io.on('connection', (socket) => {
     io.emit('presenters-updated', presenters);
   });
 
-  // Eliminar
   socket.on('delete-presenter', (id) => {
     presenters = presenters.filter(p => p.id !== id);
     savePresenters(presenters);
