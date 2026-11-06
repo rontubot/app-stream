@@ -2,8 +2,8 @@
 <html lang="es" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Host - Control Dual y Preparación de Overlays</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Panel de Host - BirraVerde Stream Control</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,10 +21,10 @@
           },
           colors: {
             cyber: {
-              black: '#0a0d0f',
-              dark: '#11161b',
-              card: '#161d24',
-              border: '#242f3a',
+              black: '#070a0d',
+              dark: '#0e141b',
+              card: '#141c24',
+              border: '#222f3d',
               green: '#00ff66',
               glow: '#00ff6640'
             }
@@ -34,10 +34,13 @@
     }
   </script>
   <style>
+    /* 16:9 Ratio perfecto responsive para monitor OBS */
     .preview-box-ratio {
       width: 100%;
+      height: 0;
       padding-top: 56.25%; /* 16:9 */
       position: relative;
+      overflow: hidden;
     }
     .preview-inner {
       position: absolute;
@@ -48,111 +51,88 @@
       transform-origin: top left;
       pointer-events: none;
     }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f141a; }
-    ::-webkit-scrollbar-thumb { background: #273544; border-radius: 3px; }
+    /* Scrollbars cyber */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #070a0d; }
+    ::-webkit-scrollbar-thumb { background: #222f3d; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #00ff66; }
   </style>
 </head>
 <body class="bg-cyber-black text-gray-100 min-h-screen font-sans antialiased selection:bg-cyber-green selection:text-black">
 
-  <!-- Header Superior -->
-  <header class="border-b border-cyber-border bg-cyber-dark/90 backdrop-blur sticky top-0 z-30 px-6 py-4">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-cyber-green/10 border border-cyber-green flex items-center justify-center text-cyber-green shadow-[0_0_15px_rgba(0,255,102,0.3)]">
-          <i data-lucide="tv" class="w-6 h-6"></i>
+  <!-- ============================================================
+       HEADER SUPERIOR RESPONSIVE
+       ============================================================ -->
+  <header class="border-b border-cyber-border bg-cyber-dark/95 backdrop-blur sticky top-0 z-40 px-4 sm:px-6 py-3.5">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <!-- Logo y Título -->
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-lg bg-cyber-green/10 border border-cyber-green flex items-center justify-center text-cyber-green shadow-[0_0_12px_rgba(0,255,102,0.3)] shrink-0">
+            <i data-lucide="tv" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold font-chakra tracking-wide flex items-center gap-2 leading-tight">
+              PANEL DE HOST <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green font-mono border border-cyber-green/40">BIRRAVERDE</span>
+            </h1>
+            <p class="text-[11px] text-gray-400">Control en vivo de escenas y overlays</p>
+          </div>
         </div>
-        <div>
-          <h1 class="text-xl font-bold font-chakra tracking-wide flex items-center gap-2">
-            PANEL DE HOST <span class="text-xs px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green font-mono border border-cyber-green/40">DUAL & PREPARACIÓN</span>
-          </h1>
-          <p class="text-xs text-gray-400">Prepara con anticipación los presentadores y lánzalos al stream cuando desees</p>
+
+        <!-- Estado en móvil (para ahorrar espacio) -->
+        <div class="sm:hidden flex items-center gap-1.5 px-2 py-1 rounded-full bg-cyber-card border border-cyber-border text-[11px] font-mono">
+          <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="socket-dot-mobile"></span>
         </div>
       </div>
 
-      <!-- Barra de Estado y Botón de OBS URL -->
-      <div class="flex items-center gap-4">
-        <div id="socket-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-card border border-cyber-border text-xs font-mono">
+      <!-- Estado de Conexión y Botón de OBS URL -->
+      <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+        <!-- Socket Status en Desktop -->
+        <div id="socket-badge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-card border border-cyber-border text-xs font-mono">
           <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse" id="socket-dot"></span>
           <span id="socket-status" class="text-gray-300">Conectando...</span>
         </div>
 
-        <button id="btn-copy-obs" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyber-green hover:text-cyber-green text-sm font-medium transition-all shadow-sm group">
-          <i data-lucide="link" class="w-4 h-4 text-cyber-green group-hover:rotate-45 transition-transform"></i>
+        <!-- Botón Copiar URL OBS -->
+        <button id="btn-copy-obs" class="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyber-green hover:text-cyber-green text-xs font-medium transition-all group">
+          <i data-lucide="link" class="w-3.5 h-3.5 text-cyber-green group-hover:rotate-45 transition-transform"></i>
           <span>Copiar URL para OBS</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- Contenedor Principal -->
-  <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+  <!-- ============================================================
+       CONTENEDOR PRINCIPAL
+       ============================================================ -->
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 py-5 space-y-6">
 
-    <!-- BARRA SUPERIOR: CONFIGURACIÓN DE TAMAÑO, AUTO-OCULTAR Y DISPARO MAESTRO -->
-    <div class="bg-cyber-dark border border-cyber-border rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 text-xs shadow-md">
-      <!-- Selector de Tamaño (Escala) -->
-      <div class="flex items-center gap-3">
-        <span class="text-gray-300 font-semibold font-chakra flex items-center gap-1.5">
-          <i data-lucide="maximize-2" class="w-4 h-4 text-cyber-green"></i> Tamaño:
-        </span>
-        <div class="flex items-center gap-1 bg-cyber-card p-1 rounded-lg border border-cyber-border" id="scale-pills">
-          <button data-scale="55" class="scale-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all">55% (Muy Chico)</button>
-          <button data-scale="65" class="scale-btn px-2.5 py-1 rounded font-bold transition-all bg-cyber-green text-black">65% (Recomendado)</button>
-          <button data-scale="75" class="scale-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all">75% (Mediano)</button>
-          <button data-scale="85" class="scale-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all">85% (Grande)</button>
-        </div>
-      </div>
-
-      <!-- Auto-Ocultar -->
-      <div class="flex items-center gap-3">
-        <span class="text-gray-300 font-semibold font-chakra flex items-center gap-1.5">
-          <i data-lucide="clock" class="w-4 h-4 text-cyber-green"></i> Auto-Ocultar:
-        </span>
-        <div class="flex items-center gap-1 bg-cyber-card p-1 rounded-lg border border-cyber-border" id="autohide-pills">
-          <button data-sec="0" class="autohide-btn px-2.5 py-1 rounded font-bold transition-all bg-cyber-green text-black">Manual</button>
-          <button data-sec="5" class="autohide-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all">5s</button>
-          <button data-sec="8" class="autohide-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all">8s</button>
-          <button data-sec="10" class="autohide-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all">10s</button>
-          <button data-sec="15" class="autohide-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all">15s</button>
-        </div>
-      </div>
-
-      <!-- Acciones Maestras de Lanzamiento de Preparados -->
-      <div class="flex items-center gap-2">
-        <button id="btn-launch-both-prepared" class="px-4 py-2 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,102,0.3)]">
-          <i data-lucide="rocket" class="w-4 h-4"></i> Lanzar Ambos Preparados
-        </button>
-        <button id="btn-hide-both" class="px-3.5 py-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5">
-          <i data-lucide="square" class="w-3.5 h-3.5 fill-current"></i> Ocultar Ambos
-        </button>
-      </div>
-    </div>
-
-    <!-- SECCIÓN DE ESCENAS DE PANTALLA COMPLETA (BIRRAVERDE) -->
-    <div class="bg-cyber-dark border border-cyber-border rounded-xl p-5 shadow-xl space-y-4 relative overflow-hidden">
-      <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-cyber-border/70">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded bg-cyber-green/10 border border-cyber-green flex items-center justify-center text-cyber-green">
+    <!-- ============================================================
+         1. PRIMER BLOQUE: ESCENAS DE PANTALLA COMPLETA (ARRIBA DEL TODO)
+         ============================================================ -->
+    <section class="bg-cyber-dark border border-cyber-border rounded-xl p-4 sm:p-5 shadow-xl space-y-4 relative overflow-hidden">
+      <!-- Cabecera de Escenas -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-cyber-border/70">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded bg-cyber-green/10 border border-cyber-green flex items-center justify-center text-cyber-green shrink-0">
             <i data-lucide="clapperboard" class="w-4 h-4"></i>
           </div>
           <div>
-            <h2 class="text-base font-bold font-chakra uppercase tracking-wide flex items-center gap-2 text-white">
+            <h2 class="text-sm sm:text-base font-bold font-chakra uppercase tracking-wide flex items-center gap-2 text-white">
               ESCENAS DE PANTALLA COMPLETA
-              <span class="text-[11px] px-2 py-0.5 rounded bg-black/60 text-gray-400 font-mono border border-gray-700">BIRRAVERDE</span>
             </h2>
-            <p class="text-xs text-gray-400">Activa o retira una escena cinematográfica animada en el stream con un solo clic</p>
+            <p class="text-[11px] text-gray-400">Activa o saca una escena cinematográfica animada con el logo de BirraVerde</p>
           </div>
         </div>
 
         <!-- Indicador de Escena Activa -->
-        <div id="scene-active-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase transition-all">
-          <span class="w-2.5 h-2.5 rounded-full bg-gray-500" id="scene-active-dot"></span>
-          <span id="scene-active-text">SIN ESCENA (STREAM EN VIVO)</span>
+        <div id="scene-active-indicator" class="w-full sm:w-auto flex items-center justify-center sm:justify-start gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase transition-all">
+          <span class="w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0" id="scene-active-dot"></span>
+          <span id="scene-active-text" class="truncate">SIN ESCENA (STREAM EN VIVO)</span>
         </div>
       </div>
 
-      <!-- Botones de Escenas Rápidas -->
+      <!-- Grid de Botones de Escenas Rápidas (Responsive: 1 col móvil, 2 col tablet, 4 col desktop) -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <!-- Escena 1: Estamos por empezar -->
         <button id="btn-scene-starting" class="btn-scene p-3.5 rounded-xl bg-cyber-card border border-cyber-border hover:border-cyber-green text-left transition-all group hover:shadow-[0_0_15px_rgba(0,255,102,0.2)]">
@@ -198,7 +178,7 @@
             STREAM FINALIZADO
           </div>
           <div class="text-[11px] text-gray-400 truncate mt-0.5">
-            ¡Gracias por acompañarnos hoy!
+            ¡Muchas gracias por acompañarnos!
           </div>
         </button>
 
@@ -209,189 +189,245 @@
           <span class="text-[10px] text-gray-300 font-mono">(Volver a Cámara / Juego)</span>
         </button>
       </div>
-    </div>
+    </section>
 
-    <!-- SECCIÓN DE CONTROL DUAL Y MONITOR OBS -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-      <!-- COLUMNA IZQUIERDA: LADO IZQUIERDO (SLOT 1) -->
-      <div class="lg:col-span-4 bg-cyber-dark border border-cyber-border rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-xl">
-        <div class="space-y-4">
-          <!-- Cabecera Izquierda -->
-          <div class="flex items-center justify-between pb-3 border-b border-cyber-border/60">
-            <span class="text-sm uppercase tracking-wider text-white font-chakra font-bold flex items-center gap-2">
-              <i data-lucide="arrow-left-circle" class="w-4 h-4 text-cyber-green"></i>
-              LADO IZQUIERDO
-            </span>
-            <div id="badge-left" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-[11px] font-bold font-chakra uppercase">
-              <span class="w-2 h-2 rounded-full bg-gray-500" id="dot-left"></span>
-              <span id="text-left">OFF AIR</span>
-            </div>
-          </div>
-
-          <!-- EN VIVO AHORA -->
-          <div class="bg-black/40 border border-cyber-border/70 rounded-lg p-3">
-            <div class="flex items-center justify-between text-[11px] text-gray-400 uppercase tracking-wider font-chakra mb-1">
-              <span>En Pantalla Ahora:</span>
-              <button id="btn-hide-left" class="text-red-400 hover:text-red-300 font-bold uppercase transition-colors flex items-center gap-1">
-                <i data-lucide="square" class="w-3 h-3"></i> Ocultar
-              </button>
-            </div>
-            <div class="text-base font-bold font-rajdhani text-white uppercase truncate" id="live-name-left">
-              (Ninguno en pantalla)
-            </div>
-            <div class="text-xs text-cyber-green font-bold font-rajdhani" id="live-nick-left"></div>
-          </div>
-
-          <!-- PRÓXIMO EN SALIR (PREPARADO / EN COLA) -->
-          <div class="bg-cyber-card border-2 border-dashed border-cyber-border hover:border-cyber-green/50 rounded-lg p-3.5 space-y-2.5 transition-colors">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] text-cyber-green uppercase tracking-wider font-chakra font-bold flex items-center gap-1">
-                <i data-lucide="clock" class="w-3.5 h-3.5"></i> Preparado (Próximo):
-              </span>
-              <span class="text-[10px] text-gray-400 font-mono">No se ve en stream hasta lanzar</span>
-            </div>
-
-            <!-- Selector para cambiar preparado rápidamente -->
-            <select id="select-queue-left" class="w-full bg-black/60 border border-cyber-border rounded px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyber-green">
-              <!-- Opciones dinámicas -->
-            </select>
-
-            <!-- Card del preparado -->
-            <div class="bg-black/50 border border-cyber-border rounded p-2.5 flex items-center justify-between">
-              <div>
-                <div class="text-sm font-bold font-rajdhani text-white uppercase" id="queue-name-left">LUIS MIGUEL ARRIETA</div>
-                <div class="text-xs font-bold font-rajdhani text-cyber-green" id="queue-nick-left">“LUISMI”</div>
-                <div class="text-[11px] text-gray-400 font-mono" id="queue-handle-left">@LUISMISHIT • DESIG</div>
-              </div>
-            </div>
-
-            <!-- Botón Disparar Preparado -->
-            <button id="btn-launch-prepared-left" class="w-full py-2.5 px-4 rounded-lg bg-cyber-green text-black font-extrabold font-chakra text-xs tracking-wider uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(0,255,102,0.25)]">
-              <i data-lucide="play" class="w-4 h-4 fill-black"></i>
-              <span>LANZAR PREPARADO A PANTALLA</span>
-            </button>
-          </div>
+    <!-- ============================================================
+         2. SEGUNDO BLOQUE: CONTROL DE OVERLAYS (LOWER THIRDS)
+         ============================================================ -->
+    <section class="space-y-4">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded bg-cyber-green/10 border border-cyber-green flex items-center justify-center text-cyber-green text-xs font-bold">
+          2
         </div>
+        <h2 class="text-base sm:text-lg font-bold font-chakra tracking-wide text-white uppercase flex items-center gap-2">
+          CONTROL DE OVERLAYS (LOWER THIRDS)
+        </h2>
       </div>
 
-      <!-- COLUMNA CENTRAL: MONITOR OBS EN VIVO -->
-      <div class="lg:col-span-4 bg-cyber-dark border border-cyber-border rounded-xl p-4 flex flex-col justify-between shadow-xl">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs uppercase tracking-wider text-gray-400 font-chakra font-semibold flex items-center gap-1.5">
-            <i data-lucide="monitor" class="w-4 h-4 text-cyber-green"></i> Monitor OBS
+      <!-- Barra de Ajustes y Acciones Maestras -->
+      <div class="bg-cyber-dark border border-cyber-border rounded-xl p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs shadow-md">
+        <!-- Selector de Tamaño (Escala) -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-gray-300 font-semibold font-chakra flex items-center gap-1 shrink-0">
+            <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-cyber-green"></i> Tamaño:
           </span>
-          <button id="btn-refresh-preview" class="hover:text-cyber-green flex items-center gap-1 text-[11px] text-gray-400 transition-colors">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Recargar
+          <div class="flex items-center gap-1 bg-cyber-card p-1 rounded-lg border border-cyber-border overflow-x-auto max-w-full" id="scale-pills">
+            <button data-scale="55" class="scale-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap">55%</button>
+            <button data-scale="65" class="scale-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap">65% (Rec.)</button>
+            <button data-scale="75" class="scale-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap">75%</button>
+            <button data-scale="85" class="scale-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap">85%</button>
+          </div>
+        </div>
+
+        <!-- Auto-Ocultar -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-gray-300 font-semibold font-chakra flex items-center gap-1 shrink-0">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-cyber-green"></i> Ocultar:
+          </span>
+          <div class="flex items-center gap-1 bg-cyber-card p-1 rounded-lg border border-cyber-border overflow-x-auto max-w-full" id="autohide-pills">
+            <button data-sec="0" class="autohide-btn px-2 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap">Manual</button>
+            <button data-sec="5" class="autohide-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap">5s</button>
+            <button data-sec="8" class="autohide-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap">8s</button>
+            <button data-sec="10" class="autohide-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap">10s</button>
+            <button data-sec="15" class="autohide-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap">15s</button>
+          </div>
+        </div>
+
+        <!-- Botones Maestros Lanzar / Ocultar Ambos -->
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <button id="btn-launch-both-prepared" class="px-3.5 py-1.5 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)]">
+            <i data-lucide="rocket" class="w-3.5 h-3.5"></i>
+            <span>Lanzar Ambos</span>
+          </button>
+          <button id="btn-hide-both" class="px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1">
+            <i data-lucide="square" class="w-3 h-3 fill-current"></i>
+            <span>Ocultar Ambos</span>
           </button>
         </div>
-
-        <div class="w-full bg-[#07090b] rounded-lg border border-cyber-border relative overflow-hidden shadow-inner preview-box-ratio">
-          <div class="absolute inset-0 opacity-15 bg-[radial-gradient(#243242_1px,transparent_1px)] [background-size:16px_16px]"></div>
-          <div class="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-            <span class="text-2xl font-extrabold font-chakra tracking-widest text-white">STREAM SCENE</span>
-          </div>
-          <div id="preview-container" class="preview-inner">
-            <iframe id="preview-iframe" src="/overlay" class="w-full h-full border-0 bg-transparent"></iframe>
-          </div>
-        </div>
-
-        <div class="mt-2 text-center text-[11px] text-gray-400 font-mono">
-          Visualiza lo que OBS está transmitiendo en tiempo real
-        </div>
       </div>
 
-      <!-- COLUMNA DERECHA: LADO DERECHO (SLOT 2) -->
-      <div class="lg:col-span-4 bg-cyber-dark border border-cyber-border rounded-xl p-5 flex flex-col justify-between space-y-4 shadow-xl">
-        <div class="space-y-4">
-          <!-- Cabecera Derecha -->
-          <div class="flex items-center justify-between pb-3 border-b border-cyber-border/60">
-            <span class="text-sm uppercase tracking-wider text-white font-chakra font-bold flex items-center gap-2">
-              <i data-lucide="arrow-right-circle" class="w-4 h-4 text-purple-400"></i>
-              LADO DERECHO
-            </span>
-            <div id="badge-right" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-[11px] font-bold font-chakra uppercase">
-              <span class="w-2 h-2 rounded-full bg-gray-500" id="dot-right"></span>
-              <span id="text-right">OFF AIR</span>
-            </div>
-          </div>
+      <!-- SECCIÓN DUAL Y MONITOR (Responsive: 1 Columna en móvil, 3 Columnas en desktop lg) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
 
-          <!-- EN VIVO AHORA -->
-          <div class="bg-black/40 border border-cyber-border/70 rounded-lg p-3">
-            <div class="flex items-center justify-between text-[11px] text-gray-400 uppercase tracking-wider font-chakra mb-1">
-              <span>En Pantalla Ahora:</span>
-              <button id="btn-hide-right" class="text-red-400 hover:text-red-300 font-bold uppercase transition-colors flex items-center gap-1">
-                <i data-lucide="square" class="w-3 h-3"></i> Ocultar
-              </button>
-            </div>
-            <div class="text-base font-bold font-rajdhani text-white uppercase truncate" id="live-name-right">
-              (Ninguno en pantalla)
-            </div>
-            <div class="text-xs text-purple-400 font-bold font-rajdhani" id="live-nick-right"></div>
-          </div>
-
-          <!-- PRÓXIMO EN SALIR (PREPARADO / EN COLA) -->
-          <div class="bg-cyber-card border-2 border-dashed border-cyber-border hover:border-purple-500/50 rounded-lg p-3.5 space-y-2.5 transition-colors">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] text-purple-400 uppercase tracking-wider font-chakra font-bold flex items-center gap-1">
-                <i data-lucide="clock" class="w-3.5 h-3.5"></i> Preparado (Próximo):
+        <!-- LADO IZQUIERDO (SLOT 1) -->
+        <div class="lg:col-span-4 bg-cyber-dark border border-cyber-border rounded-xl p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-xl">
+          <div class="space-y-3.5">
+            <!-- Header Izquierdo -->
+            <div class="flex items-center justify-between pb-2.5 border-b border-cyber-border/60">
+              <span class="text-xs sm:text-sm uppercase tracking-wider text-white font-chakra font-bold flex items-center gap-1.5">
+                <i data-lucide="arrow-left-circle" class="w-4 h-4 text-cyber-green"></i>
+                LADO IZQUIERDO
               </span>
-              <span class="text-[10px] text-gray-400 font-mono">No se ve en stream hasta lanzar</span>
-            </div>
-
-            <!-- Selector para cambiar preparado rápidamente -->
-            <select id="select-queue-right" class="w-full bg-black/60 border border-cyber-border rounded px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-400">
-              <!-- Opciones dinámicas -->
-            </select>
-
-            <!-- Card del preparado -->
-            <div class="bg-black/50 border border-cyber-border rounded p-2.5 flex items-center justify-between">
-              <div>
-                <div class="text-sm font-bold font-rajdhani text-white uppercase" id="queue-name-right">CARLOS MENDOZA</div>
-                <div class="text-xs font-bold font-rajdhani text-purple-400" id="queue-nick-right">“CHARLIE”</div>
-                <div class="text-[11px] text-gray-400 font-mono" id="queue-handle-right">@CHARLIE_STREAM • CASTER</div>
+              <div id="badge-left" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-[10px] sm:text-[11px] font-bold font-chakra uppercase">
+                <span class="w-2 h-2 rounded-full bg-gray-500" id="dot-left"></span>
+                <span id="text-left">OFF AIR</span>
               </div>
             </div>
 
-            <!-- Botón Disparar Preparado -->
-            <button id="btn-launch-prepared-right" class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold font-chakra text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(145,70,255,0.25)]">
-              <i data-lucide="play" class="w-4 h-4 fill-white"></i>
-              <span>LANZAR PREPARADO A PANTALLA</span>
-            </button>
+            <!-- EN VIVO AHORA -->
+            <div class="bg-black/40 border border-cyber-border/70 rounded-lg p-3">
+              <div class="flex items-center justify-between text-[11px] text-gray-400 uppercase tracking-wider font-chakra mb-1">
+                <span>En Pantalla Ahora:</span>
+                <button id="btn-hide-left" class="text-red-400 hover:text-red-300 font-bold uppercase transition-colors flex items-center gap-1">
+                  <i data-lucide="square" class="w-3 h-3"></i> Ocultar
+                </button>
+              </div>
+              <div class="text-base font-bold font-rajdhani text-white uppercase truncate" id="live-name-left">
+                (Ninguno en pantalla)
+              </div>
+              <div class="text-xs text-cyber-green font-bold font-rajdhani" id="live-nick-left"></div>
+            </div>
+
+            <!-- PRÓXIMO PREPARADO -->
+            <div class="bg-cyber-card border-2 border-dashed border-cyber-border hover:border-cyber-green/50 rounded-lg p-3 space-y-2.5 transition-colors">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] text-cyber-green uppercase tracking-wider font-chakra font-bold flex items-center gap-1">
+                  <i data-lucide="clock" class="w-3 h-3"></i> Preparado (Próximo):
+                </span>
+                <span class="text-[10px] text-gray-400 font-mono">No visible aún</span>
+              </div>
+
+              <select id="select-queue-left" class="w-full bg-black/60 border border-cyber-border rounded px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyber-green truncate">
+                <!-- Opciones dinámicas -->
+              </select>
+
+              <div class="bg-black/50 border border-cyber-border rounded p-2.5 flex items-center justify-between">
+                <div class="min-w-0 pr-2">
+                  <div class="text-sm font-bold font-rajdhani text-white uppercase truncate" id="queue-name-left">LUIS MIGUEL ARRIETA</div>
+                  <div class="text-xs font-bold font-rajdhani text-cyber-green truncate" id="queue-nick-left">“LUISMI”</div>
+                  <div class="text-[11px] text-gray-400 font-mono truncate" id="queue-handle-left">@LUISMISHIT • DESIG</div>
+                </div>
+              </div>
+
+              <button id="btn-launch-prepared-left" class="w-full py-2.5 px-3 rounded-lg bg-cyber-green text-black font-extrabold font-chakra text-xs tracking-wider uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.25)]">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-black"></i>
+                <span>LANZAR PREPARADO A PANTALLA</span>
+              </button>
+            </div>
           </div>
         </div>
+
+        <!-- MONITOR OBS EN VIVO (CENTRAL) -->
+        <div class="lg:col-span-4 bg-cyber-dark border border-cyber-border rounded-xl p-3.5 sm:p-4 flex flex-col justify-between shadow-xl order-first lg:order-none">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs uppercase tracking-wider text-gray-400 font-chakra font-semibold flex items-center gap-1.5">
+              <i data-lucide="monitor" class="w-4 h-4 text-cyber-green"></i> Monitor OBS en Vivo
+            </span>
+            <button id="btn-refresh-preview" class="hover:text-cyber-green flex items-center gap-1 text-[11px] text-gray-400 transition-colors">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i> Recargar
+            </button>
+          </div>
+
+          <!-- Contenedor 16:9 con escala matemática -->
+          <div class="w-full bg-[#07090b] rounded-lg border border-cyber-border relative overflow-hidden shadow-inner preview-box-ratio">
+            <div class="absolute inset-0 opacity-15 bg-[radial-gradient(#243242_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            <div class="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+              <span class="text-2xl font-extrabold font-chakra tracking-widest text-white">STREAM SCENE</span>
+            </div>
+            <div id="preview-container" class="preview-inner">
+              <iframe id="preview-iframe" src="/overlay" class="w-full h-full border-0 bg-transparent"></iframe>
+            </div>
+          </div>
+
+          <div class="mt-2 text-center text-[10px] text-gray-400 font-mono">
+            Muestra escenas de pantalla completa y overlays en tiempo real
+          </div>
+        </div>
+
+        <!-- LADO DERECHO (SLOT 2) -->
+        <div class="lg:col-span-4 bg-cyber-dark border border-cyber-border rounded-xl p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-xl">
+          <div class="space-y-3.5">
+            <!-- Header Derecho -->
+            <div class="flex items-center justify-between pb-2.5 border-b border-cyber-border/60">
+              <span class="text-xs sm:text-sm uppercase tracking-wider text-white font-chakra font-bold flex items-center gap-1.5">
+                <i data-lucide="arrow-right-circle" class="w-4 h-4 text-purple-400"></i>
+                LADO DERECHO
+              </span>
+              <div id="badge-right" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-[10px] sm:text-[11px] font-bold font-chakra uppercase">
+                <span class="w-2 h-2 rounded-full bg-gray-500" id="dot-right"></span>
+                <span id="text-right">OFF AIR</span>
+              </div>
+            </div>
+
+            <!-- EN VIVO AHORA -->
+            <div class="bg-black/40 border border-cyber-border/70 rounded-lg p-3">
+              <div class="flex items-center justify-between text-[11px] text-gray-400 uppercase tracking-wider font-chakra mb-1">
+                <span>En Pantalla Ahora:</span>
+                <button id="btn-hide-right" class="text-red-400 hover:text-red-300 font-bold uppercase transition-colors flex items-center gap-1">
+                  <i data-lucide="square" class="w-3 h-3"></i> Ocultar
+                </button>
+              </div>
+              <div class="text-base font-bold font-rajdhani text-white uppercase truncate" id="live-name-right">
+                (Ninguno en pantalla)
+              </div>
+              <div class="text-xs text-purple-400 font-bold font-rajdhani" id="live-nick-right"></div>
+            </div>
+
+            <!-- PRÓXIMO PREPARADO -->
+            <div class="bg-cyber-card border-2 border-dashed border-cyber-border hover:border-purple-500/50 rounded-lg p-3 space-y-2.5 transition-colors">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] text-purple-400 uppercase tracking-wider font-chakra font-bold flex items-center gap-1">
+                  <i data-lucide="clock" class="w-3 h-3"></i> Preparado (Próximo):
+                </span>
+                <span class="text-[10px] text-gray-400 font-mono">No visible aún</span>
+              </div>
+
+              <select id="select-queue-right" class="w-full bg-black/60 border border-cyber-border rounded px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-purple-400 truncate">
+                <!-- Opciones dinámicas -->
+              </select>
+
+              <div class="bg-black/50 border border-cyber-border rounded p-2.5 flex items-center justify-between">
+                <div class="min-w-0 pr-2">
+                  <div class="text-sm font-bold font-rajdhani text-white uppercase truncate" id="queue-name-right">CARLOS MENDOZA</div>
+                  <div class="text-xs font-bold font-rajdhani text-purple-400 truncate" id="queue-nick-right">“CHARLIE”</div>
+                  <div class="text-[11px] text-gray-400 font-mono truncate" id="queue-handle-right">@CHARLIE_STREAM • CASTER</div>
+                </div>
+              </div>
+
+              <button id="btn-launch-prepared-right" class="w-full py-2.5 px-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold font-chakra text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(145,70,255,0.25)]">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-white"></i>
+                <span>LANZAR PREPARADO A PANTALLA</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
+    </section>
 
-    </div>
-
-    <!-- SECCIÓN DE PRESENTADORES GUARDADOS -->
-    <div class="space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-4">
+    <!-- ============================================================
+         3. TERCER BLOQUE: DECK DE PRESENTADORES GUARDADOS
+         ============================================================ -->
+    <section class="space-y-4 pt-2">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-xl font-bold font-chakra tracking-wide flex items-center gap-2 text-white">
+          <h2 class="text-base sm:text-xl font-bold font-chakra tracking-wide flex items-center gap-2 text-white">
             <i data-lucide="users" class="w-5 h-5 text-cyber-green"></i>
             DECK DE PRESENTADORES GUARDADOS
           </h2>
-          <p class="text-xs text-gray-400">Prepara para el próximo cambio o lánzalos directamente</p>
+          <p class="text-xs text-gray-400">Prepara para el próximo cambio o lánzalos directamente al stream</p>
         </div>
 
-        <button id="btn-open-create-modal" class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyber-green text-black font-bold font-chakra hover:bg-emerald-400 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)]">
-          <i data-lucide="plus" class="w-5 h-5 stroke-[3]"></i>
+        <button id="btn-open-create-modal" class="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-cyber-green text-black font-bold font-chakra hover:bg-emerald-400 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)] text-xs sm:text-sm">
+          <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
           <span>CREAR NUEVO PRESENTADOR</span>
         </button>
       </div>
 
-      <!-- Grid Cards -->
-      <div id="presenters-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-    </div>
+      <!-- Grid Cards (Responsive: 1 col móvil, 2 col tablet, 3 col desktop) -->
+      <div id="presenters-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
 
   </main>
 
-  <!-- MODAL: CREAR / EDITAR PRESENTADOR -->
-  <div id="presenter-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-cyber-dark border border-cyber-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-      <div class="px-6 py-4 border-b border-cyber-border flex items-center justify-between bg-cyber-card/50">
-        <h3 id="modal-title" class="text-lg font-bold font-chakra text-white flex items-center gap-2">
+  <!-- ============================================================
+       MODAL: CREAR / EDITAR PRESENTADOR (100% RESPONSIVE)
+       ============================================================ -->
+  <div id="presenter-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4">
+    <div class="bg-cyber-dark border border-cyber-border rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-cyber-border flex items-center justify-between bg-cyber-card/50 shrink-0">
+        <h3 id="modal-title" class="text-base sm:text-lg font-bold font-chakra text-white flex items-center gap-2 truncate">
           <i data-lucide="user-plus" class="w-5 h-5 text-cyber-green"></i>
           CREAR NUEVO PRESENTADOR
         </h3>
@@ -400,34 +436,35 @@
         </button>
       </div>
 
-      <form id="presenter-form" class="p-6 space-y-5">
+      <!-- Modal Body (Scrollable) -->
+      <form id="presenter-form" class="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
         <input type="hidden" id="form-id" value="">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider font-chakra flex items-center gap-1.5">
               <i data-lucide="user" class="w-3.5 h-3.5 text-cyber-green"></i>
               Nombre Completo *
             </label>
-            <input type="text" id="form-name" required placeholder="Ej: LUIS MIGUEL ARRIETA" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-4 py-2.5 text-white font-rajdhani text-lg font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green">
+            <input type="text" id="form-name" required placeholder="Ej: LUIS MIGUEL ARRIETA" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3.5 py-2.5 text-white font-rajdhani text-base font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green">
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider font-chakra flex items-center gap-1.5">
               <i data-lucide="tag" class="w-3.5 h-3.5 text-cyber-green"></i>
               Apodo / Nickname *
             </label>
-            <input type="text" id="form-nick" required placeholder='Ej: "LUISMI"' class="w-full bg-cyber-card border border-cyber-border rounded-lg px-4 py-2.5 text-cyber-green font-rajdhani text-lg font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green">
+            <input type="text" id="form-nick" required placeholder='Ej: "LUISMI"' class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3.5 py-2.5 text-cyber-green font-rajdhani text-base font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green">
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="space-y-1.5">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="space-y-1">
             <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider font-chakra flex items-center gap-1.5">
               <i data-lucide="share-2" class="w-3.5 h-3.5 text-cyber-green"></i>
               Plataforma
             </label>
-            <select id="form-platform" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3 py-2.5 text-white font-medium focus:outline-none focus:border-cyber-green">
+            <select id="form-platform" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-cyber-green">
               <option value="kick">KICK</option>
               <option value="twitch">TWITCH</option>
               <option value="youtube">YOUTUBE</option>
@@ -437,58 +474,59 @@
             </select>
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider font-chakra flex items-center gap-1.5">
               <i data-lucide="at-sign" class="w-3.5 h-3.5 text-cyber-green"></i>
               Usuario / Handle *
             </label>
-            <input type="text" id="form-handle" required placeholder="Ej: @LUISMISHIT" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-4 py-2.5 text-white font-rajdhani text-base font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green">
+            <input type="text" id="form-handle" required placeholder="Ej: @LUISMISHIT" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3.5 py-2 text-white font-rajdhani text-sm font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green">
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider font-chakra flex items-center gap-1.5">
               <i data-lucide="badge-check" class="w-3.5 h-3.5 text-cyber-green"></i>
               Rol / Título
             </label>
-            <input type="text" id="form-role" placeholder="Ej: DESIG, HOST, CASTER" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-4 py-2.5 text-white font-rajdhani text-base font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green">
+            <input type="text" id="form-role" placeholder="Ej: DESIG, HOST, CASTER" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3.5 py-2 text-white font-rajdhani text-sm font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green">
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <div class="space-y-1.5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          <div class="space-y-1">
             <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider font-chakra flex items-center gap-1.5">
               <i data-lucide="palette" class="w-3.5 h-3.5 text-cyber-green"></i>
               Color Neón de Acento
             </label>
             <div class="flex items-center gap-2">
-              <input type="color" id="form-accent-color" value="#00ff66" class="w-10 h-10 rounded border border-cyber-border bg-cyber-card cursor-pointer p-0.5">
-              <div class="flex items-center gap-1">
-                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#00ff66] border border-white/20" data-color="#00ff66" title="Verde Kick"></button>
-                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#9146FF] border border-white/20" data-color="#9146FF" title="Morado Twitch"></button>
-                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#FF0033] border border-white/20" data-color="#FF0033" title="Rojo YouTube"></button>
-                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#00F2EA] border border-white/20" data-color="#00F2EA" title="Cyan Cyberpunk"></button>
-                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#FFB703] border border-white/20" data-color="#FFB703" title="Ámbar Oro"></button>
+              <input type="color" id="form-accent-color" value="#00ff66" class="w-9 h-9 rounded border border-cyber-border bg-cyber-card cursor-pointer p-0.5 shrink-0">
+              <div class="flex items-center gap-1 flex-wrap">
+                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#00ff66] border border-white/20" data-color="#00ff66"></button>
+                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#9146FF] border border-white/20" data-color="#9146FF"></button>
+                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#FF0033] border border-white/20" data-color="#FF0033"></button>
+                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#00F2EA] border border-white/20" data-color="#00F2EA"></button>
+                <button type="button" class="preset-color w-6 h-6 rounded-full bg-[#FFB703] border border-white/20" data-color="#FFB703"></button>
               </div>
             </div>
           </div>
 
-          <div class="space-y-1.5">
+          <div class="space-y-1">
             <label class="text-xs font-semibold text-gray-300 uppercase tracking-wider font-chakra flex items-center gap-1.5">
               <i data-lucide="compass" class="w-3.5 h-3.5 text-cyber-green"></i>
               Lado Preferido
             </label>
-            <select id="form-default-side" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3 py-2.5 text-white font-medium focus:outline-none focus:border-cyber-green">
+            <select id="form-default-side" class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-cyber-green text-sm">
               <option value="left">Lado Izquierdo</option>
               <option value="right">Lado Derecho</option>
             </select>
           </div>
         </div>
 
-        <div class="pt-4 border-t border-cyber-border flex items-center justify-end gap-3">
-          <button type="button" id="btn-cancel-modal" class="px-5 py-2.5 rounded-lg border border-cyber-border hover:bg-cyber-card text-gray-300 font-medium text-sm transition-colors">
+        <!-- Modal Footer Actions (Sticky on Mobile) -->
+        <div class="pt-4 border-t border-cyber-border flex items-center justify-end gap-2.5 shrink-0">
+          <button type="button" id="btn-cancel-modal" class="px-4 py-2 rounded-lg border border-cyber-border hover:bg-cyber-card text-gray-300 font-medium text-xs sm:text-sm transition-colors">
             Cancelar
           </button>
-          <button type="submit" id="btn-save-presenter" class="px-6 py-2.5 rounded-lg bg-cyber-green text-black font-chakra font-bold text-sm hover:bg-emerald-400 transition-all flex items-center gap-2">
+          <button type="submit" id="btn-save-presenter" class="px-5 py-2 rounded-lg bg-cyber-green text-black font-chakra font-bold text-xs sm:text-sm hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,255,102,0.3)]">
             <i data-lucide="save" class="w-4 h-4"></i>
             <span>GUARDAR PRESENTADOR</span>
           </button>
@@ -497,30 +535,32 @@
     </div>
   </div>
 
-  <!-- MODAL: OBS URL -->
-  <div id="obs-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+  <!-- ============================================================
+       MODAL: OBS URL
+       ============================================================ -->
+  <div id="obs-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4">
     <div class="bg-cyber-dark border border-cyber-border rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl">
-      <div class="px-6 py-4 border-b border-cyber-border flex items-center justify-between bg-cyber-card/50">
-        <h3 class="text-lg font-bold font-chakra text-white flex items-center gap-2">
+      <div class="px-5 py-4 border-b border-cyber-border flex items-center justify-between bg-cyber-card/50">
+        <h3 class="text-base sm:text-lg font-bold font-chakra text-white flex items-center gap-2 truncate">
           <i data-lucide="video" class="w-5 h-5 text-cyber-green"></i>
-          CONFIGURACIÓN PARA OBS STUDIO / STREAMLABS
+          CONFIGURACIÓN PARA OBS STUDIO
         </h3>
         <button id="btn-close-obs-modal" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-cyber-border/40">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <div class="p-6 space-y-4 text-sm text-gray-300">
+      <div class="p-5 sm:p-6 space-y-4 text-xs sm:text-sm text-gray-300">
         <p>Copia esta URL y agrégala como fuente de navegador en tu escena de OBS:</p>
 
         <div class="flex items-center gap-2">
-          <input type="text" id="obs-url-input" readonly class="w-full bg-black/60 border border-cyber-border rounded-lg px-4 py-2 text-cyber-green font-mono text-sm select-all">
-          <button id="btn-copy-url-inside" class="px-4 py-2 rounded-lg bg-cyber-green text-black font-bold font-chakra hover:bg-emerald-400 shrink-0">
+          <input type="text" id="obs-url-input" readonly class="w-full bg-black/60 border border-cyber-border rounded-lg px-3 py-2 text-cyber-green font-mono text-xs select-all">
+          <button id="btn-copy-url-inside" class="px-3.5 py-2 rounded-lg bg-cyber-green text-black font-bold font-chakra hover:bg-emerald-400 shrink-0 text-xs">
             Copiar
           </button>
         </div>
 
-        <div class="space-y-2 bg-cyber-card p-4 rounded-xl border border-cyber-border font-mono text-xs">
+        <div class="space-y-2 bg-cyber-card p-3 sm:p-4 rounded-xl border border-cyber-border font-mono text-[11px] sm:text-xs">
           <div class="text-cyber-green font-bold mb-1">⚙️ Ajustes recomendados en OBS:</div>
           <div class="flex justify-between py-1 border-b border-cyber-border/50">
             <span class="text-gray-400">Tipo de Fuente:</span>

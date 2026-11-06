@@ -3,6 +3,7 @@ const socket = io();
 
 // Conexión
 const socketDot = document.getElementById('socket-dot');
+const socketDotMobile = document.getElementById('socket-dot-mobile');
 const socketStatus = document.getElementById('socket-status');
 
 // Escala y Auto-hide
@@ -94,12 +95,15 @@ function refreshIcons() {
 }
 
 function adjustPreviewScale() {
-  if (!previewContainer) return;
+  if (!previewContainer || !previewContainer.parentElement) return;
   const parentWidth = previewContainer.parentElement.clientWidth;
+  if (!parentWidth) return;
   const scale = parentWidth / 1920;
   previewContainer.style.transform = `scale(${scale})`;
 }
 window.addEventListener('resize', adjustPreviewScale);
+window.addEventListener('load', adjustPreviewScale);
+setTimeout(adjustPreviewScale, 150);
 
 // Selector de Tamaño (Escala)
 scalePills.addEventListener('click', (e) => {
@@ -109,9 +113,9 @@ scalePills.addEventListener('click', (e) => {
   socket.emit('set-scale', scale);
 
   document.querySelectorAll('.scale-btn').forEach(b => {
-    b.className = 'scale-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all';
+    b.className = 'scale-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap transition-all';
   });
-  btn.className = 'scale-btn px-2.5 py-1 rounded font-bold transition-all bg-cyber-green text-black';
+  btn.className = 'scale-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap transition-all';
 });
 
 // Selector de Auto-Ocultar
@@ -121,9 +125,9 @@ autohidePills.addEventListener('click', (e) => {
   currentAutoHide = parseInt(btn.dataset.sec, 10);
 
   document.querySelectorAll('.autohide-btn').forEach(b => {
-    b.className = 'autohide-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all';
+    b.className = 'autohide-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap transition-all';
   });
-  btn.className = 'autohide-btn px-2.5 py-1 rounded font-bold transition-all bg-cyber-green text-black';
+  btn.className = 'autohide-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap transition-all';
 });
 
 // Presets de colores
@@ -135,15 +139,21 @@ document.querySelectorAll('.preset-color').forEach(btn => {
 
 // Sockets
 socket.on('connect', () => {
-  socketDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse';
-  socketStatus.textContent = 'En Línea';
-  socketStatus.className = 'text-cyber-green font-semibold';
+  if (socketDot) socketDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse';
+  if (socketDotMobile) socketDotMobile.className = 'w-2 h-2 rounded-full bg-cyber-green animate-pulse';
+  if (socketStatus) {
+    socketStatus.textContent = 'En Línea';
+    socketStatus.className = 'text-cyber-green font-semibold';
+  }
 });
 
 socket.on('disconnect', () => {
-  socketDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
-  socketStatus.textContent = 'Desconectado';
-  socketStatus.className = 'text-red-400 font-semibold';
+  if (socketDot) socketDot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+  if (socketDotMobile) socketDotMobile.className = 'w-2 h-2 rounded-full bg-red-500';
+  if (socketStatus) {
+    socketStatus.textContent = 'Desconectado';
+    socketStatus.className = 'text-red-400 font-semibold';
+  }
 });
 
 socket.on('state-update', (state) => {
@@ -155,8 +165,8 @@ socket.on('state-update', (state) => {
     document.querySelectorAll('.scale-btn').forEach(b => {
       const match = parseInt(b.dataset.scale, 10) === state.scale;
       b.className = match
-        ? 'scale-btn px-2.5 py-1 rounded font-bold transition-all bg-cyber-green text-black'
-        : 'scale-btn px-2.5 py-1 rounded font-medium text-gray-400 hover:text-white transition-all';
+        ? 'scale-btn px-2.5 py-1 rounded text-[11px] font-bold bg-cyber-green text-black whitespace-nowrap transition-all'
+        : 'scale-btn px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:text-white whitespace-nowrap transition-all';
     });
   }
 
