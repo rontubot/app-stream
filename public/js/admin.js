@@ -87,7 +87,7 @@ let currentLiveState = {
   queue: { left: null, right: null },
   scale: 65
 };
-let currentAutoHide = 0;
+let currentAutoHide = 5; // Predeterminado: 5 segundos al cargar
 
 function refreshIcons() {
   if (window.lucide) window.lucide.createIcons();

@@ -133,7 +133,7 @@ if (presenters.length > 0) {
 let timerLeft = null;
 let timerRight = null;
 
-function triggerShowSlot(slot, presenter, autoHideSeconds = 0) {
+function triggerShowSlot(slot, presenter, autoHideSeconds = 5) {
   const targetSlot = (slot === 'right') ? 'right' : 'left';
 
   if (targetSlot === 'left' && timerLeft) {
