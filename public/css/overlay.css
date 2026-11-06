@@ -151,13 +151,13 @@ html, body {
    ============================================================ */
 .overlay-bottom-left {
   position: absolute;
-  top: 180px;
-  left: 78px;
+  top: 184px;
+  left: 84px;
   width: 440px;
-  height: 54px;
+  height: 46px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
   z-index: 10;
 }
 
@@ -166,32 +166,34 @@ html, body {
   align-items: center;
   justify-content: center;
   user-select: none;
+  flex-shrink: 0;
 }
 
 /* Logo oficial real de Kick */
 .kick-logo-img {
-  height: 35px;
+  height: 27px;
   width: auto;
-  max-width: 125px;
+  max-width: 120px;
   object-fit: contain;
-  filter: drop-shadow(0 0 10px rgba(83, 252, 24, 0.75));
+  filter: drop-shadow(0 0 8px rgba(83, 252, 24, 0.7));
   display: inline-block;
   vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .presenter-handle {
   color: #FFFFFF;
   font-family: 'Rajdhani', sans-serif;
   font-weight: 700;
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 330px;
+  max-width: 320px;
 }
 
 /* ============================================================
