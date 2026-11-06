@@ -129,6 +129,88 @@
       </div>
     </div>
 
+    <!-- SECCIÓN DE ESCENAS DE PANTALLA COMPLETA (BIRRAVERDE) -->
+    <div class="bg-cyber-dark border border-cyber-border rounded-xl p-5 shadow-xl space-y-4 relative overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-cyber-border/70">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded bg-cyber-green/10 border border-cyber-green flex items-center justify-center text-cyber-green">
+            <i data-lucide="clapperboard" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold font-chakra uppercase tracking-wide flex items-center gap-2 text-white">
+              ESCENAS DE PANTALLA COMPLETA
+              <span class="text-[11px] px-2 py-0.5 rounded bg-black/60 text-gray-400 font-mono border border-gray-700">BIRRAVERDE</span>
+            </h2>
+            <p class="text-xs text-gray-400">Activa o retira una escena cinematográfica animada en el stream con un solo clic</p>
+          </div>
+        </div>
+
+        <!-- Indicador de Escena Activa -->
+        <div id="scene-active-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase transition-all">
+          <span class="w-2.5 h-2.5 rounded-full bg-gray-500" id="scene-active-dot"></span>
+          <span id="scene-active-text">SIN ESCENA (STREAM EN VIVO)</span>
+        </div>
+      </div>
+
+      <!-- Botones de Escenas Rápidas -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <!-- Escena 1: Estamos por empezar -->
+        <button id="btn-scene-starting" class="btn-scene p-3.5 rounded-xl bg-cyber-card border border-cyber-border hover:border-cyber-green text-left transition-all group hover:shadow-[0_0_15px_rgba(0,255,102,0.2)]">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold font-chakra text-cyber-green flex items-center gap-1.5">
+              <i data-lucide="play-circle" class="w-4 h-4"></i> INICIANDO
+            </span>
+            <span class="text-[10px] text-gray-500 font-mono">Pre-Stream</span>
+          </div>
+          <div class="text-sm font-bold font-rajdhani text-white uppercase group-hover:text-cyber-green transition-colors">
+            ESTAMOS POR EMPEZAR
+          </div>
+          <div class="text-[11px] text-gray-400 truncate mt-0.5">
+            La transmisión comenzará en breve
+          </div>
+        </button>
+
+        <!-- Escena 2: Ya volvemos (BRB) -->
+        <button id="btn-scene-brb" class="btn-scene p-3.5 rounded-xl bg-cyber-card border border-cyber-border hover:border-yellow-400 text-left transition-all group hover:shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold font-chakra text-yellow-400 flex items-center gap-1.5">
+              <i data-lucide="pause-circle" class="w-4 h-4"></i> PAUSA
+            </span>
+            <span class="text-[10px] text-gray-500 font-mono">BRB</span>
+          </div>
+          <div class="text-sm font-bold font-rajdhani text-white uppercase group-hover:text-yellow-400 transition-colors">
+            YA VOLVEMOS
+          </div>
+          <div class="text-[11px] text-gray-400 truncate mt-0.5">
+            Breve pausa comercial • Enseguida regresamos
+          </div>
+        </button>
+
+        <!-- Escena 3: Stream Finalizado -->
+        <button id="btn-scene-ended" class="btn-scene p-3.5 rounded-xl bg-cyber-card border border-cyber-border hover:border-red-500 text-left transition-all group hover:shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold font-chakra text-red-400 flex items-center gap-1.5">
+              <i data-lucide="stop-circle" class="w-4 h-4"></i> FINAL
+            </span>
+            <span class="text-[10px] text-gray-500 font-mono">Outro</span>
+          </div>
+          <div class="text-sm font-bold font-rajdhani text-white uppercase group-hover:text-red-400 transition-colors">
+            STREAM FINALIZADO
+          </div>
+          <div class="text-[11px] text-gray-400 truncate mt-0.5">
+            ¡Gracias por acompañarnos hoy!
+          </div>
+        </button>
+
+        <!-- Botón Quitar Escena (Volver a En Vivo) -->
+        <button id="btn-hide-scene" class="p-3.5 rounded-xl bg-red-600/20 border border-red-500/40 hover:bg-red-600 hover:text-white text-red-400 text-center transition-all flex flex-col items-center justify-center gap-1 font-chakra font-bold">
+          <i data-lucide="eye-off" class="w-5 h-5"></i>
+          <span class="text-xs uppercase tracking-wider">QUITAR ESCENA</span>
+          <span class="text-[10px] text-gray-300 font-mono">(Volver a Cámara / Juego)</span>
+        </button>
+      </div>
+    </div>
+
     <!-- SECCIÓN DE CONTROL DUAL Y MONITOR OBS -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 

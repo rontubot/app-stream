@@ -21,7 +21,7 @@ const SETTINGS_FILE = path.join(__dirname, 'data', 'settings.json');
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Estado actual del overlay en vivo y de preparación (Queue / Preview)
+// Estado actual del overlay en vivo, cola y escenas de pantalla completa
 let liveState = {
   left: {
     isVisible: false,
@@ -36,10 +36,17 @@ let liveState = {
     shownAt: null
   },
   queue: {
-    left: null,   // Presentador preparado para el lado izquierdo
-    right: null   // Presentador preparado para el lado derecho
+    left: null,
+    right: null
   },
-  scale: 65
+  scale: 65,
+  scene: {
+    isActive: false,
+    type: null, // 'starting' | 'brb' | 'ended' | 'custom'
+    title: '',
+    subtitle: '',
+    startedAt: null
+  }
 };
 
 // Cargar presentadores del archivo
@@ -117,7 +124,6 @@ if (presenters.length === 0) {
   savePresenters(presenters);
 }
 
-// Inicializar cola con los primeros presentadores
 if (presenters.length > 0) {
   liveState.queue.left = presenters[0];
   liveState.queue.right = presenters[1] || presenters[0];
@@ -245,7 +251,6 @@ io.on('connection', (socket) => {
 
   // 1. Preparar un slot (Queue / Preview sin mostrarlo en stream)
   socket.on('prepare-slot', (data) => {
-    // data: { slot: 'left' | 'right', presenter, id }
     let target = data.presenter;
     if (!target && data.id) {
       target = presenters.find(p => p.id === data.id);
@@ -257,7 +262,6 @@ io.on('connection', (socket) => {
 
   // 2. Lanzar a en vivo lo que ya está preparado
   socket.on('launch-prepared', (data) => {
-    // data: { slot: 'left' | 'right' | 'both', autoHideSeconds }
     const slot = data.slot || 'both';
     const autoHide = data.autoHideSeconds || 0;
 
@@ -293,7 +297,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 4. Ocultar
+  // 4. Ocultar overlays
   socket.on('hide-slot', (slot) => {
     triggerHideSlot(slot || 'left');
   });
@@ -302,7 +306,25 @@ io.on('connection', (socket) => {
     triggerHideSlot('all');
   });
 
-  // 5. Escala
+  // 5. Escenas de pantalla completa (Ya volvemos, Empezando, Finalizado)
+  socket.on('show-scene', (data) => {
+    // data: { type, title, subtitle }
+    liveState.scene = {
+      isActive: true,
+      type: data.type || 'brb',
+      title: data.title || '',
+      subtitle: data.subtitle || '',
+      startedAt: Date.now()
+    };
+    io.emit('state-update', liveState);
+  });
+
+  socket.on('hide-scene', () => {
+    liveState.scene.isActive = false;
+    io.emit('state-update', liveState);
+  });
+
+  // 6. Escala
   socket.on('set-scale', (scalePercent) => {
     const s = Math.min(100, Math.max(40, Number(scalePercent) || 65));
     liveState.scale = s;
@@ -310,7 +332,7 @@ io.on('connection', (socket) => {
     io.emit('state-update', liveState);
   });
 
-  // 6. Guardar / Eliminar
+  // 7. Guardar / Eliminar
   socket.on('save-presenter', (presData) => {
     if (!presData.id) {
       presData.id = `pres-${Date.now()}`;

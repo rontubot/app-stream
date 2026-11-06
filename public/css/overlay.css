@@ -351,3 +351,354 @@ html, body {
     transform: scale(var(--overlay-scale)) translateX(120px);
   }
 }
+
+
+/* ============================================================
+   ESCENAS DE PANTALLA COMPLETA (FULLSCREEN STREAM SCENES)
+   ============================================================ */
+
+#fullscreen-scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, #0d141b 0%, #06090c 70%, #020405 100%);
+  overflow: hidden;
+}
+
+#fullscreen-scene.is-active {
+  opacity: 1;
+  visibility: visible;
+  animation: enterSceneFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#fullscreen-scene.is-exiting {
+  visibility: visible !important;
+  animation: exitSceneFade 0.55s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@keyframes enterSceneFade {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+@keyframes exitSceneFade {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: scale(0.96);
+  }
+}
+
+/* Fondo 3D con Rejilla Cyber Perspectiva */
+.scene-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cyber-grid-3d {
+  position: absolute;
+  bottom: -40%;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 255, 102, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 102, 0.15) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform: perspective(400px) rotateX(75deg);
+  animation: gridTravel 8s linear infinite;
+  mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, transparent 80%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, transparent 80%);
+}
+
+@keyframes gridTravel {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 60px;
+  }
+}
+
+/* Anillos de Radar / Pulsaciones de Luz detrás del logo */
+.cyber-radar-glow {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 255, 102, 0.18) 0%, rgba(0, 255, 102, 0.03) 45%, transparent 70%);
+  pointer-events: none;
+  animation: radarPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes radarPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* Rayo Escáner que recorre verticalmente */
+.cyber-scanline {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 102, 0.6) 50%, transparent 100%);
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.8);
+  opacity: 0.4;
+  animation: laserScan 6s linear infinite;
+}
+
+@keyframes laserScan {
+  0% { top: -20px; }
+  100% { top: 105%; }
+}
+
+/* Contenido Central: Logo BirraVerde + Texto */
+.scene-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 900px;
+  padding: 30px;
+}
+
+/* Badge de Estado */
+.scene-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px;
+  background: rgba(0, 255, 102, 0.1);
+  border: 1px solid rgba(0, 255, 102, 0.4);
+  border-radius: 30px;
+  color: #00ff66;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin-bottom: 30px;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
+  animation: badgeSlideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.scene-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #00ff66;
+  box-shadow: 0 0 8px #00ff66;
+  animation: sceneDotPulse 1.5s infinite;
+}
+
+@keyframes sceneDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.3); }
+}
+
+@keyframes badgeSlideDown {
+  0% { opacity: 0; transform: translateY(-20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Marco y Contenedor del Logo */
+.scene-logo-wrapper {
+  position: relative;
+  padding: 35px 60px;
+  background: linear-gradient(135deg, rgba(20, 28, 36, 0.85) 0%, rgba(10, 15, 20, 0.95) 100%);
+  border: 2px solid rgba(0, 255, 102, 0.4);
+  border-radius: 16px;
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(0, 255, 102, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  margin-bottom: 35px;
+  overflow: hidden;
+  animation: logoArrival 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both, logoFloat 5s ease-in-out infinite 1s;
+}
+
+.scene-logo-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 15px;
+  height: 15px;
+  border-top: 3px solid #00ff66;
+  border-left: 3px solid #00ff66;
+}
+
+.scene-logo-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15px;
+  height: 15px;
+  border-bottom: 3px solid #00ff66;
+  border-right: 3px solid #00ff66;
+}
+
+/* Imagen del Logo BirraVerde */
+.scene-logo-img {
+  max-width: 580px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 0 20px rgba(0, 255, 102, 0.5));
+}
+
+.scene-logo-shimmer {
+  position: absolute;
+  top: -50%;
+  left: -150%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.08) 60%,
+    transparent 100%
+  );
+  transform: rotate(30deg);
+  animation: logoShimmerSweep 5s infinite ease-in-out 1.2s;
+  pointer-events: none;
+}
+
+@keyframes logoShimmerSweep {
+  0% { left: -150%; }
+  30% { left: 200%; }
+  100% { left: 200%; }
+}
+
+@keyframes logoArrival {
+  0% {
+    opacity: 0;
+    transform: scale(1.3) translateY(40px);
+    filter: blur(15px) brightness(2);
+  }
+  70% {
+    transform: scale(0.98) translateY(-4px);
+    filter: blur(0px) brightness(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px) brightness(1);
+  }
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+/* Títulos de la Escena */
+.scene-text-block {
+  animation: textEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+}
+
+@keyframes textEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scene-title {
+  color: #FFFFFF;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 800;
+  font-size: 64px;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 255, 102, 0.6),
+    0 0 40px rgba(0, 255, 102, 0.3);
+  margin-bottom: 12px;
+}
+
+.scene-subtitle {
+  color: #CBD5E1;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  margin-bottom: 25px;
+}
+
+/* Barras visualizer */
+.scene-visualizer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+}
+
+.scene-visualizer .bar {
+  width: 5px;
+  height: 6px;
+  background: #00ff66;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(0, 255, 102, 0.8);
+  animation: eqBounce 1.2s ease-in-out infinite alternate;
+}
+
+.scene-visualizer .bar-1 { animation-delay: 0.1s; }
+.scene-visualizer .bar-2 { animation-delay: 0.3s; }
+.scene-visualizer .bar-3 { animation-delay: 0.5s; }
+.scene-visualizer .bar-4 { animation-delay: 0.2s; }
+.scene-visualizer .bar-5 { animation-delay: 0.4s; }
+.scene-visualizer .bar-6 { animation-delay: 0.6s; }
+.scene-visualizer .bar-7 { animation-delay: 0.25s; }
+.scene-visualizer .bar-8 { animation-delay: 0.45s; }
+
+@keyframes eqBounce {
+  0% { height: 4px; opacity: 0.4; }
+  100% { height: 26px; opacity: 1; }
+}

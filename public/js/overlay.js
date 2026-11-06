@@ -1,6 +1,7 @@
-// overlay.js - Manejo simultáneo de Lado Izquierdo y Lado Derecho
+// overlay.js - Manejo de Overlays Duales y Escenas de Pantalla Completa
 const socket = io();
 
+// Slots de Lower Thirds
 const slots = {
   left: {
     el: document.getElementById('slot-left'),
@@ -21,6 +22,13 @@ const slots = {
     hideTimeout: null
   }
 };
+
+// Elementos de Escena Pantalla Completa
+const sceneEl = document.getElementById('fullscreen-scene');
+const sceneBadgeText = document.getElementById('scene-badge-text');
+const sceneTitle = document.getElementById('scene-title');
+const sceneSubtitle = document.getElementById('scene-subtitle');
+let sceneHideTimeout = null;
 
 // Iconos oficiales
 const PLATFORM_ICONS = {
@@ -77,12 +85,8 @@ const PLATFORM_ICONS = {
 function formatNickname(nick) {
   if (!nick) return '';
   nick = nick.trim();
-  if (!nick.startsWith('“') && !nick.startsWith('"')) {
-    nick = `“${nick}`;
-  }
-  if (!nick.endsWith('”') && !nick.endsWith('"')) {
-    nick = `${nick}”`;
-  }
+  if (!nick.startsWith('“') && !nick.startsWith('"')) nick = `“${nick}`;
+  if (!nick.endsWith('”') && !nick.endsWith('"')) nick = `${nick}”`;
   return nick;
 }
 
@@ -95,7 +99,6 @@ function renderSlot(slotKey, presenter) {
   s.role.textContent = presenter.role || '';
   s.handle.textContent = presenter.handle || '';
 
-  // Plataforma
   const platKey = (presenter.platform || 'kick').toLowerCase();
   if (PLATFORM_ICONS[platKey]) {
     s.badge.innerHTML = PLATFORM_ICONS[platKey];
@@ -107,7 +110,6 @@ function renderSlot(slotKey, presenter) {
     `;
   }
 
-  // Colores específicos para este slot
   const accent = presenter.accentColor || '#00ff66';
   s.el.style.setProperty('--accent-color', accent);
   s.el.style.setProperty('--accent-glow', `${accent}B3`);
@@ -149,24 +151,85 @@ function hideSlot(slotKey) {
   }, 560);
 }
 
+// Manejo de Escena Pantalla Completa
+function showScene(sceneData) {
+  if (!sceneEl) return;
+
+  if (sceneHideTimeout) {
+    clearTimeout(sceneHideTimeout);
+    sceneHideTimeout = null;
+  }
+
+  let badge = 'TRANSMISIÓN EN PAUSA';
+  let title = sceneData.title || 'YA VOLVEMOS';
+  let sub = sceneData.subtitle || 'Enseguida regresamos';
+
+  if (sceneData.type === 'starting') {
+    badge = 'INICIANDO TRANSMISIÓN';
+    if (!sceneData.title) title = 'ESTAMOS POR EMPEZAR';
+    if (!sceneData.subtitle) sub = 'La transmisión comenzará en breve • Prepara tu birra';
+  } else if (sceneData.type === 'ended') {
+    badge = 'STREAM FINALIZADO';
+    if (!sceneData.title) title = 'STREAM FINALIZADO';
+    if (!sceneData.subtitle) sub = '¡Muchas gracias por acompañarnos hoy! • Nos vemos en el próximo stream';
+  } else if (sceneData.type === 'brb') {
+    badge = 'TRANSMISIÓN EN PAUSA';
+    if (!sceneData.title) title = 'YA VOLVEMOS';
+    if (!sceneData.subtitle) sub = 'Breve pausa comercial • Enseguida regresamos';
+  }
+
+  sceneBadgeText.textContent = badge;
+  sceneTitle.textContent = title;
+  sceneSubtitle.textContent = sub;
+
+  sceneEl.classList.remove('is-exiting');
+  sceneEl.classList.remove('is-active');
+  void sceneEl.offsetWidth; // Trigger reflow
+
+  sceneEl.classList.add('is-active');
+}
+
+function hideScene() {
+  if (!sceneEl || !sceneEl.classList.contains('is-active')) return;
+
+  if (sceneHideTimeout) {
+    clearTimeout(sceneHideTimeout);
+    sceneHideTimeout = null;
+  }
+
+  sceneEl.classList.remove('is-active');
+  sceneEl.classList.add('is-exiting');
+
+  sceneHideTimeout = setTimeout(() => {
+    sceneEl.classList.remove('is-exiting');
+    sceneHideTimeout = null;
+  }, 580);
+}
+
 // Sincronizar estado global
 socket.on('state-update', (state) => {
   if (!state) return;
 
-  // Actualizar escala dinámica
+  // Escala
   if (state.scale) {
     const scaleVal = state.scale / 100;
     document.documentElement.style.setProperty('--overlay-scale', scaleVal);
   }
 
-  // Slot Izquierdo
+  // Escena Pantalla Completa
+  if (state.scene && state.scene.isActive) {
+    showScene(state.scene);
+  } else {
+    hideScene();
+  }
+
+  // Lower Thirds
   if (state.left && state.left.isVisible && state.left.presenter) {
     showSlot('left', state.left.presenter);
   } else {
     hideSlot('left');
   }
 
-  // Slot Derecho
   if (state.right && state.right.isVisible && state.right.presenter) {
     showSlot('right', state.right.presenter);
   } else {

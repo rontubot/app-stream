@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stream Overlay - Dual Slot (Left & Right)</title>
+  <title>Stream Overlay - Dual Slot & Fullscreen Scenes</title>
   <link rel="stylesheet" href="/css/overlay.css">
 </head>
 <body>
@@ -40,6 +40,43 @@
         </div>
         <div class="overlay-bottom-right">
           <div class="presenter-role"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESCENA PANTALLA COMPLETA (YA VOLVEMOS / POR EMPEZAR / FINALIZADO) -->
+    <div id="fullscreen-scene">
+      <div class="scene-backdrop">
+        <div class="cyber-grid-3d"></div>
+        <div class="cyber-radar-glow"></div>
+        <div class="cyber-scanline"></div>
+      </div>
+
+      <div class="scene-content">
+        <div class="scene-badge" id="scene-badge">
+          <span class="scene-dot"></span>
+          <span id="scene-badge-text">TRANSMISIÓN EN PAUSA</span>
+        </div>
+
+        <div class="scene-logo-wrapper">
+          <div class="scene-logo-shimmer"></div>
+          <img src="/assets/logo-birraverde.png" alt="BirraVerde" class="scene-logo-img" id="scene-logo">
+        </div>
+
+        <div class="scene-text-block">
+          <h1 class="scene-title" id="scene-title">YA VOLVEMOS</h1>
+          <p class="scene-subtitle" id="scene-subtitle">Breve pausa comercial • Enseguida regresamos</p>
+        </div>
+
+        <div class="scene-visualizer">
+          <span class="bar bar-1"></span>
+          <span class="bar bar-2"></span>
+          <span class="bar bar-3"></span>
+          <span class="bar bar-4"></span>
+          <span class="bar bar-5"></span>
+          <span class="bar bar-6"></span>
+          <span class="bar bar-7"></span>
+          <span class="bar bar-8"></span>
         </div>
       </div>
     </div>

@@ -11,6 +11,15 @@ const autohidePills = document.getElementById('autohide-pills');
 const btnLaunchBothPrepared = document.getElementById('btn-launch-both-prepared');
 const btnHideBoth = document.getElementById('btn-hide-both');
 
+// Escenas de Pantalla Completa DOM
+const sceneActiveIndicator = document.getElementById('scene-active-indicator');
+const sceneActiveDot = document.getElementById('scene-active-dot');
+const sceneActiveText = document.getElementById('scene-active-text');
+const btnSceneStarting = document.getElementById('btn-scene-starting');
+const btnSceneBrb = document.getElementById('btn-scene-brb');
+const btnSceneEnded = document.getElementById('btn-scene-ended');
+const btnHideScene = document.getElementById('btn-hide-scene');
+
 // Slot Izquierdo DOM
 const badgeLeft = document.getElementById('badge-left');
 const dotLeft = document.getElementById('dot-left');
@@ -216,6 +225,31 @@ socket.on('state-update', (state) => {
     }
   }
 
+  // Estado de Escenas de Pantalla Completa
+  document.querySelectorAll('.btn-scene').forEach(b => b.classList.remove('ring-2', 'ring-cyber-green', 'ring-yellow-400', 'ring-red-400'));
+
+  if (state.scene && state.scene.isActive) {
+    let scTitle = state.scene.title || 'ESCENA';
+    if (state.scene.type === 'starting') {
+      btnSceneStarting.classList.add('ring-2', 'ring-cyber-green');
+      if (!state.scene.title) scTitle = 'ESTAMOS POR EMPEZAR';
+    } else if (state.scene.type === 'brb') {
+      btnSceneBrb.classList.add('ring-2', 'ring-yellow-400');
+      if (!state.scene.title) scTitle = 'YA VOLVEMOS';
+    } else if (state.scene.type === 'ended') {
+      btnSceneEnded.classList.add('ring-2', 'ring-red-400');
+      if (!state.scene.title) scTitle = 'STREAM FINALIZADO';
+    }
+
+    sceneActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)]';
+    sceneActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping';
+    sceneActiveText.textContent = `EN PANTALLA: ${scTitle}`;
+  } else {
+    sceneActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
+    sceneActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+    sceneActiveText.textContent = 'SIN ESCENA (STREAM EN VIVO)';
+  }
+
   renderPresentersGrid();
 });
 
@@ -279,10 +313,39 @@ btnLaunchBothPrepared.addEventListener('click', () => {
   socket.emit('launch-prepared', { slot: 'both', autoHideSeconds: currentAutoHide });
 });
 
-// Ocultar
+// Ocultar Lower Thirds
 btnHideLeft.addEventListener('click', () => socket.emit('hide-slot', 'left'));
 btnHideRight.addEventListener('click', () => socket.emit('hide-slot', 'right'));
 btnHideBoth.addEventListener('click', () => socket.emit('hide-all'));
+
+// Eventos de Escenas de Pantalla Completa
+btnSceneStarting.addEventListener('click', () => {
+  socket.emit('show-scene', {
+    type: 'starting',
+    title: 'ESTAMOS POR EMPEZAR',
+    subtitle: 'La transmisión comenzará en breve • Prepara tu birra'
+  });
+});
+
+btnSceneBrb.addEventListener('click', () => {
+  socket.emit('show-scene', {
+    type: 'brb',
+    title: 'YA VOLVEMOS',
+    subtitle: 'Breve pausa comercial • Enseguida regresamos'
+  });
+});
+
+btnSceneEnded.addEventListener('click', () => {
+  socket.emit('show-scene', {
+    type: 'ended',
+    title: 'STREAM FINALIZADO',
+    subtitle: '¡Muchas gracias por acompañarnos hoy! • Nos vemos en el próximo stream'
+  });
+});
+
+btnHideScene.addEventListener('click', () => {
+  socket.emit('hide-scene');
+});
 
 btnRefreshPreview.addEventListener('click', () => {
   previewIframe.src = '/overlay?t=' + Date.now();
