@@ -70,6 +70,10 @@ let liveState = {
     isActive: false,
     fight: null,
     shownAt: null
+  },
+  topHud: {
+    isVisible: true,
+    customText: ''
   }
 };
 
@@ -110,6 +114,12 @@ function loadSettings() {
       if (typeof data.defaultAutoHide === 'number') {
         liveState.defaultAutoHide = data.defaultAutoHide;
       }
+      if (data.topHud && typeof data.topHud.isVisible === 'boolean') {
+        liveState.topHud.isVisible = data.topHud.isVisible;
+      }
+      if (data.topHud && typeof data.topHud.customText === 'string') {
+        liveState.topHud.customText = data.topHud.customText;
+      }
       return data;
     }
   } catch (err) {
@@ -127,6 +137,10 @@ function saveSettings() {
       queue: {
         leftId: liveState.queue.left ? liveState.queue.left.id : null,
         rightId: liveState.queue.right ? liveState.queue.right.id : null
+      },
+      topHud: {
+        isVisible: liveState.topHud.isVisible,
+        customText: liveState.topHud.customText
       }
     };
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(payload, null, 2), 'utf-8');
@@ -619,6 +633,30 @@ io.on('connection', (socket) => {
   socket.on('hide-vs', () => {
     liveState.vs.isActive = false;
     io.emit('state-update', liveState);
+  });
+
+  // 5.c. Overlay Superior Dinámico BirraVerde (HUD y Marquesina)
+  socket.on('toggle-top-hud', (payload) => {
+    if (payload && typeof payload.isVisible === 'boolean') {
+      liveState.topHud.isVisible = payload.isVisible;
+    } else {
+      liveState.topHud.isVisible = !liveState.topHud.isVisible;
+    }
+    saveSettings();
+    io.emit('state-update', liveState);
+  });
+
+  socket.on('update-top-hud-text', (data) => {
+    if (data && typeof data.text === 'string') {
+      liveState.topHud.customText = data.text.trim();
+      saveSettings();
+      io.emit('state-update', liveState);
+    }
+  });
+
+  socket.on('trigger-hud-alert', (alertData) => {
+    // alertData: { type: 'follow'|'donation'|'comment', user, detail, amount }
+    io.emit('hud-alert', alertData);
   });
 
   socket.on('save-fight', (fightData, callback) => {

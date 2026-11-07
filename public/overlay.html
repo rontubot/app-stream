@@ -8,6 +8,76 @@
 </head>
 <body>
   <div id="overlay-stage">
+
+    <!-- ============================================================
+         OVERLAY SUPERIOR DINÁMICO: LOGO BIRRAVERDE Y BARRA DE EVENTOS (HUD)
+         ============================================================ -->
+    <div id="stream-top-hud" class="stream-top-hud is-visible">
+      <div class="hud-ambient-glow"></div>
+      
+      <!-- Contenedor Principal del HUD -->
+      <div class="hud-container">
+        <!-- Bloque del Logo y Marca BirraVerde -->
+        <div class="hud-brand-block">
+          <div class="hud-logo-frame">
+            <div class="hud-logo-scanner"></div>
+            <img src="/assets/logo-birraverde.png" class="hud-logo-img" alt="BirraVerde">
+          </div>
+          <div class="hud-brand-text">
+            <span class="hud-brand-title">BIRRAVERDE</span>
+            <span class="hud-brand-tag">STREAM</span>
+          </div>
+        </div>
+
+        <!-- Divisor Angular Cyber -->
+        <div class="hud-divider">
+          <span class="hud-divider-slash"></span>
+        </div>
+
+        <!-- Área de Contenido Dinámico (Ticker / Alertas de Eventos) -->
+        <div class="hud-content-area">
+          <!-- Ticker Rotativo Normal -->
+          <div class="hud-ticker-track" id="hud-ticker-track">
+            <!-- Item 1: Live Status & Kick -->
+            <div class="hud-ticker-item is-active" id="hud-ticker-item-live">
+              <span class="hud-badge-live">
+                <span class="hud-live-dot"></span>
+                <span>LIVE</span>
+              </span>
+              <span class="hud-ticker-text" id="hud-ticker-main-text">KICK.COM/BIRRAVERDE</span>
+            </div>
+
+            <!-- Item 2: Feed Dinámico / Mensaje Personalizado -->
+            <div class="hud-ticker-item" id="hud-ticker-item-feed">
+              <span class="hud-feed-badge">⚡</span>
+              <span class="hud-feed-text" id="hud-feed-text">¡Bienvenidos a la transmisión!</span>
+            </div>
+          </div>
+
+          <!-- Capa de Notificación / Alerta Emergente (Follows / Donaciones / Comentarios) -->
+          <div class="hud-alert-layer" id="hud-alert-layer">
+            <div class="hud-alert-badge" id="hud-alert-badge">
+              <span id="hud-alert-icon">⭐</span>
+              <span id="hud-alert-type">NUEVO FOLLOWER</span>
+            </div>
+            <div class="hud-alert-body">
+              <span class="hud-alert-user" id="hud-alert-user">@usuario</span>
+              <span class="hud-alert-detail" id="hud-alert-detail">se acaba de sumar al stream</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Esquina Cyber Derecha / Terminal Status -->
+        <div class="hud-corner-fin">
+          <div class="hud-signal-bars">
+            <span class="bar bar-1"></span>
+            <span class="bar bar-2"></span>
+            <span class="bar bar-3"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SLOT IZQUIERDO -->
     <div id="slot-left" class="slot-wrapper">
       <div class="overlay-card">

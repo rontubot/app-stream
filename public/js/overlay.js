@@ -460,4 +460,98 @@ socket.on('state-update', (state) => {
   } else {
     hideSlot('right');
   }
+
+  // Overlay Superior Dinámico (HUD BirraVerde y Barra de Eventos)
+  if (state.topHud) {
+    updateTopHud(state.topHud);
+  }
+});
+
+// ============================================================
+// OVERLAY SUPERIOR DINÁMICO (HUD BIRRAVERDE Y BARRA DE EVENTOS)
+// ============================================================
+const streamTopHud = document.getElementById('stream-top-hud');
+const hudTickerTrack = document.getElementById('hud-ticker-track');
+const hudTickerItemLive = document.getElementById('hud-ticker-item-live');
+const hudTickerItemFeed = document.getElementById('hud-ticker-item-feed');
+const hudTickerMainText = document.getElementById('hud-ticker-main-text');
+const hudFeedText = document.getElementById('hud-feed-text');
+const hudAlertLayer = document.getElementById('hud-alert-layer');
+const hudAlertBadge = document.getElementById('hud-alert-badge');
+const hudAlertIcon = document.getElementById('hud-alert-icon');
+const hudAlertType = document.getElementById('hud-alert-type');
+const hudAlertUser = document.getElementById('hud-alert-user');
+const hudAlertDetail = document.getElementById('hud-alert-detail');
+
+let hudTickerIndex = 0;
+let hudAlertTimeout = null;
+let isHudAlertActive = false;
+
+function updateTopHud(topHud) {
+  if (!streamTopHud) return;
+
+  if (topHud.isVisible !== false) {
+    streamTopHud.classList.add('is-visible');
+  } else {
+    streamTopHud.classList.remove('is-visible');
+  }
+
+  if (topHud.customText && hudFeedText) {
+    hudFeedText.textContent = topHud.customText;
+  }
+}
+
+// Rotación automática del ticker
+setInterval(() => {
+  if (isHudAlertActive) return;
+
+  hudTickerIndex = (hudTickerIndex + 1) % 2;
+  if (hudTickerIndex === 0) {
+    if (hudTickerItemFeed) hudTickerItemFeed.classList.remove('is-active');
+    if (hudTickerItemLive) hudTickerItemLive.classList.add('is-active');
+  } else {
+    if (hudTickerItemLive) hudTickerItemLive.classList.remove('is-active');
+    if (hudTickerItemFeed) hudTickerItemFeed.classList.add('is-active');
+  }
+}, 6000);
+
+// Escuchar alertas de eventos (Follows, Donaciones, Comentarios)
+socket.on('hud-alert', (data) => {
+  if (!streamTopHud || !hudAlertLayer || !data) return;
+
+  streamTopHud.classList.add('is-visible');
+  isHudAlertActive = true;
+
+  if (hudAlertTimeout) clearTimeout(hudAlertTimeout);
+
+  if (data.type === 'donation') {
+    if (hudAlertBadge) hudAlertBadge.className = 'hud-alert-badge type-donation';
+    if (hudAlertIcon) hudAlertIcon.textContent = '💎';
+    if (hudAlertType) hudAlertType.textContent = 'DONACIÓN';
+    if (hudAlertUser) hudAlertUser.textContent = data.user || 'Donador';
+    if (hudAlertDetail) hudAlertDetail.textContent = data.detail ? `(${data.amount || '$5.00'}) ${data.detail}` : `donó ${data.amount || '$5.00'}`;
+  } else if (data.type === 'comment') {
+    if (hudAlertBadge) hudAlertBadge.className = 'hud-alert-badge type-comment';
+    if (hudAlertIcon) hudAlertIcon.textContent = '💬';
+    if (hudAlertType) hudAlertType.textContent = 'CHAT';
+    if (hudAlertUser) hudAlertUser.textContent = data.user || '@usuario';
+    if (hudAlertDetail) hudAlertDetail.textContent = data.detail || 'comentó en el stream';
+  } else {
+    if (hudAlertBadge) hudAlertBadge.className = 'hud-alert-badge';
+    if (hudAlertIcon) hudAlertIcon.textContent = '⭐';
+    if (hudAlertType) hudAlertType.textContent = 'NUEVO FOLLOWER';
+    if (hudAlertUser) hudAlertUser.textContent = data.user || '@nuevo_seguidor';
+    if (hudAlertDetail) hudAlertDetail.textContent = data.detail || 'se acaba de suscribir / seguir';
+  }
+
+  if (hudTickerTrack) hudTickerTrack.style.opacity = '0';
+  hudAlertLayer.classList.add('is-showing');
+
+  hudAlertTimeout = setTimeout(() => {
+    hudAlertLayer.classList.remove('is-showing');
+    setTimeout(() => {
+      if (hudTickerTrack) hudTickerTrack.style.opacity = '1';
+      isHudAlertActive = false;
+    }, 400);
+  }, 7000);
 });

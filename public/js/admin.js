@@ -21,6 +21,17 @@ const btnSceneBrb = document.getElementById('btn-scene-brb');
 const btnSceneEnded = document.getElementById('btn-scene-ended');
 const btnHideScene = document.getElementById('btn-hide-scene');
 
+// Overlay Superior Dinámico (HUD BirraVerde) DOM
+const topHudStatusBadge = document.getElementById('top-hud-status-badge');
+const btnToggleTopHud = document.getElementById('btn-toggle-top-hud');
+const iconTopHudToggle = document.getElementById('icon-top-hud-toggle');
+const textTopHudToggle = document.getElementById('text-top-hud-toggle');
+const inputTopHudText = document.getElementById('input-top-hud-text');
+const btnSaveTopHudText = document.getElementById('btn-save-top-hud-text');
+const btnTestFollow = document.getElementById('btn-test-follow');
+const btnTestDonation = document.getElementById('btn-test-donation');
+const btnTestComment = document.getElementById('btn-test-comment');
+
 // Navbar y Navegación de Pestañas
 const navTabMain = document.getElementById('nav-tab-main');
 const navTabAnimations = document.getElementById('nav-tab-animations');
@@ -500,6 +511,37 @@ socket.on('state-update', (state) => {
       if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
       if (vsActiveText) vsActiveText.textContent = 'SIN COMBATE EN VIVO';
     }
+  }
+
+  // Estado del Overlay Superior Dinámico (HUD BirraVerde)
+  if (state.topHud) {
+    const isTopHudVisible = state.topHud.isVisible !== false;
+    if (topHudStatusBadge) {
+      if (isTopHudVisible) {
+        topHudStatusBadge.className = 'px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/40 uppercase';
+        topHudStatusBadge.textContent = 'ACTIVO EN STREAM';
+      } else {
+        topHudStatusBadge.className = 'px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px] font-mono border border-gray-700 uppercase';
+        topHudStatusBadge.textContent = 'OCULTO EN STREAM';
+      }
+    }
+
+    if (btnToggleTopHud) {
+      if (isTopHudVisible) {
+        btnToggleTopHud.className = 'px-3.5 py-1.5 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.3)]';
+        if (textTopHudToggle) textTopHudToggle.textContent = 'OVERLAY ACTIVO';
+        if (iconTopHudToggle) iconTopHudToggle.setAttribute('data-lucide', 'eye');
+      } else {
+        btnToggleTopHud.className = 'px-3.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-gray-500 text-gray-300 font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5';
+        if (textTopHudToggle) textTopHudToggle.textContent = 'OVERLAY OCULTO';
+        if (iconTopHudToggle) iconTopHudToggle.setAttribute('data-lucide', 'eye-off');
+      }
+    }
+
+    if (inputTopHudText && document.activeElement !== inputTopHudText) {
+      inputTopHudText.value = state.topHud.customText || '';
+    }
+    refreshIcons();
   }
 
   saveToLocalStorage();
@@ -1543,6 +1585,81 @@ if (cardSceneVelada) {
 if (btnCollapseVeladaPanel) {
   btnCollapseVeladaPanel.addEventListener('click', () => {
     toggleVeladaModule(false);
+  });
+}
+
+// ============================================================
+// OVERLAY SUPERIOR DINÁMICO (HUD BIRRAVERDE Y BARRA DE EVENTOS)
+// ============================================================
+if (btnToggleTopHud) {
+  btnToggleTopHud.addEventListener('click', () => {
+    const isCurrentVisible = currentLiveState.topHud ? currentLiveState.topHud.isVisible !== false : true;
+    socket.emit('toggle-top-hud', { isVisible: !isCurrentVisible });
+    showToast(!isCurrentVisible ? '👁️ Overlay Superior Activado' : '🕶️ Overlay Superior Ocultado');
+  });
+}
+
+if (btnSaveTopHudText && inputTopHudText) {
+  btnSaveTopHudText.addEventListener('click', () => {
+    const text = inputTopHudText.value.trim();
+    socket.emit('update-top-hud-text', { text });
+    showToast('✅ Texto de marquesina actualizado en OBS');
+  });
+
+  inputTopHudText.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      btnSaveTopHudText.click();
+    }
+  });
+}
+
+// Simulador de Eventos (Follows, Donaciones, Comentarios)
+if (btnTestFollow) {
+  btnTestFollow.addEventListener('click', () => {
+    const testUsers = ['@alex_gamer', '@valen_kick', '@cyber_streamer', '@birra_fan', '@rodrigo_live'];
+    const user = testUsers[Math.floor(Math.random() * testUsers.length)];
+    socket.emit('trigger-hud-alert', {
+      type: 'follow',
+      user: user,
+      detail: 'se acaba de suscribir / seguir al stream'
+    });
+    showToast(`⭐ Simulación enviada: Follow de ${user}`);
+  });
+}
+
+if (btnTestDonation) {
+  btnTestDonation.addEventListener('click', () => {
+    const amounts = ['$5.00', '$10.00', '$25.00', '$50.00', '$100.00'];
+    const testUsers = ['@el_donador', '@luismishit_fan', '@santi_birra', '@vip_kick'];
+    const msgs = ['¡Gran transmisión!', 'Para las birras del stream 🍻', 'Apoyando el directo 🔥', '¡Vamos con todo el hype!'];
+    const user = testUsers[Math.floor(Math.random() * testUsers.length)];
+    const amount = amounts[Math.floor(Math.random() * amounts.length)];
+    const msg = msgs[Math.floor(Math.random() * msgs.length)];
+    socket.emit('trigger-hud-alert', {
+      type: 'donation',
+      user: user,
+      amount: amount,
+      detail: msg
+    });
+    showToast(`💎 Simulación enviada: Donación de ${user} (${amount})`);
+  });
+}
+
+if (btnTestComment) {
+  btnTestComment.addEventListener('click', () => {
+    const testComments = [
+      { user: '@facu_kick', msg: '¡Qué buen overlay se armaron!' },
+      { user: '@marian_99', msg: '¿A qué hora empieza la pelea estelar?' },
+      { user: '@nico_birra', msg: '¡El mejor stream de Kick de lejos!' }
+    ];
+    const item = testComments[Math.floor(Math.random() * testComments.length)];
+    socket.emit('trigger-hud-alert', {
+      type: 'comment',
+      user: item.user,
+      detail: item.msg
+    });
+    showToast(`💬 Simulación enviada: Comentario de ${item.user}`);
   });
 }
 

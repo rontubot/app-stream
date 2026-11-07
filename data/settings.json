@@ -4,5 +4,9 @@
   "queue": {
     "leftId": "pres-1",
     "rightId": "pres-2"
+  },
+  "topHud": {
+    "isVisible": true,
+    "customText": ""
   }
 }
