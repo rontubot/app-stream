@@ -31,7 +31,7 @@ const sceneTitle = document.getElementById('scene-title');
 const sceneSubtitle = document.getElementById('scene-subtitle');
 const sceneTextBlock = document.getElementById('scene-text-block');
 const sceneLogoWrapper = document.getElementById('scene-logo-wrapper');
-const sceneStinger = document.getElementById('scene-stinger');
+const sceneLaser = document.getElementById('scene-laser');
 const sceneRadarGlow = document.getElementById('scene-radar-glow');
 
 let sceneHideTimeout = null;
@@ -194,7 +194,7 @@ function applySceneContent(info) {
   }
 }
 
-// Disparar animación de transición temática BirraVerde entre escenas activas
+// Disparar animación de transición con escaneo láser minimalista de arriba a abajo
 function triggerSceneTransition(info) {
   if (sceneTransitionTimer) {
     clearTimeout(sceneTransitionTimer);
@@ -205,7 +205,7 @@ function triggerSceneTransition(info) {
     sceneCleanupTimer = null;
   }
 
-  // 1. Salida rápida estilizada de los textos actuales
+  // 1. Salida rápida y limpia de los textos actuales
   if (sceneTextBlock) {
     sceneTextBlock.classList.remove('is-switching-in');
     sceneTextBlock.classList.add('is-switching-out');
@@ -215,31 +215,26 @@ function triggerSceneTransition(info) {
     sceneBadge.classList.add('is-switching-out');
   }
 
-  // 2. Disparar Stinger cibernético de BirraVerde
-  if (sceneStinger) {
-    sceneStinger.classList.remove('is-active');
-    void sceneStinger.offsetWidth; // Trigger reflow
-    sceneStinger.classList.add('is-active');
+  // 2. Disparar línea láser en primer plano barriendo de arriba a abajo
+  if (sceneLaser) {
+    sceneLaser.classList.remove('is-active');
+    void sceneLaser.offsetWidth; // Trigger reflow
+    sceneLaser.classList.add('is-active');
   }
 
-  // 3. Pulso de choque de energía en el contenedor del logo BirraVerde y radar
-  if (sceneLogoWrapper) {
-    sceneLogoWrapper.classList.remove('is-pulsing');
-    void sceneLogoWrapper.offsetWidth;
-    sceneLogoWrapper.classList.add('is-pulsing');
-  }
-  if (sceneRadarGlow) {
-    sceneRadarGlow.classList.remove('is-pulsing');
-    void sceneRadarGlow.offsetWidth;
-    sceneRadarGlow.classList.add('is-pulsing');
-  }
-
-  // 4. A los 220ms (clímax del destello y barrido verde BirraVerde):
+  // 3. Cuando la línea láser pasa por el centro (~260ms):
   sceneTransitionTimer = setTimeout(() => {
-    // Reemplazar textos y estilos del nuevo estado
+    // Resplandor sutil en el logo al ser escaneado por el láser
+    if (sceneLogoWrapper) {
+      sceneLogoWrapper.classList.remove('is-scanning');
+      void sceneLogoWrapper.offsetWidth;
+      sceneLogoWrapper.classList.add('is-scanning');
+    }
+
+    // Colocar el nuevo contenido de la escena inmediatamente al paso del láser
     applySceneContent(info);
 
-    // Entrada limpia con resplandor para los nuevos textos
+    // Entrada limpia y revelación del nuevo texto
     if (sceneTextBlock) {
       sceneTextBlock.classList.remove('is-switching-out');
       sceneTextBlock.classList.add('is-switching-in');
@@ -249,18 +244,17 @@ function triggerSceneTransition(info) {
       sceneBadge.classList.add('is-switching-in');
     }
 
-    // 5. Al terminar la transición (~650ms), limpiar clases temporales
+    // 4. Al completar el paso del láser por abajo (~720ms), limpiar clases temporales
     sceneCleanupTimer = setTimeout(() => {
-      if (sceneStinger) sceneStinger.classList.remove('is-active');
+      if (sceneLaser) sceneLaser.classList.remove('is-active');
       if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-in');
       if (sceneBadge) sceneBadge.classList.remove('is-switching-in');
-      if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-pulsing');
-      if (sceneRadarGlow) sceneRadarGlow.classList.remove('is-pulsing');
+      if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-scanning');
       sceneCleanupTimer = null;
-    }, 450);
+    }, 460);
 
     sceneTransitionTimer = null;
-  }, 220);
+  }, 260);
 }
 
 // Manejo de Escena Pantalla Completa
@@ -281,7 +275,7 @@ function showScene(sceneData) {
                           sceneEl.classList.contains('is-active') && 
                           !sceneEl.classList.contains('is-exiting');
 
-  // CASO A: Si ya estamos en una animación activa (ej: pasar de "ya vuelvo" a "stream finalizado")
+  // CASO A: Si ya estamos en una escena activa (ej: pasar de "ya vuelvo" a "stream finalizado")
   if (isAlreadyActive) {
     // Si la información no cambió, ignorar para evitar transiciones innecesarias
     if (currentSceneType === info.type && 
@@ -294,7 +288,7 @@ function showScene(sceneData) {
     currentSceneTitle = info.title;
     currentSceneSubtitle = info.sub;
 
-    // Ejecutar transición cinemática BirraVerde sin quitar is-active ni mostrar la escena de atrás
+    // Ejecutar escaneo láser minimalista de arriba a abajo sin transparentar la pantalla
     triggerSceneTransition(info);
     return;
   }
@@ -308,11 +302,10 @@ function showScene(sceneData) {
   applySceneContent(info);
 
   // Limpiar estados de transición residuales
-  if (sceneStinger) sceneStinger.classList.remove('is-active');
+  if (sceneLaser) sceneLaser.classList.remove('is-active');
   if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-out', 'is-switching-in');
   if (sceneBadge) sceneBadge.classList.remove('is-switching-out', 'is-switching-in');
-  if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-pulsing');
-  if (sceneRadarGlow) sceneRadarGlow.classList.remove('is-pulsing');
+  if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-scanning');
 
   sceneEl.classList.remove('is-exiting');
   sceneEl.classList.remove('is-active');
@@ -342,11 +335,10 @@ function hideScene() {
   currentSceneTitle = '';
   currentSceneSubtitle = '';
 
-  if (sceneStinger) sceneStinger.classList.remove('is-active');
+  if (sceneLaser) sceneLaser.classList.remove('is-active');
   if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-out', 'is-switching-in');
   if (sceneBadge) sceneBadge.classList.remove('is-switching-out', 'is-switching-in');
-  if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-pulsing');
-  if (sceneRadarGlow) sceneRadarGlow.classList.remove('is-pulsing');
+  if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-scanning');
 
   sceneEl.classList.remove('is-active');
   sceneEl.classList.add('is-exiting');

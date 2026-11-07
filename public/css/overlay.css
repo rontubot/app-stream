@@ -654,269 +654,193 @@ html, body {
 }
 
 /* ============================================================
-   STINGER DE TRANSICIÓN BIRRAVERDE ENTRE ESCENAS ACTIVAS
-   (Efecto cinematográfico cibernético sin mostrar la escena de atrás)
+   LÍNEA LÁSER MINIMALISTA DE TRANSICIÓN EN PRIMER PLANO
+   (Barre de arriba a abajo y coloca la nueva escena)
    ============================================================ */
 
-.scene-transition-stinger {
+.scene-transition-laser {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 50;
+  z-index: 100;
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
 }
 
-.scene-transition-stinger.is-active {
+.scene-transition-laser.is-active {
   opacity: 1;
   visibility: visible;
 }
 
-/* Destello general de fondo verde cyber durante el cambio */
-.stinger-flare {
+/* El haz láser que recorre verticalmente toda la pantalla */
+.laser-beam {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(0, 255, 102, 0.3) 0%, rgba(0, 255, 102, 0.08) 40%, transparent 70%);
-  opacity: 0;
+  left: 0;
+  width: 100%;
+  height: 90px;
+  top: -100px;
+  pointer-events: none;
 }
 
-.scene-transition-stinger.is-active .stinger-flare {
-  animation: flareFlash 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.scene-transition-laser.is-active .laser-beam {
+  animation: laserScanDown 0.72s cubic-bezier(0.25, 1, 0.35, 1) forwards;
 }
 
-@keyframes flareFlash {
+@keyframes laserScanDown {
   0% {
+    top: -100px;
     opacity: 0;
-    transform: scale(0.85);
   }
-  35% {
+  10% {
     opacity: 1;
-    transform: scale(1.1);
+  }
+  85% {
+    opacity: 1;
   }
   100% {
+    top: 105%;
     opacity: 0;
-    transform: scale(1.3);
   }
 }
 
-/* Franjas / Cuchillas cortantes angulares cyber (Stinger Slashes) */
-.stinger-slash {
+/* Núcleo cortante horizontal del láser */
+.laser-core {
   position: absolute;
-  top: -50%;
-  width: 170%;
-  height: 200%;
-  transform: rotate(-25deg);
-  pointer-events: none;
-  opacity: 0;
-}
-
-.stinger-slash-1 {
-  left: -170%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(0, 255, 102, 0.1) 25%,
-    rgba(0, 255, 102, 0.7) 48%,
-    rgba(255, 255, 255, 0.95) 50%,
-    rgba(0, 255, 102, 0.7) 52%,
-    rgba(0, 255, 102, 0.1) 75%,
-    transparent 100%
-  );
-  box-shadow: 0 0 50px rgba(0, 255, 102, 0.85);
-}
-
-.stinger-slash-2 {
-  left: -190%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(0, 200, 80, 0.2) 35%,
-    rgba(0, 255, 102, 0.6) 50%,
-    transparent 65%
-  );
-}
-
-.scene-transition-stinger.is-active .stinger-slash-1 {
-  opacity: 1;
-  animation: slashWipe1 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-.scene-transition-stinger.is-active .stinger-slash-2 {
-  opacity: 1;
-  animation: slashWipe2 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) 0.04s forwards;
-}
-
-@keyframes slashWipe1 {
-  0% { left: -170%; }
-  100% { left: 140%; }
-}
-
-@keyframes slashWipe2 {
-  0% { left: -190%; }
-  100% { left: 120%; }
-}
-
-/* Destello central con Emblema / Logo BirraVerde */
-.stinger-center-burst {
-  position: absolute;
-  top: 45%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.7);
-  opacity: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 52;
-}
-
-.stinger-logo-img {
-  max-width: 520px;
-  height: auto;
-  filter: drop-shadow(0 0 35px #00ff66) drop-shadow(0 0 70px rgba(0, 255, 102, 0.7)) brightness(1.35);
-}
-
-.scene-transition-stinger.is-active .stinger-center-burst {
-  animation: centerLogoBurst 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes centerLogoBurst {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.75);
-    filter: blur(10px);
-  }
-  35% {
-    opacity: 0.95;
-    transform: translate(-50%, -50%) scale(1.06);
-    filter: blur(0px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.28);
-    filter: blur(8px);
-  }
-}
-
-/* Haz de luz anamórfico horizontal */
-.stinger-light-streak {
-  position: absolute;
-  top: 45%;
+  bottom: 0;
   left: 0;
   width: 100%;
   height: 4px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(0, 255, 102, 0.8) 25%,
+    rgba(0, 255, 102, 0.3) 10%,
+    rgba(0, 255, 102, 0.95) 30%,
     #ffffff 50%,
-    rgba(0, 255, 102, 0.8) 75%,
+    rgba(0, 255, 102, 0.95) 70%,
+    rgba(0, 255, 102, 0.3) 90%,
     transparent 100%
   );
-  box-shadow: 0 0 25px rgba(0, 255, 102, 1), 0 0 50px rgba(0, 255, 102, 0.6);
-  opacity: 0;
-  transform: scaleX(0.1);
-  z-index: 51;
+  box-shadow: 
+    0 0 15px #00ff66,
+    0 0 30px rgba(0, 255, 102, 0.9),
+    0 0 50px rgba(0, 255, 102, 0.5);
 }
 
-.scene-transition-stinger.is-active .stinger-light-streak {
-  animation: streakExpand 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* Estela suave y translúcida hacia arriba */
+.laser-trail {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  background: linear-gradient(to top, rgba(0, 255, 102, 0.16) 0%, rgba(0, 255, 102, 0.04) 50%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, transparent 100%);
 }
 
-@keyframes streakExpand {
+/* Destello sutil de brillo en el centro */
+.laser-glare {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, #ffffff 0%, rgba(0, 255, 102, 0.8) 50%, transparent 80%);
+  box-shadow: 0 0 25px #00ff66;
+}
+
+/* Resplandor sutil en el logo cuando el láser pasa por encima */
+.scene-logo-wrapper.is-scanning {
+  animation: logoLaserSweep 0.5s cubic-bezier(0.25, 1, 0.35, 1) forwards !important;
+}
+
+@keyframes logoLaserSweep {
   0% {
-    opacity: 0;
-    transform: scaleX(0.1);
+    filter: drop-shadow(0 0 20px rgba(0, 255, 102, 0.2));
   }
-  30% {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scaleX(1.3);
-  }
-}
-
-/* Pulso de impacto en el contenedor del logo y radar glow */
-.scene-logo-wrapper.is-pulsing {
-  animation: logoTransitionPulse 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-}
-
-@keyframes logoTransitionPulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 102, 0.2);
-  }
-  35% {
-    transform: scale(1.04);
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 60px rgba(0, 255, 102, 0.8), inset 0 0 25px rgba(0, 255, 102, 0.4);
+  40% {
+    filter: drop-shadow(0 0 35px rgba(0, 255, 102, 0.85)) brightness(1.15);
     border-color: rgba(0, 255, 102, 0.9);
   }
   100% {
-    transform: scale(1);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 102, 0.2);
+    filter: drop-shadow(0 0 20px rgba(0, 255, 102, 0.2));
   }
 }
 
-.cyber-radar-glow.is-pulsing {
-  animation: radarTransitionPulse 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-}
-
-@keyframes radarTransitionPulse {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.7;
-  }
-  40% {
-    transform: translate(-50%, -50%) scale(1.35);
-    opacity: 1;
-    background: radial-gradient(circle, rgba(0, 255, 102, 0.4) 0%, rgba(0, 255, 102, 0.1) 50%, transparent 70%);
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1.15);
-    opacity: 0.8;
-  }
-}
-
-/* Transición suave y limpia de Textos (Salida y Entrada sincronizadas) */
+/* Transición minimalista y limpia de Textos (Salida y Entrada sincronizadas con el paso del láser) */
 .scene-text-block.is-switching-out,
 .scene-badge.is-switching-out {
-  animation: sceneTextOut 0.22s cubic-bezier(0.7, 0, 0.84, 0) forwards !important;
+  animation: textScanOut 0.22s cubic-bezier(0.7, 0, 0.84, 0) forwards !important;
 }
 
 .scene-text-block.is-switching-in,
 .scene-badge.is-switching-in {
-  animation: sceneTextIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  animation: textScanIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
-@keyframes sceneTextOut {
+@keyframes textScanOut {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     filter: blur(0px);
   }
   100% {
     opacity: 0;
-    transform: translateY(-16px) scale(0.96);
-    filter: blur(6px);
+    transform: translateY(-10px);
+    filter: blur(4px);
   }
 }
 
-@keyframes sceneTextIn {
+@keyframes textScanIn {
   0% {
     opacity: 0;
-    transform: translateY(18px) scale(1.03);
-    filter: blur(6px);
+    transform: translateY(12px);
+    filter: blur(4px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     filter: blur(0px);
   }
+}
+
+/* Estilos de badges por tipo de escena */
+.scene-badge.badge-starting {
+  background: rgba(0, 255, 102, 0.12);
+  border-color: rgba(0, 255, 102, 0.6);
+  color: #00ff66;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+}
+.scene-badge.badge-starting .scene-dot {
+  background-color: #00ff66;
+  box-shadow: 0 0 8px #00ff66;
+}
+
+.scene-badge.badge-brb {
+  background: rgba(234, 179, 8, 0.12);
+  border-color: rgba(234, 179, 8, 0.6);
+  color: #facc15;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+}
+.scene-badge.badge-brb .scene-dot {
+  background-color: #facc15;
+  box-shadow: 0 0 8px #facc15;
+}
+
+.scene-badge.badge-ended {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #f87171;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+}
+.scene-badge.badge-ended .scene-dot {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
 }
 
 /* Estilos de badges por tipo de escena */
