@@ -49,11 +49,18 @@ const queueNickRight = document.getElementById('queue-nick-right');
 const queueHandleRight = document.getElementById('queue-handle-right');
 const btnLaunchPreparedRight = document.getElementById('btn-launch-prepared-right');
 
-// Monitor Preview
+// Monitor Preview & Control de Visibilidad
 const previewContainer = document.getElementById('preview-container');
 const previewIframe = document.getElementById('preview-iframe');
 const btnRefreshPreview = document.getElementById('btn-refresh-preview');
 const btnCopyObs = document.getElementById('btn-copy-obs');
+const colMonitor = document.getElementById('col-monitor');
+const colSlotLeft = document.getElementById('col-slot-left');
+const colSlotRight = document.getElementById('col-slot-right');
+const btnToggleMonitor = document.getElementById('btn-toggle-monitor');
+const btnHideMonitorCard = document.getElementById('btn-hide-monitor-card');
+const textToggleMonitor = document.getElementById('text-toggle-monitor');
+const iconToggleMonitor = document.getElementById('icon-toggle-monitor');
 
 // Deck de Presentadores y Modales
 const presentersGrid = document.getElementById('presenters-grid');
@@ -87,6 +94,7 @@ const toastContainer = document.getElementById('toast-container');
 // Claves de LocalStorage
 const LS_PRESENTERS_KEY = 'birraverde_stream_presenters_v1';
 const LS_SETTINGS_KEY = 'birraverde_stream_settings_v1';
+const LS_MONITOR_VISIBLE_KEY = 'birraverde_stream_monitor_visible_v1';
 
 // Estado local reactivo
 let presentersList = [];
@@ -159,6 +167,11 @@ function loadFromLocalStorage() {
         currentLiveState.defaultAutoHide = parsedSettings.defaultAutoHide;
         updateAutoHideUI(currentAutoHide);
       }
+    }
+
+    const rawMonitorVisible = localStorage.getItem(LS_MONITOR_VISIBLE_KEY);
+    if (rawMonitorVisible === 'false') {
+      setMonitorVisibility(false, false);
     }
   } catch (err) {
     console.warn('Error leyendo LocalStorage:', err);
@@ -504,6 +517,77 @@ btnHideScene.addEventListener('click', () => {
 btnRefreshPreview.addEventListener('click', () => {
   previewIframe.src = '/overlay?t=' + Date.now();
 });
+
+// ============================================================
+// VISIBILIDAD DEL MONITOR OBS EN VIVO
+// ============================================================
+function setMonitorVisibility(visible, save = true) {
+  if (!colMonitor) return;
+
+  if (visible) {
+    // Mostrar monitor
+    colMonitor.classList.remove('hidden');
+    if (colSlotLeft) {
+      colSlotLeft.classList.remove('lg:col-span-6');
+      colSlotLeft.classList.add('lg:col-span-4');
+    }
+    if (colSlotRight) {
+      colSlotRight.classList.remove('lg:col-span-6');
+      colSlotRight.classList.add('lg:col-span-4');
+    }
+    if (textToggleMonitor) textToggleMonitor.textContent = 'Ocultar Monitor';
+    if (btnToggleMonitor) {
+      btnToggleMonitor.className = 'col-span-2 sm:col-auto px-3 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-gray-500 text-gray-300 hover:text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5';
+    }
+    if (iconToggleMonitor) {
+      iconToggleMonitor.setAttribute('data-lucide', 'eye-off');
+    }
+    setTimeout(adjustPreviewScale, 50);
+  } else {
+    // Ocultar monitor y expandir los slots a 6 columnas cada uno
+    colMonitor.classList.add('hidden');
+    if (colSlotLeft) {
+      colSlotLeft.classList.remove('lg:col-span-4');
+      colSlotLeft.classList.add('lg:col-span-6');
+    }
+    if (colSlotRight) {
+      colSlotRight.classList.remove('lg:col-span-4');
+      colSlotRight.classList.add('lg:col-span-6');
+    }
+    if (textToggleMonitor) textToggleMonitor.textContent = 'Mostrar Monitor';
+    if (btnToggleMonitor) {
+      btnToggleMonitor.className = 'col-span-2 sm:col-auto px-3 py-1.5 rounded-lg bg-cyber-green/10 border border-cyber-green text-cyber-green shadow-[0_0_10px_rgba(0,255,102,0.2)] font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5';
+    }
+    if (iconToggleMonitor) {
+      iconToggleMonitor.setAttribute('data-lucide', 'monitor');
+    }
+  }
+
+  if (save) {
+    try {
+      localStorage.setItem(LS_MONITOR_VISIBLE_KEY, visible ? 'true' : 'false');
+    } catch (e) {
+      console.warn('Error guardando preferencia de monitor:', e);
+    }
+  }
+
+  refreshIcons();
+}
+
+if (btnToggleMonitor) {
+  btnToggleMonitor.addEventListener('click', () => {
+    const isCurrentlyHidden = colMonitor.classList.contains('hidden');
+    setMonitorVisibility(isCurrentlyHidden, true);
+    showToast(isCurrentlyHidden ? '🖥️ Monitor OBS en vivo visible' : '👁️‍🗨️ Monitor OBS en vivo oculto');
+  });
+}
+
+if (btnHideMonitorCard) {
+  btnHideMonitorCard.addEventListener('click', () => {
+    setMonitorVisibility(false, true);
+    showToast('👁️‍🗨️ Monitor OBS oculto. Puedes volver a activarlo con el botón "Mostrar Monitor".');
+  });
+}
 
 // ============================================================
 // RENDERIZAR DECK DE PRESENTADORES
