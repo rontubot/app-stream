@@ -22,6 +22,21 @@ const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
 // Middleware con límite ampliado para fotos de peleadores
 app.use(express.json({ limit: '30mb' }));
+
+// Desactivar caché agresivo de OBS y navegadores para assets estáticos
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
+// Ruta explícita para asegurar la carga del logo oficial transparente
+app.get(['/assets/logo-velada-del-caos.png', '/assets/la%20velada%20del%20caos%20logo.png'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'public', 'assets', 'la velada del caos logo.png'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Estado actual del overlay en vivo, cola, escenas y banco de VS Boxeo
