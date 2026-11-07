@@ -205,56 +205,25 @@ function triggerSceneTransition(info) {
     sceneCleanupTimer = null;
   }
 
-  // 1. Salida rápida y limpia de los textos actuales
-  if (sceneTextBlock) {
-    sceneTextBlock.classList.remove('is-switching-in');
-    sceneTextBlock.classList.add('is-switching-out');
-  }
-  if (sceneBadge) {
-    sceneBadge.classList.remove('is-switching-in');
-    sceneBadge.classList.add('is-switching-out');
-  }
-
-  // 2. Disparar línea láser en primer plano barriendo de arriba a abajo
+  // 1. Activar la línea láser en primer plano barriendo de arriba a abajo
   if (sceneLaser) {
     sceneLaser.classList.remove('is-active');
     void sceneLaser.offsetWidth; // Trigger reflow
     sceneLaser.classList.add('is-active');
   }
 
-  // 3. Cuando la línea láser pasa por el centro (~260ms):
+  // 2. Justo al paso de la línea láser (~260ms) se coloca la nueva escena de inmediato
+  // (sin recargas posteriores ni re-animaciones en los bloques)
   sceneTransitionTimer = setTimeout(() => {
-    // Resplandor sutil en el logo al ser escaneado por el láser
-    if (sceneLogoWrapper) {
-      sceneLogoWrapper.classList.remove('is-scanning');
-      void sceneLogoWrapper.offsetWidth;
-      sceneLogoWrapper.classList.add('is-scanning');
-    }
-
-    // Colocar el nuevo contenido de la escena inmediatamente al paso del láser
     applySceneContent(info);
-
-    // Entrada limpia y revelación del nuevo texto
-    if (sceneTextBlock) {
-      sceneTextBlock.classList.remove('is-switching-out');
-      sceneTextBlock.classList.add('is-switching-in');
-    }
-    if (sceneBadge) {
-      sceneBadge.classList.remove('is-switching-out');
-      sceneBadge.classList.add('is-switching-in');
-    }
-
-    // 4. Al completar el paso del láser por abajo (~720ms), limpiar clases temporales
-    sceneCleanupTimer = setTimeout(() => {
-      if (sceneLaser) sceneLaser.classList.remove('is-active');
-      if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-in');
-      if (sceneBadge) sceneBadge.classList.remove('is-switching-in');
-      if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-scanning');
-      sceneCleanupTimer = null;
-    }, 460);
-
     sceneTransitionTimer = null;
   }, 260);
+
+  // 3. Al completar el paso del láser por abajo (~720ms), se desactiva el láser
+  sceneCleanupTimer = setTimeout(() => {
+    if (sceneLaser) sceneLaser.classList.remove('is-active');
+    sceneCleanupTimer = null;
+  }, 720);
 }
 
 // Manejo de Escena Pantalla Completa
@@ -301,17 +270,19 @@ function showScene(sceneData) {
 
   applySceneContent(info);
 
-  // Limpiar estados de transición residuales
   if (sceneLaser) sceneLaser.classList.remove('is-active');
-  if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-out', 'is-switching-in');
-  if (sceneBadge) sceneBadge.classList.remove('is-switching-out', 'is-switching-in');
-  if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-scanning');
 
   sceneEl.classList.remove('is-exiting');
   sceneEl.classList.remove('is-active');
+  sceneEl.classList.remove('is-initial-entering');
   void sceneEl.offsetWidth; // Trigger reflow para la entrada inicial
 
   sceneEl.classList.add('is-active');
+  sceneEl.classList.add('is-initial-entering');
+
+  setTimeout(() => {
+    if (sceneEl) sceneEl.classList.remove('is-initial-entering');
+  }, 850);
 }
 
 function hideScene() {
@@ -336,10 +307,7 @@ function hideScene() {
   currentSceneSubtitle = '';
 
   if (sceneLaser) sceneLaser.classList.remove('is-active');
-  if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-out', 'is-switching-in');
-  if (sceneBadge) sceneBadge.classList.remove('is-switching-out', 'is-switching-in');
-  if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-scanning');
-
+  sceneEl.classList.remove('is-initial-entering');
   sceneEl.classList.remove('is-active');
   sceneEl.classList.add('is-exiting');
 

@@ -326,7 +326,22 @@ html, body {
 #fullscreen-scene.is-active {
   opacity: 1;
   visibility: visible;
+}
+
+#fullscreen-scene.is-initial-entering {
   animation: enterSceneFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#fullscreen-scene.is-initial-entering .scene-badge {
+  animation: badgeSlideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+#fullscreen-scene.is-initial-entering .scene-logo-wrapper {
+  animation: logoArrival 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both, logoFloat 5s ease-in-out infinite 1s;
+}
+
+#fullscreen-scene.is-initial-entering .scene-text-block {
+  animation: textEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
 }
 
 #fullscreen-scene.is-exiting {
@@ -464,7 +479,6 @@ html, body {
   text-transform: uppercase;
   margin-bottom: 30px;
   box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
-  animation: badgeSlideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 
 .scene-dot {
@@ -499,7 +513,7 @@ html, body {
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   margin-bottom: 35px;
   overflow: hidden;
-  animation: logoArrival 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both, logoFloat 5s ease-in-out infinite 1s;
+  animation: logoFloat 5s ease-in-out infinite;
 }
 
 .scene-logo-wrapper::before {
@@ -581,7 +595,7 @@ html, body {
 
 /* Títulos de la Escena */
 .scene-text-block {
-  animation: textEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+  opacity: 1;
 }
 
 @keyframes textEntrance {
@@ -752,95 +766,6 @@ html, body {
   border-radius: 50%;
   background: radial-gradient(ellipse at center, #ffffff 0%, rgba(0, 255, 102, 0.8) 50%, transparent 80%);
   box-shadow: 0 0 25px #00ff66;
-}
-
-/* Resplandor sutil en el logo cuando el láser pasa por encima */
-.scene-logo-wrapper.is-scanning {
-  animation: logoLaserSweep 0.5s cubic-bezier(0.25, 1, 0.35, 1) forwards !important;
-}
-
-@keyframes logoLaserSweep {
-  0% {
-    filter: drop-shadow(0 0 20px rgba(0, 255, 102, 0.2));
-  }
-  40% {
-    filter: drop-shadow(0 0 35px rgba(0, 255, 102, 0.85)) brightness(1.15);
-    border-color: rgba(0, 255, 102, 0.9);
-  }
-  100% {
-    filter: drop-shadow(0 0 20px rgba(0, 255, 102, 0.2));
-  }
-}
-
-/* Transición minimalista y limpia de Textos (Salida y Entrada sincronizadas con el paso del láser) */
-.scene-text-block.is-switching-out,
-.scene-badge.is-switching-out {
-  animation: textScanOut 0.22s cubic-bezier(0.7, 0, 0.84, 0) forwards !important;
-}
-
-.scene-text-block.is-switching-in,
-.scene-badge.is-switching-in {
-  animation: textScanIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-}
-
-@keyframes textScanOut {
-  0% {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0px);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-10px);
-    filter: blur(4px);
-  }
-}
-
-@keyframes textScanIn {
-  0% {
-    opacity: 0;
-    transform: translateY(12px);
-    filter: blur(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0px);
-  }
-}
-
-/* Estilos de badges por tipo de escena */
-.scene-badge.badge-starting {
-  background: rgba(0, 255, 102, 0.12);
-  border-color: rgba(0, 255, 102, 0.6);
-  color: #00ff66;
-  box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
-}
-.scene-badge.badge-starting .scene-dot {
-  background-color: #00ff66;
-  box-shadow: 0 0 8px #00ff66;
-}
-
-.scene-badge.badge-brb {
-  background: rgba(234, 179, 8, 0.12);
-  border-color: rgba(234, 179, 8, 0.6);
-  color: #facc15;
-  box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
-}
-.scene-badge.badge-brb .scene-dot {
-  background-color: #facc15;
-  box-shadow: 0 0 8px #facc15;
-}
-
-.scene-badge.badge-ended {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.6);
-  color: #f87171;
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
-}
-.scene-badge.badge-ended .scene-dot {
-  background-color: #ef4444;
-  box-shadow: 0 0 8px #ef4444;
 }
 
 /* Estilos de badges por tipo de escena */
