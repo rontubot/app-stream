@@ -21,7 +21,22 @@ const btnSceneBrb = document.getElementById('btn-scene-brb');
 const btnSceneEnded = document.getElementById('btn-scene-ended');
 const btnHideScene = document.getElementById('btn-hide-scene');
 
+// Navbar y Navegación de Pestañas
+const navTabMain = document.getElementById('nav-tab-main');
+const navTabAnimations = document.getElementById('nav-tab-animations');
+const navBadgeVs = document.getElementById('nav-badge-vs');
+const tabPanelMain = document.getElementById('tab-panel-main');
+const tabPanelAnimations = document.getElementById('tab-panel-animations');
+
 // Banco de Animaciones: VS Boxeo (La Velada del Caos) DOM
+const cardSceneVelada = document.getElementById('card-scene-velada');
+const btnToggleVeladaPanel = document.getElementById('btn-toggle-velada-panel');
+const textToggleVeladaPanel = document.getElementById('text-toggle-velada-panel');
+const iconToggleVeladaPanel = document.getElementById('icon-toggle-velada-panel');
+const btnCollapseVeladaPanel = document.getElementById('btn-collapse-velada-panel');
+const sceneModuleVelada = document.getElementById('scene-module-velada');
+const badgeVeladaStatus = document.getElementById('badge-velada-status');
+const labelFightsCount = document.getElementById('label-fights-count');
 const vsActiveIndicator = document.getElementById('vs-active-indicator');
 const vsActiveDot = document.getElementById('vs-active-dot');
 const vsActiveText = document.getElementById('vs-active-text');
@@ -456,16 +471,32 @@ socket.on('state-update', (state) => {
   }
 
   // Estado del Banco de Animaciones: VS Boxeo (La Velada del Caos)
+  const isVsLive = !!(state.vs && state.vs.isActive && state.vs.fight);
+  if (navBadgeVs) {
+    if (isVsLive) navBadgeVs.classList.remove('hidden');
+    else navBadgeVs.classList.add('hidden');
+  }
+
+  if (badgeVeladaStatus) {
+    if (isVsLive) {
+      badgeVeladaStatus.className = 'px-2 py-0.5 rounded bg-cyber-green text-black text-[10px] font-mono font-bold animate-pulse shadow-[0_0_10px_rgba(0,255,102,0.6)]';
+      badgeVeladaStatus.textContent = 'EN VIVO OBS';
+    } else {
+      badgeVeladaStatus.className = 'px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px] font-mono border border-gray-700';
+      badgeVeladaStatus.textContent = 'DISPONIBLE';
+    }
+  }
+
   if (vsActiveIndicator) {
-    if (state.vs && state.vs.isActive && state.vs.fight) {
+    if (isVsLive) {
       const f = state.vs.fight;
       const f1Name = f.fighter1?.name || 'P1';
       const f2Name = f.fighter2?.name || 'P2';
-      vsActiveIndicator.className = 'w-full lg:w-auto flex items-center justify-center lg:justify-start gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)]';
+      vsActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)]';
       if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping';
       if (vsActiveText) vsActiveText.textContent = `EN PANTALLA: ${f1Name} VS ${f2Name}`;
     } else {
-      vsActiveIndicator.className = 'w-full lg:w-auto flex items-center justify-center lg:justify-start gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
+      vsActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
       if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
       if (vsActiveText) vsActiveText.textContent = 'SIN COMBATE EN VIVO';
     }
@@ -703,6 +734,11 @@ socket.on('fights-updated', (incomingFights) => {
 });
 
 function renderFightsSelect() {
+  if (labelFightsCount) {
+    const len = fightsList.length;
+    labelFightsCount.textContent = `${len} ${len === 1 ? 'combate listo' : 'combates listos'}`;
+  }
+
   if (!selectFightActive) return;
   selectFightActive.innerHTML = '';
 
@@ -1417,9 +1453,104 @@ btnCopyUrlInside.addEventListener('click', () => {
   });
 });
 
+// ============================================================
+// NAVEGACIÓN NAVBAR (PESTAÑAS)
+// ============================================================
+function switchMainTab(tab) {
+  if (tab === 'animations') {
+    if (tabPanelMain) tabPanelMain.classList.add('hidden');
+    if (tabPanelAnimations) tabPanelAnimations.classList.remove('hidden');
+
+    if (navTabMain) {
+      navTabMain.className = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
+    }
+    if (navTabAnimations) {
+      navTabAnimations.className = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
+    }
+    localStorage.setItem('birraverde_active_tab', 'animations');
+  } else {
+    if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
+    if (tabPanelMain) tabPanelMain.classList.remove('hidden');
+
+    if (navTabMain) {
+      navTabMain.className = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
+    }
+    if (navTabAnimations) {
+      navTabAnimations.className = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
+    }
+    localStorage.setItem('birraverde_active_tab', 'main');
+    setTimeout(adjustPreviewScale, 50);
+  }
+  refreshIcons();
+}
+
+if (navTabMain) {
+  navTabMain.addEventListener('click', () => switchMainTab('main'));
+}
+if (navTabAnimations) {
+  navTabAnimations.addEventListener('click', () => switchMainTab('animations'));
+}
+
+// ============================================================
+// BANCO DE ANIMACIONES: DESPLEGAR/CONTRAER ESCENA
+// ============================================================
+let isVeladaPanelOpen = false;
+
+function toggleVeladaModule(forceState) {
+  if (typeof forceState === 'boolean') {
+    isVeladaPanelOpen = forceState;
+  } else {
+    isVeladaPanelOpen = !isVeladaPanelOpen;
+  }
+
+  if (sceneModuleVelada) {
+    if (isVeladaPanelOpen) {
+      sceneModuleVelada.classList.remove('hidden');
+      if (textToggleVeladaPanel) textToggleVeladaPanel.textContent = 'OCULTAR';
+      if (iconToggleVeladaPanel) iconToggleVeladaPanel.setAttribute('data-lucide', 'chevron-up');
+      if (cardSceneVelada) {
+        cardSceneVelada.classList.add('border-cyber-green', 'shadow-[0_0_20px_rgba(0,255,102,0.2)]');
+      }
+      setTimeout(() => {
+        sceneModuleVelada.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    } else {
+      sceneModuleVelada.classList.add('hidden');
+      if (textToggleVeladaPanel) textToggleVeladaPanel.textContent = 'ABRIR CONSOLA';
+      if (iconToggleVeladaPanel) iconToggleVeladaPanel.setAttribute('data-lucide', 'chevron-down');
+      if (cardSceneVelada) {
+        cardSceneVelada.classList.remove('border-cyber-green', 'shadow-[0_0_20px_rgba(0,255,102,0.2)]');
+      }
+    }
+    refreshIcons();
+  }
+}
+
+if (btnToggleVeladaPanel) {
+  btnToggleVeladaPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleVeladaModule();
+  });
+}
+
+if (cardSceneVelada) {
+  cardSceneVelada.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-toggle-velada-panel')) return;
+    toggleVeladaModule();
+  });
+}
+
+if (btnCollapseVeladaPanel) {
+  btnCollapseVeladaPanel.addEventListener('click', () => {
+    toggleVeladaModule(false);
+  });
+}
+
 // Inicialización
 loadFromLocalStorage();
 updateSelectOptions();
 renderPresentersGrid();
+const savedTab = localStorage.getItem('birraverde_active_tab') || 'main';
+switchMainTab(savedTab);
 setTimeout(adjustPreviewScale, 100);
 refreshIcons();
