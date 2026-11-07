@@ -1,0 +1,68 @@
+[
+  {
+    "id": "fight-velada-1",
+    "title": "PELEA ESTELAR",
+    "subtitle": "CAMPEONATO LA VELADA DEL CAOS",
+    "rounds": "3 ROUNDS x 3 MIN",
+    "category": "PESO MEDIO",
+    "fighter1": {
+      "name": "LIONEL ARRIETA",
+      "nickname": "EL TORO",
+      "weight": "74.5 KG",
+      "height": "1.78 M",
+      "record": {
+        "wins": 5,
+        "draws": 0,
+        "losses": 1
+      },
+      "corner": "red",
+      "photo": "/assets/boxer-placeholder.svg"
+    },
+    "fighter2": {
+      "name": "CARLOS MENDOZA",
+      "nickname": "LA ROCA",
+      "weight": "73.8 KG",
+      "height": "1.82 M",
+      "record": {
+        "wins": 4,
+        "draws": 1,
+        "losses": 0
+      },
+      "corner": "blue",
+      "photo": "/assets/boxer-placeholder.svg"
+    }
+  },
+  {
+    "id": "fight-velada-2",
+    "title": "CO-ESTELAR",
+    "subtitle": "DUELO DE PESOS PESADOS",
+    "rounds": "3 ROUNDS x 3 MIN",
+    "category": "PESO PESADO",
+    "fighter1": {
+      "name": "FRANCO DEMOLEDOR",
+      "nickname": "TITAN",
+      "weight": "88.2 KG",
+      "height": "1.86 M",
+      "record": {
+        "wins": 7,
+        "draws": 0,
+        "losses": 0
+      },
+      "corner": "red",
+      "photo": "/assets/boxer-placeholder.svg"
+    },
+    "fighter2": {
+      "name": "JAVIER GOMEZ",
+      "nickname": "EL CAOS",
+      "weight": "89.0 KG",
+      "height": "1.88 M",
+      "record": {
+        "wins": 6,
+        "draws": 1,
+        "losses": 1
+      },
+      "corner": "blue",
+      "photo": "/assets/boxer-placeholder.svg"
+    }
+  }
+]

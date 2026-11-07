@@ -42,6 +42,113 @@ let currentSceneType = null;
 let currentSceneTitle = '';
 let currentSceneSubtitle = '';
 
+// Elementos de la Tabla VS Boxeo (La Velada del Caos)
+const vsOverlay = document.getElementById('vs-box-overlay');
+const vsFightTitle = document.getElementById('vs-fight-title');
+const vsFightSubtitle = document.getElementById('vs-fight-subtitle');
+
+const vsF1CornerTag = document.getElementById('vs-f1-corner-tag');
+const vsF1CornerText = document.getElementById('vs-f1-corner-text');
+const vsF1Photo = document.getElementById('vs-f1-photo');
+const vsF1Nick = document.getElementById('vs-f1-nick');
+const vsF1Name = document.getElementById('vs-f1-name');
+const vsF1Wins = document.getElementById('vs-f1-wins');
+const vsF1Draws = document.getElementById('vs-f1-draws');
+const vsF1Losses = document.getElementById('vs-f1-losses');
+const vsF1Weight = document.getElementById('vs-f1-weight');
+const vsF1Height = document.getElementById('vs-f1-height');
+
+const vsF2CornerTag = document.getElementById('vs-f2-corner-tag');
+const vsF2CornerText = document.getElementById('vs-f2-corner-text');
+const vsF2Photo = document.getElementById('vs-f2-photo');
+const vsF2Nick = document.getElementById('vs-f2-nick');
+const vsF2Name = document.getElementById('vs-f2-name');
+const vsF2Wins = document.getElementById('vs-f2-wins');
+const vsF2Draws = document.getElementById('vs-f2-draws');
+const vsF2Losses = document.getElementById('vs-f2-losses');
+const vsF2Weight = document.getElementById('vs-f2-weight');
+const vsF2Height = document.getElementById('vs-f2-height');
+
+let vsHideTimeout = null;
+let isVsActive = false;
+
+function renderCornerTag(elTag, elText, corner) {
+  if (!elTag) return;
+  elTag.classList.remove('corner-red', 'corner-blue', 'corner-green', 'corner-gold');
+
+  let c = corner || 'red';
+  elTag.classList.add(`corner-${c}`);
+
+  if (elText) {
+    if (c === 'red') elText.textContent = 'ESQUINA ROJA';
+    else if (c === 'blue') elText.textContent = 'ESQUINA AZUL';
+    else if (c === 'green') elText.textContent = 'ESQUINA VERDE';
+    else if (c === 'gold') elText.textContent = 'ESQUINA DORADA';
+    else elText.textContent = `ESQUINA ${c.toUpperCase()}`;
+  }
+}
+
+function showVsOverlay(fight) {
+  if (!vsOverlay || !fight) return;
+
+  if (vsHideTimeout) {
+    clearTimeout(vsHideTimeout);
+    vsHideTimeout = null;
+  }
+
+  // Título
+  if (vsFightTitle) vsFightTitle.textContent = fight.title || 'PELEA ESTELAR';
+  if (vsFightSubtitle) vsFightSubtitle.textContent = fight.subtitle || `${fight.category || 'PESO MEDIO'} • ${fight.rounds || '3 ROUNDS'}`;
+
+  // Peleador 1
+  const f1 = fight.fighter1 || {};
+  if (vsF1Name) vsF1Name.textContent = f1.name || 'PELEADOR 1';
+  if (vsF1Nick) vsF1Nick.textContent = f1.nickname ? `“${f1.nickname.replace(/["“”]/g, '')}”` : '';
+  if (vsF1Weight) vsF1Weight.textContent = f1.weight || '-- KG';
+  if (vsF1Height) vsF1Height.textContent = f1.height || '-- M';
+  if (vsF1Photo) vsF1Photo.src = f1.photo || '/assets/boxer-placeholder.svg';
+  if (vsF1Wins) vsF1Wins.textContent = f1.record?.wins ?? (f1.wins ?? 0);
+  if (vsF1Draws) vsF1Draws.textContent = f1.record?.draws ?? (f1.draws ?? 0);
+  if (vsF1Losses) vsF1Losses.textContent = f1.record?.losses ?? (f1.losses ?? 0);
+  renderCornerTag(vsF1CornerTag, vsF1CornerText, f1.corner || 'red');
+
+  // Peleador 2
+  const f2 = fight.fighter2 || {};
+  if (vsF2Name) vsF2Name.textContent = f2.name || 'PELEADOR 2';
+  if (vsF2Nick) vsF2Nick.textContent = f2.nickname ? `“${f2.nickname.replace(/["“”]/g, '')}”` : '';
+  if (vsF2Weight) vsF2Weight.textContent = f2.weight || '-- KG';
+  if (vsF2Height) vsF2Height.textContent = f2.height || '-- M';
+  if (vsF2Photo) vsF2Photo.src = f2.photo || '/assets/boxer-placeholder.svg';
+  if (vsF2Wins) vsF2Wins.textContent = f2.record?.wins ?? (f2.wins ?? 0);
+  if (vsF2Draws) vsF2Draws.textContent = f2.record?.draws ?? (f2.draws ?? 0);
+  if (vsF2Losses) vsF2Losses.textContent = f2.record?.losses ?? (f2.losses ?? 0);
+  renderCornerTag(vsF2CornerTag, vsF2CornerText, f2.corner || 'blue');
+
+  isVsActive = true;
+  vsOverlay.classList.remove('is-exiting');
+  vsOverlay.classList.remove('is-active');
+  void vsOverlay.offsetWidth; // Reflow para disparar el SLAM de impacto
+  vsOverlay.classList.add('is-active');
+}
+
+function hideVsOverlay() {
+  if (!vsOverlay || !vsOverlay.classList.contains('is-active')) return;
+
+  if (vsHideTimeout) {
+    clearTimeout(vsHideTimeout);
+    vsHideTimeout = null;
+  }
+
+  isVsActive = false;
+  vsOverlay.classList.remove('is-active');
+  vsOverlay.classList.add('is-exiting');
+
+  vsHideTimeout = setTimeout(() => {
+    vsOverlay.classList.remove('is-exiting');
+    vsHideTimeout = null;
+  }, 480);
+}
+
 // Iconos oficiales
 const PLATFORM_ICONS = {
   kick: `
@@ -332,6 +439,13 @@ socket.on('state-update', (state) => {
     showScene(state.scene);
   } else {
     hideScene();
+  }
+
+  // Banco de Animaciones - Tabla VS Boxeo (La Velada del Caos)
+  if (state.vs && state.vs.isActive && state.vs.fight) {
+    showVsOverlay(state.vs.fight);
+  } else {
+    hideVsOverlay();
   }
 
   // Lower Thirds

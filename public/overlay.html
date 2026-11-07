@@ -95,6 +95,160 @@
         </div>
       </div>
     </div>
+
+    <!-- ============================================================
+         BANCO DE ANIMACIONES: TABLA VS BOXEO (LA VELADA DEL CAOS)
+         ============================================================ -->
+    <div id="vs-box-overlay" class="vs-box-screen">
+      <!-- Fondo Ring / Arena de Boxeo -->
+      <div class="vs-backdrop">
+        <div class="vs-ring-glow"></div>
+        <div class="vs-light-cone vs-light-left"></div>
+        <div class="vs-light-cone vs-light-right"></div>
+        <div class="vs-scanlines"></div>
+      </div>
+
+      <!-- Contenedor Principal del Matchup -->
+      <div class="vs-matchup-container">
+        <!-- Barra Superior: Evento y Título del Combate -->
+        <header class="vs-header-banner">
+          <div class="vs-event-pill">
+            <span class="vs-live-dot"></span>
+            <span class="vs-event-title">LA VELADA DEL CAOS • BOXING NIGHT</span>
+          </div>
+          <h2 class="vs-fight-title" id="vs-fight-title">PELEA ESTELAR</h2>
+          <div class="vs-fight-subtitle" id="vs-fight-subtitle">PESO MEDIO • 3 ROUNDS x 3 MIN</div>
+        </header>
+
+        <!-- Arena Central: Peleador 1 vs Peleador 2 -->
+        <div class="vs-battlefield">
+          
+          <!-- PELEADOR 1 (ESQUINA IZQUIERDA) -->
+          <div class="vs-fighter-column vs-fighter-left" id="vs-fighter-left">
+            <!-- Marco metálico del peleador que entra de golpe -->
+            <div class="fighter-card-slam">
+              <div class="fighter-corner-tag" id="vs-f1-corner-tag">
+                <span id="vs-f1-corner-text">ESQUINA ROJA</span>
+              </div>
+              <div class="fighter-avatar-wrapper">
+                <div class="fighter-avatar-shimmer"></div>
+                <img src="/assets/boxer-placeholder.svg" id="vs-f1-photo" class="fighter-avatar-img" alt="Peleador 1">
+                <div class="fighter-avatar-bottom-fade"></div>
+              </div>
+
+              <!-- Ficha de Datos del Peleador -->
+              <div class="fighter-stats-plate">
+                <div class="fighter-nickname" id="vs-f1-nick">“EL TORO”</div>
+                <h3 class="fighter-name" id="vs-f1-name">LIONEL ARRIETA</h3>
+
+                <!-- Marcador de Récord de Peleas: V - E - D -->
+                <div class="fighter-record-display">
+                  <div class="record-badge record-wins" title="Victorias">
+                    <span class="record-num" id="vs-f1-wins">5</span>
+                    <span class="record-label">V</span>
+                  </div>
+                  <span class="record-dash">•</span>
+                  <div class="record-badge record-draws" title="Empates">
+                    <span class="record-num" id="vs-f1-draws">0</span>
+                    <span class="record-label">E</span>
+                  </div>
+                  <span class="record-dash">•</span>
+                  <div class="record-badge record-losses" title="Derrotas">
+                    <span class="record-num" id="vs-f1-losses">1</span>
+                    <span class="record-label">D</span>
+                  </div>
+                </div>
+
+                <!-- Métricas Físicas: Peso y Altura -->
+                <div class="fighter-metrics-row">
+                  <div class="metric-item">
+                    <span class="metric-title">PESO</span>
+                    <span class="metric-val" id="vs-f1-weight">74.5 KG</span>
+                  </div>
+                  <div class="metric-divider"></div>
+                  <div class="metric-item">
+                    <span class="metric-title">ALTURA</span>
+                    <span class="metric-val" id="vs-f1-height">1.78 M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CENTRO: LOGO DE LA VELADA DEL CAOS + EMBLEMA VS -->
+          <div class="vs-center-col">
+            <div class="vs-center-shockwave"></div>
+            
+            <!-- Logo oficial de La Velada del Caos -->
+            <div class="vs-shield-logo-wrap">
+              <img src="/assets/logo-velada-del-caos.png" class="vs-velada-logo" alt="La Velada del Caos">
+            </div>
+
+            <!-- Emblema VS Cromado con Resplandor Neón -->
+            <div class="vs-badge-emblem">
+              <span class="vs-text-v">V</span>
+              <span class="vs-text-s">S</span>
+              <div class="vs-emblem-flare"></div>
+            </div>
+
+            <div class="vs-center-divider-laser"></div>
+          </div>
+
+          <!-- PELEADOR 2 (ESQUINA DERECHA) -->
+          <div class="vs-fighter-column vs-fighter-right" id="vs-fighter-right">
+            <!-- Marco metálico del peleador que entra de golpe -->
+            <div class="fighter-card-slam">
+              <div class="fighter-corner-tag" id="vs-f2-corner-tag">
+                <span id="vs-f2-corner-text">ESQUINA AZUL</span>
+              </div>
+              <div class="fighter-avatar-wrapper">
+                <div class="fighter-avatar-shimmer"></div>
+                <img src="/assets/boxer-placeholder.svg" id="vs-f2-photo" class="fighter-avatar-img" alt="Peleador 2">
+                <div class="fighter-avatar-bottom-fade"></div>
+              </div>
+
+              <!-- Ficha de Datos del Peleador -->
+              <div class="fighter-stats-plate">
+                <div class="fighter-nickname" id="vs-f2-nick">“LA ROCA”</div>
+                <h3 class="fighter-name" id="vs-f2-name">CARLOS MENDOZA</h3>
+
+                <!-- Marcador de Récord de Peleas: V - E - D -->
+                <div class="fighter-record-display">
+                  <div class="record-badge record-wins" title="Victorias">
+                    <span class="record-num" id="vs-f2-wins">4</span>
+                    <span class="record-label">V</span>
+                  </div>
+                  <span class="record-dash">•</span>
+                  <div class="record-badge record-draws" title="Empates">
+                    <span class="record-num" id="vs-f2-draws">1</span>
+                    <span class="record-label">E</span>
+                  </div>
+                  <span class="record-dash">•</span>
+                  <div class="record-badge record-losses" title="Derrotas">
+                    <span class="record-num" id="vs-f2-losses">0</span>
+                    <span class="record-label">D</span>
+                  </div>
+                </div>
+
+                <!-- Métricas Físicas: Peso y Altura -->
+                <div class="fighter-metrics-row">
+                  <div class="metric-item">
+                    <span class="metric-title">PESO</span>
+                    <span class="metric-val" id="vs-f2-weight">73.8 KG</span>
+                  </div>
+                  <div class="metric-divider"></div>
+                  <div class="metric-item">
+                    <span class="metric-title">ALTURA</span>
+                    <span class="metric-val" id="vs-f2-height">1.82 M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

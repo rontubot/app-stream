@@ -17,12 +17,14 @@ const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'presenters.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const FIGHTS_FILE = path.join(DATA_DIR, 'fights.json');
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
-// Middleware
-app.use(express.json());
+// Middleware con límite ampliado para fotos de peleadores
+app.use(express.json({ limit: '30mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Estado actual del overlay en vivo, cola y escenas de pantalla completa
+// Estado actual del overlay en vivo, cola, escenas y banco de VS Boxeo
 let liveState = {
   left: {
     isVisible: false,
@@ -48,6 +50,11 @@ let liveState = {
     title: '',
     subtitle: '',
     startedAt: null
+  },
+  vs: {
+    isActive: false,
+    fight: null,
+    shownAt: null
   }
 };
 
@@ -115,9 +122,110 @@ function saveSettings() {
   }
 }
 
+// Cargar y guardar combates (La Velada del Caos)
+function loadFights() {
+  try {
+    if (fs.existsSync(FIGHTS_FILE)) {
+      const data = fs.readFileSync(FIGHTS_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Error al cargar combates:', err);
+  }
+  return [];
+}
+
+function saveFights(fightsList) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(FIGHTS_FILE, JSON.stringify(fightsList, null, 2), 'utf-8');
+    return true;
+  } catch (err) {
+    console.error('Error al guardar combates:', err);
+    return false;
+  }
+}
+
 // Inicialización de datos
 let savedSettings = loadSettings();
 let presenters = loadPresenters();
+let fights = loadFights();
+
+// Si no hay combates por primera vez, creamos los por defecto para La Velada del Caos
+if (fights.length === 0) {
+  fights = [
+    {
+      id: "fight-velada-1",
+      title: "PELEA ESTELAR",
+      subtitle: "CAMPEONATO LA VELADA DEL CAOS",
+      rounds: "3 ROUNDS x 3 MIN",
+      category: "PESO MEDIO",
+      fighter1: {
+        name: "LIONEL ARRIETA",
+        nickname: "EL TORO",
+        weight: "74.5 KG",
+        height: "1.78 M",
+        record: {
+          wins: 5,
+          draws: 0,
+          losses: 1
+        },
+        corner: "red",
+        photo: "/assets/boxer-placeholder.svg"
+      },
+      fighter2: {
+        name: "CARLOS MENDOZA",
+        nickname: "LA ROCA",
+        weight: "73.8 KG",
+        height: "1.82 M",
+        record: {
+          wins: 4,
+          draws: 1,
+          losses: 0
+        },
+        corner: "blue",
+        photo: "/assets/boxer-placeholder.svg"
+      }
+    },
+    {
+      id: "fight-velada-2",
+      title: "CO-ESTELAR",
+      subtitle: "DUELO DE PESOS PESADOS",
+      rounds: "3 ROUNDS x 3 MIN",
+      category: "PESO PESADO",
+      fighter1: {
+        name: "FRANCO DEMOLEDOR",
+        nickname: "TITAN",
+        weight: "88.2 KG",
+        height: "1.86 M",
+        record: {
+          wins: 7,
+          draws: 0,
+          losses: 0
+        },
+        corner: "red",
+        photo: "/assets/boxer-placeholder.svg"
+      },
+      fighter2: {
+        name: "JAVIER GOMEZ",
+        nickname: "EL CAOS",
+        weight: "89.0 KG",
+        height: "1.88 M",
+        record: {
+          wins: 6,
+          draws: 1,
+          losses: 1
+        },
+        corner: "blue",
+        photo: "/assets/boxer-placeholder.svg"
+      }
+    }
+  ];
+  saveFights(fights);
+}
 
 // Si no hay presentadores por primera vez, creamos los por defecto
 if (presenters.length === 0) {
@@ -310,6 +418,77 @@ app.delete('/api/presenters/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// Rutas API REST para Combates de Boxeo (La Velada del Caos)
+app.get('/api/fights', (req, res) => res.json(fights));
+
+app.post('/api/fights', (req, res) => {
+  const newFight = { ...req.body, id: req.body.id || `fight-${Date.now()}` };
+  fights.push(newFight);
+  saveFights(fights);
+  io.emit('fights-updated', fights);
+  res.status(201).json(newFight);
+});
+
+app.put('/api/fights/:id', (req, res) => {
+  const { id } = req.params;
+  const index = fights.findIndex(f => f.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Combate no encontrado' });
+
+  fights[index] = { ...fights[index], ...req.body, id };
+  saveFights(fights);
+
+  // Si el combate actualizado está en pantalla, sincronizarlo en tiempo real
+  if (liveState.vs.isActive && liveState.vs.fight && liveState.vs.fight.id === id) {
+    liveState.vs.fight = fights[index];
+    io.emit('state-update', liveState);
+  }
+
+  io.emit('fights-updated', fights);
+  res.json(fights[index]);
+});
+
+app.delete('/api/fights/:id', (req, res) => {
+  const { id } = req.params;
+  fights = fights.filter(f => f.id !== id);
+  saveFights(fights);
+
+  if (liveState.vs.isActive && liveState.vs.fight && liveState.vs.fight.id === id) {
+    liveState.vs.isActive = false;
+    liveState.vs.fight = null;
+    io.emit('state-update', liveState);
+  }
+
+  io.emit('fights-updated', fights);
+  res.json({ success: true });
+});
+
+// Endpoint de subida de imágenes PNG para boxeadores
+app.post('/api/upload', (req, res) => {
+  try {
+    const { dataUrl, filename } = req.body;
+    if (!dataUrl) {
+      return res.status(400).json({ error: 'No se envió imagen en base64' });
+    }
+
+    const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ error: 'Formato base64 no válido' });
+    }
+
+    const ext = filename ? path.extname(filename) || '.png' : '.png';
+    const cleanName = `boxer-${Date.now()}-${Math.random().toString(36).substring(2, 7)}${ext}`;
+    
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    const filePath = path.join(UPLOADS_DIR, cleanName);
+    fs.writeFileSync(filePath, Buffer.from(matches[2], 'base64'));
+
+    res.json({ success: true, url: `/uploads/${cleanName}` });
+  } catch (err) {
+    console.error('Error al subir imagen de boxeador:', err);
+    res.status(500).json({ error: 'No se pudo guardar la imagen' });
+  }
+});
+
 // Rutas directas para OBS y Host
 app.get('/overlay', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
@@ -323,6 +502,7 @@ app.get(['/', '/admin', '/host'], (req, res) => {
 io.on('connection', (socket) => {
   socket.emit('state-update', liveState);
   socket.emit('presenters-updated', presenters);
+  socket.emit('fights-updated', fights);
 
   // 1. Preparar un slot (Queue / Preview sin mostrarlo en stream)
   socket.on('prepare-slot', (data) => {
@@ -399,6 +579,71 @@ io.on('connection', (socket) => {
   socket.on('hide-scene', () => {
     liveState.scene.isActive = false;
     io.emit('state-update', liveState);
+  });
+
+  // 5.b. Banco de Animaciones - Tabla VS Boxeo (La Velada del Caos)
+  socket.on('show-vs', (data) => {
+    let targetFight = data.fight;
+    if (!targetFight && data.id) {
+      targetFight = fights.find(f => f.id === data.id);
+    }
+    if (!targetFight && fights.length > 0) {
+      targetFight = fights[0];
+    }
+
+    if (targetFight) {
+      liveState.vs = {
+        isActive: true,
+        fight: targetFight,
+        shownAt: Date.now()
+      };
+      io.emit('state-update', liveState);
+    }
+  });
+
+  socket.on('hide-vs', () => {
+    liveState.vs.isActive = false;
+    io.emit('state-update', liveState);
+  });
+
+  socket.on('save-fight', (fightData, callback) => {
+    if (!fightData) return;
+
+    if (!fightData.id) {
+      fightData.id = `fight-${Date.now()}`;
+      fights.push(fightData);
+    } else {
+      const idx = fights.findIndex(f => f.id === fightData.id);
+      if (idx !== -1) {
+        fights[idx] = { ...fights[idx], ...fightData };
+      } else {
+        fights.push(fightData);
+      }
+    }
+    saveFights(fights);
+
+    // Si el combate guardado está actualmente activo en pantalla, actualizarlo
+    if (liveState.vs.isActive && liveState.vs.fight && liveState.vs.fight.id === fightData.id) {
+      liveState.vs.fight = fightData;
+      io.emit('state-update', liveState);
+    }
+
+    io.emit('fights-updated', fights);
+    if (typeof callback === 'function') callback({ success: true, fight: fightData });
+  });
+
+  socket.on('delete-fight', (id, callback) => {
+    fights = fights.filter(f => f.id !== id);
+    saveFights(fights);
+
+    if (liveState.vs.isActive && liveState.vs.fight && liveState.vs.fight.id === id) {
+      liveState.vs.isActive = false;
+      liveState.vs.fight = null;
+      io.emit('state-update', liveState);
+    }
+
+    io.emit('fights-updated', fights);
+    if (typeof callback === 'function') callback({ success: true });
   });
 
   // 6. Configuración: Escala y Auto-Hide (Persistencia total)

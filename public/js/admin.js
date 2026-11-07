@@ -21,6 +21,57 @@ const btnSceneBrb = document.getElementById('btn-scene-brb');
 const btnSceneEnded = document.getElementById('btn-scene-ended');
 const btnHideScene = document.getElementById('btn-hide-scene');
 
+// Banco de Animaciones: VS Boxeo (La Velada del Caos) DOM
+const vsActiveIndicator = document.getElementById('vs-active-indicator');
+const vsActiveDot = document.getElementById('vs-active-dot');
+const vsActiveText = document.getElementById('vs-active-text');
+const selectFightActive = document.getElementById('select-fight-active');
+const btnLaunchVs = document.getElementById('btn-launch-vs');
+const btnHideVs = document.getElementById('btn-hide-vs');
+const btnOpenCreateFight = document.getElementById('btn-open-create-fight');
+const btnOpenEditFight = document.getElementById('btn-open-edit-fight');
+const fightPreviewStrip = document.getElementById('fight-preview-strip');
+
+// Modal de Combate Boxeo DOM
+const fightModal = document.getElementById('fight-modal');
+const fightModalTitle = document.getElementById('fight-modal-title');
+const btnCloseFightModal = document.getElementById('btn-close-fight-modal');
+const btnCancelFightModal = document.getElementById('btn-cancel-fight-modal');
+const fightForm = document.getElementById('fight-form');
+const fightFormId = document.getElementById('fight-form-id');
+const fightFormTitle = document.getElementById('fight-form-title');
+const fightFormCategory = document.getElementById('fight-form-category');
+const fightFormRounds = document.getElementById('fight-form-rounds');
+
+// Peleador 1 Form DOM
+const fightF1Corner = document.getElementById('fight-f1-corner');
+const fightF1Name = document.getElementById('fight-f1-name');
+const fightF1Nick = document.getElementById('fight-f1-nick');
+const fightF1Wins = document.getElementById('fight-f1-wins');
+const fightF1Draws = document.getElementById('fight-f1-draws');
+const fightF1Losses = document.getElementById('fight-f1-losses');
+const fightF1Weight = document.getElementById('fight-f1-weight');
+const fightF1Height = document.getElementById('fight-f1-height');
+const fightF1PreviewImg = document.getElementById('fight-f1-preview-img');
+const fightF1File = document.getElementById('fight-f1-file');
+const fightF1PhotoUrl = document.getElementById('fight-f1-photo-url');
+
+// Peleador 2 Form DOM
+const fightF2Corner = document.getElementById('fight-f2-corner');
+const fightF2Name = document.getElementById('fight-f2-name');
+const fightF2Nick = document.getElementById('fight-f2-nick');
+const fightF2Wins = document.getElementById('fight-f2-wins');
+const fightF2Draws = document.getElementById('fight-f2-draws');
+const fightF2Losses = document.getElementById('fight-f2-losses');
+const fightF2Weight = document.getElementById('fight-f2-weight');
+const fightF2Height = document.getElementById('fight-f2-height');
+const fightF2PreviewImg = document.getElementById('fight-f2-preview-img');
+const fightF2File = document.getElementById('fight-f2-file');
+const fightF2PhotoUrl = document.getElementById('fight-f2-photo-url');
+
+const btnSaveFight = document.getElementById('btn-save-fight');
+const btnSaveAndLaunchFight = document.getElementById('btn-save-and-launch-fight');
+
 // Slot Izquierdo DOM
 const badgeLeft = document.getElementById('badge-left');
 const dotLeft = document.getElementById('dot-left');
@@ -95,9 +146,12 @@ const toastContainer = document.getElementById('toast-container');
 const LS_PRESENTERS_KEY = 'birraverde_stream_presenters_v1';
 const LS_SETTINGS_KEY = 'birraverde_stream_settings_v1';
 const LS_MONITOR_VISIBLE_KEY = 'birraverde_stream_monitor_visible_v1';
+const LS_FIGHTS_KEY = 'velada_caos_fights_v1';
 
 // Estado local reactivo
 let presentersList = [];
+let fightsList = [];
+let selectedFightId = null;
 let currentLiveState = {
   left: { isVisible: false, presenter: null },
   right: { isVisible: false, presenter: null },
@@ -172,6 +226,19 @@ function loadFromLocalStorage() {
     const rawMonitorVisible = localStorage.getItem(LS_MONITOR_VISIBLE_KEY);
     if (rawMonitorVisible === 'false') {
       setMonitorVisibility(false, false);
+    }
+
+    const rawFights = localStorage.getItem(LS_FIGHTS_KEY);
+    if (rawFights) {
+      try {
+        const parsedFights = JSON.parse(rawFights);
+        if (Array.isArray(parsedFights) && parsedFights.length > 0) {
+          fightsList = parsedFights;
+          if (!selectedFightId) selectedFightId = fightsList[0].id;
+          renderFightsSelect();
+          renderFightPreview();
+        }
+      } catch (e) {}
     }
   } catch (err) {
     console.warn('Error leyendo LocalStorage:', err);
@@ -388,6 +455,22 @@ socket.on('state-update', (state) => {
     sceneActiveText.textContent = 'SIN ESCENA (STREAM EN VIVO)';
   }
 
+  // Estado del Banco de Animaciones: VS Boxeo (La Velada del Caos)
+  if (vsActiveIndicator) {
+    if (state.vs && state.vs.isActive && state.vs.fight) {
+      const f = state.vs.fight;
+      const f1Name = f.fighter1?.name || 'P1';
+      const f2Name = f.fighter2?.name || 'P2';
+      vsActiveIndicator.className = 'w-full lg:w-auto flex items-center justify-center lg:justify-start gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)]';
+      if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping';
+      if (vsActiveText) vsActiveText.textContent = `EN PANTALLA: ${f1Name} VS ${f2Name}`;
+    } else {
+      vsActiveIndicator.className = 'w-full lg:w-auto flex items-center justify-center lg:justify-start gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
+      if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+      if (vsActiveText) vsActiveText.textContent = 'SIN COMBATE EN VIVO';
+    }
+  }
+
   saveToLocalStorage();
   renderPresentersGrid();
 });
@@ -586,6 +669,387 @@ if (btnHideMonitorCard) {
   btnHideMonitorCard.addEventListener('click', () => {
     setMonitorVisibility(false, true);
     showToast('👁️‍🗨️ Monitor OBS oculto. Puedes volver a activarlo con el botón "Mostrar Monitor".');
+  });
+}
+
+// ============================================================
+// BANCO DE ANIMACIONES: LA VELADA DEL CAOS (VS BOXEO)
+// ============================================================
+
+// Sincronización de Combates desde el Servidor
+socket.on('fights-updated', (incomingFights) => {
+  if (Array.isArray(incomingFights) && incomingFights.length > 0) {
+    fightsList = incomingFights;
+    try {
+      localStorage.setItem(LS_FIGHTS_KEY, JSON.stringify(fightsList));
+    } catch (e) {}
+  } else {
+    // Si el servidor viene vacío, intentar rescatar de localStorage
+    const localFights = localStorage.getItem(LS_FIGHTS_KEY);
+    if (localFights) {
+      try {
+        fightsList = JSON.parse(localFights);
+      } catch (e) {}
+    }
+  }
+
+  // Si no hay seleccionado o el seleccionado ya no existe, elegir el primero
+  if (!selectedFightId || !fightsList.some(f => f.id === selectedFightId)) {
+    selectedFightId = fightsList[0] ? fightsList[0].id : null;
+  }
+
+  renderFightsSelect();
+  renderFightPreview();
+});
+
+function renderFightsSelect() {
+  if (!selectFightActive) return;
+  selectFightActive.innerHTML = '';
+
+  if (fightsList.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '(Sin combates configurados)';
+    selectFightActive.appendChild(opt);
+    return;
+  }
+
+  fightsList.forEach((fight, idx) => {
+    const opt = document.createElement('option');
+    opt.value = fight.id;
+    const f1 = fight.fighter1?.name || 'Peleador 1';
+    const f2 = fight.fighter2?.name || 'Peleador 2';
+    opt.textContent = `${idx + 1}. [${fight.title || 'COMBATE'}] ${f1} VS ${f2}`;
+    if (fight.id === selectedFightId) {
+      opt.selected = true;
+    }
+    selectFightActive.appendChild(opt);
+  });
+}
+
+function renderFightPreview() {
+  if (!fightPreviewStrip) return;
+  const currentFight = fightsList.find(f => f.id === selectedFightId) || fightsList[0];
+
+  if (!currentFight) {
+    fightPreviewStrip.innerHTML = `
+      <div class="col-span-full text-center py-6 text-gray-500 font-chakra text-xs">
+        No hay combates disponibles. Haz clic en "NUEVO COMBATE" para configurar la primera pelea.
+      </div>
+    `;
+    return;
+  }
+
+  const f1 = currentFight.fighter1 || {};
+  const f2 = currentFight.fighter2 || {};
+
+  fightPreviewStrip.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center w-full">
+      <!-- Ficha Peleador 1 -->
+      <div class="md:col-span-5 bg-black/60 border border-red-500/40 rounded-xl p-3 flex items-center gap-3">
+        <div class="w-16 h-20 bg-black/80 rounded-lg border border-red-500/40 overflow-hidden flex items-center justify-center shrink-0">
+          <img src="${f1.photo || '/assets/boxer-placeholder.svg'}" class="w-full h-full object-contain" alt="${f1.name || ''}">
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[10px] font-chakra font-bold text-red-400 uppercase tracking-wider">
+            ${f1.corner === 'red' ? '🔴 ESQUINA ROJA' : (f1.corner ? `ESQUINA ${f1.corner.toUpperCase()}` : 'ESQUINA 1')}
+          </div>
+          <div class="text-sm sm:text-base font-bold font-rajdhani text-white uppercase truncate">
+            ${f1.name || 'Peleador 1'}
+          </div>
+          <div class="text-xs font-bold font-rajdhani text-red-400 uppercase truncate">
+            ${f1.nickname ? `“${f1.nickname}”` : ''}
+          </div>
+          <div class="flex items-center gap-2 mt-1 text-[11px] font-chakra">
+            <span class="px-1.5 py-0.5 rounded bg-green-500/20 text-cyber-green border border-green-500/40 font-bold">${f1.record?.wins ?? 0}V</span>
+            <span class="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/40 font-bold">${f1.record?.draws ?? 0}E</span>
+            <span class="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">${f1.record?.losses ?? 0}D</span>
+            <span class="text-gray-400 font-mono text-[10px] ml-auto">${f1.weight || '--'} • ${f1.height || '--'}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Centro VS -->
+      <div class="md:col-span-2 flex flex-col items-center justify-center text-center py-1">
+        <div class="w-10 h-10 rounded-lg bg-cyber-green/10 border border-cyber-green/50 flex items-center justify-center font-rajdhani font-black text-xl text-cyber-green shadow-[0_0_12px_rgba(0,255,102,0.3)]">
+          VS
+        </div>
+        <div class="text-xs font-rajdhani font-bold text-white uppercase tracking-wider mt-1.5">
+          ${currentFight.title || 'PELEA'}
+        </div>
+        <div class="text-[10px] font-chakra text-gray-400 uppercase truncate">
+          ${currentFight.category || currentFight.rounds || 'BOXEO'}
+        </div>
+      </div>
+
+      <!-- Ficha Peleador 2 -->
+      <div class="md:col-span-5 bg-black/60 border border-blue-500/40 rounded-xl p-3 flex items-center gap-3">
+        <div class="flex-1 min-w-0 text-right">
+          <div class="text-[10px] font-chakra font-bold text-blue-400 uppercase tracking-wider">
+            ${f2.corner === 'blue' ? '🔵 ESQUINA AZUL' : (f2.corner ? `ESQUINA ${f2.corner.toUpperCase()}` : 'ESQUINA 2')}
+          </div>
+          <div class="text-sm sm:text-base font-bold font-rajdhani text-white uppercase truncate">
+            ${f2.name || 'Peleador 2'}
+          </div>
+          <div class="text-xs font-bold font-rajdhani text-blue-400 uppercase truncate">
+            ${f2.nickname ? `“${f2.nickname}”` : ''}
+          </div>
+          <div class="flex items-center justify-end gap-2 mt-1 text-[11px] font-chakra">
+            <span class="text-gray-400 font-mono text-[10px] mr-auto">${f2.weight || '--'} • ${f2.height || '--'}</span>
+            <span class="px-1.5 py-0.5 rounded bg-green-500/20 text-cyber-green border border-green-500/40 font-bold">${f2.record?.wins ?? 0}V</span>
+            <span class="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/40 font-bold">${f2.record?.draws ?? 0}E</span>
+            <span class="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40 font-bold">${f2.record?.losses ?? 0}D</span>
+          </div>
+        </div>
+        <div class="w-16 h-20 bg-black/80 rounded-lg border border-blue-500/40 overflow-hidden flex items-center justify-center shrink-0">
+          <img src="${f2.photo || '/assets/boxer-placeholder.svg'}" class="w-full h-full object-contain" alt="${f2.name || ''}">
+        </div>
+      </div>
+    </div>
+  `;
+
+  refreshIcons();
+}
+
+// Selector de Combate Activo
+if (selectFightActive) {
+  selectFightActive.addEventListener('change', (e) => {
+    selectedFightId = e.target.value;
+    renderFightPreview();
+  });
+}
+
+// Botón Lanzar VS a Pantalla
+if (btnLaunchVs) {
+  btnLaunchVs.addEventListener('click', () => {
+    const targetFight = fightsList.find(f => f.id === selectedFightId) || fightsList[0];
+    if (!targetFight) {
+      showToast('⚠️ No hay combates configurados para lanzar', 'error');
+      return;
+    }
+    socket.emit('show-vs', { fight: targetFight });
+    showToast(`🥊 Tabla VS lanzada en pantalla: ${targetFight.fighter1?.name || 'P1'} vs ${targetFight.fighter2?.name || 'P2'}`);
+  });
+}
+
+// Botón Quitar VS
+if (btnHideVs) {
+  btnHideVs.addEventListener('click', () => {
+    socket.emit('hide-vs');
+    showToast('👁️‍🗨️ Tabla VS de combate retirada de pantalla');
+  });
+}
+
+// Función para subir archivos PNG de peleadores a /api/upload
+function setupFighterImageUpload(inputEl, previewEl, urlInputEl) {
+  if (!inputEl) return;
+  inputEl.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const dataUrl = evt.target.result;
+      if (previewEl) previewEl.src = dataUrl;
+
+      // Subir al servidor express para persistir como archivo local en /uploads/
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataUrl, filename: file.name })
+        });
+        const result = await res.json();
+        if (result && result.url) {
+          if (urlInputEl) urlInputEl.value = result.url;
+          if (previewEl) previewEl.src = result.url;
+          showToast('✅ Foto PNG del peleador subida con éxito');
+        } else {
+          // Fallback a dataUrl en caso de error
+          if (urlInputEl) urlInputEl.value = dataUrl;
+        }
+      } catch (err) {
+        console.warn('Error subiendo imagen al endpoint, usando dataURL local:', err);
+        if (urlInputEl) urlInputEl.value = dataUrl;
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+setupFighterImageUpload(fightF1File, fightF1PreviewImg, fightF1PhotoUrl);
+setupFighterImageUpload(fightF2File, fightF2PreviewImg, fightF2PhotoUrl);
+
+if (fightF1PhotoUrl) {
+  fightF1PhotoUrl.addEventListener('input', (e) => {
+    if (fightF1PreviewImg) fightF1PreviewImg.src = e.target.value.trim() || '/assets/boxer-placeholder.svg';
+  });
+}
+
+if (fightF2PhotoUrl) {
+  fightF2PhotoUrl.addEventListener('input', (e) => {
+    if (fightF2PreviewImg) fightF2PreviewImg.src = e.target.value.trim() || '/assets/boxer-placeholder.svg';
+  });
+}
+
+// Abrir Modal de Combate
+function openFightModal(fightId = null) {
+  if (!fightModal) return;
+
+  const target = fightId ? fightsList.find(f => f.id === fightId) : null;
+
+  if (target) {
+    if (fightModalTitle) fightModalTitle.textContent = `EDITAR: ${target.title || 'COMBATE'}`;
+    fightFormId.value = target.id;
+    fightFormTitle.value = target.title || '';
+    fightFormCategory.value = target.category || '';
+    fightFormRounds.value = target.rounds || '3 ROUNDS x 3 MIN';
+
+    // Fighter 1
+    const f1 = target.fighter1 || {};
+    fightF1Name.value = f1.name || '';
+    fightF1Nick.value = f1.nickname || '';
+    fightF1Corner.value = f1.corner || 'red';
+    fightF1Wins.value = f1.record?.wins ?? 0;
+    fightF1Draws.value = f1.record?.draws ?? 0;
+    fightF1Losses.value = f1.record?.losses ?? 0;
+    fightF1Weight.value = f1.weight || '';
+    fightF1Height.value = f1.height || '';
+    fightF1PhotoUrl.value = f1.photo || '';
+    fightF1PreviewImg.src = f1.photo || '/assets/boxer-placeholder.svg';
+
+    // Fighter 2
+    const f2 = target.fighter2 || {};
+    fightF2Name.value = f2.name || '';
+    fightF2Nick.value = f2.nickname || '';
+    fightF2Corner.value = f2.corner || 'blue';
+    fightF2Wins.value = f2.record?.wins ?? 0;
+    fightF2Draws.value = f2.record?.draws ?? 0;
+    fightF2Losses.value = f2.record?.losses ?? 0;
+    fightF2Weight.value = f2.weight || '';
+    fightF2Height.value = f2.height || '';
+    fightF2PhotoUrl.value = f2.photo || '';
+    fightF2PreviewImg.src = f2.photo || '/assets/boxer-placeholder.svg';
+  } else {
+    if (fightModalTitle) fightModalTitle.textContent = 'CONFIGURAR NUEVO COMBATE • LA VELADA DEL CAOS';
+    fightFormId.value = '';
+    fightFormTitle.value = `COMBATE ${fightsList.length + 1}`;
+    fightFormCategory.value = 'PESO MEDIO';
+    fightFormRounds.value = '3 ROUNDS x 3 MIN';
+
+    fightF1Name.value = '';
+    fightF1Nick.value = '';
+    fightF1Corner.value = 'red';
+    fightF1Wins.value = 0;
+    fightF1Draws.value = 0;
+    fightF1Losses.value = 0;
+    fightF1Weight.value = '';
+    fightF1Height.value = '';
+    fightF1PhotoUrl.value = '';
+    fightF1PreviewImg.src = '/assets/boxer-placeholder.svg';
+
+    fightF2Name.value = '';
+    fightF2Nick.value = '';
+    fightF2Corner.value = 'blue';
+    fightF2Wins.value = 0;
+    fightF2Draws.value = 0;
+    fightF2Losses.value = 0;
+    fightF2Weight.value = '';
+    fightF2Height.value = '';
+    fightF2PhotoUrl.value = '';
+    fightF2PreviewImg.src = '/assets/boxer-placeholder.svg';
+  }
+
+  fightModal.classList.remove('hidden');
+  fightModal.classList.add('flex');
+}
+
+function closeFightModal() {
+  if (!fightModal) return;
+  fightModal.classList.remove('flex');
+  fightModal.classList.add('hidden');
+}
+
+if (btnOpenCreateFight) {
+  btnOpenCreateFight.addEventListener('click', () => openFightModal(null));
+}
+
+if (btnOpenEditFight) {
+  btnOpenEditFight.addEventListener('click', () => {
+    if (!selectedFightId && fightsList.length > 0) selectedFightId = fightsList[0].id;
+    openFightModal(selectedFightId);
+  });
+}
+
+if (btnCloseFightModal) btnCloseFightModal.addEventListener('click', closeFightModal);
+if (btnCancelFightModal) btnCancelFightModal.addEventListener('click', closeFightModal);
+
+// Recolectar datos y guardar combate
+function collectFightFormData() {
+  const fightId = fightFormId.value.trim() || `fight-${Date.now()}`;
+  return {
+    id: fightId,
+    title: fightFormTitle.value.trim() || 'PELEA ESTELAR',
+    category: fightFormCategory.value.trim() || 'PESO MEDIO',
+    rounds: fightFormRounds.value.trim() || '3 ROUNDS x 3 MIN',
+    fighter1: {
+      name: fightF1Name.value.trim() || 'PELEADOR 1',
+      nickname: fightF1Nick.value.trim() || '',
+      corner: fightF1Corner.value || 'red',
+      weight: fightF1Weight.value.trim() || '-- KG',
+      height: fightF1Height.value.trim() || '-- M',
+      record: {
+        wins: parseInt(fightF1Wins.value, 10) || 0,
+        draws: parseInt(fightF1Draws.value, 10) || 0,
+        losses: parseInt(fightF1Losses.value, 10) || 0
+      },
+      photo: fightF1PhotoUrl.value.trim() || '/assets/boxer-placeholder.svg'
+    },
+    fighter2: {
+      name: fightF2Name.value.trim() || 'PELEADOR 2',
+      nickname: fightF2Nick.value.trim() || '',
+      corner: fightF2Corner.value || 'blue',
+      weight: fightF2Weight.value.trim() || '-- KG',
+      height: fightF2Height.value.trim() || '-- M',
+      record: {
+        wins: parseInt(fightF2Wins.value, 10) || 0,
+        draws: parseInt(fightF2Draws.value, 10) || 0,
+        losses: parseInt(fightF2Losses.value, 10) || 0
+      },
+      photo: fightF2PhotoUrl.value.trim() || '/assets/boxer-placeholder.svg'
+    }
+  };
+}
+
+if (fightForm) {
+  fightForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fightData = collectFightFormData();
+
+    socket.emit('save-fight', fightData, (res) => {
+      // Confirmado
+    });
+
+    selectedFightId = fightData.id;
+    showToast(`🥊 Combate "${fightData.title}" guardado con éxito`);
+    closeFightModal();
+  });
+}
+
+if (btnSaveAndLaunchFight) {
+  btnSaveAndLaunchFight.addEventListener('click', () => {
+    if (!fightForm.checkValidity()) {
+      fightForm.reportValidity();
+      return;
+    }
+    const fightData = collectFightFormData();
+
+    socket.emit('save-fight', fightData);
+    socket.emit('show-vs', { fight: fightData });
+
+    selectedFightId = fightData.id;
+    showToast(`🚀 Combate guardado y lanzado a pantalla en vivo`);
+    closeFightModal();
   });
 }
 
