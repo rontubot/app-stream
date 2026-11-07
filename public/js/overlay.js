@@ -25,10 +25,22 @@ const slots = {
 
 // Elementos de Escena Pantalla Completa
 const sceneEl = document.getElementById('fullscreen-scene');
+const sceneBadge = document.getElementById('scene-badge');
 const sceneBadgeText = document.getElementById('scene-badge-text');
 const sceneTitle = document.getElementById('scene-title');
 const sceneSubtitle = document.getElementById('scene-subtitle');
+const sceneTextBlock = document.getElementById('scene-text-block');
+const sceneLogoWrapper = document.getElementById('scene-logo-wrapper');
+const sceneStinger = document.getElementById('scene-stinger');
+const sceneRadarGlow = document.getElementById('scene-radar-glow');
+
 let sceneHideTimeout = null;
+let sceneTransitionTimer = null;
+let sceneCleanupTimer = null;
+let isSceneActive = false;
+let currentSceneType = null;
+let currentSceneTitle = '';
+let currentSceneSubtitle = '';
 
 // Iconos oficiales
 const PLATFORM_ICONS = {
@@ -143,40 +155,168 @@ function hideSlot(slotKey) {
   }, 560);
 }
 
-// Manejo de Escena Pantalla Completa
-function showScene(sceneData) {
-  if (!sceneEl) return;
-
-  if (sceneHideTimeout) {
-    clearTimeout(sceneHideTimeout);
-    sceneHideTimeout = null;
-  }
-
+// Obtener información normalizada y clases según el tipo de escena
+function getSceneInfo(sceneData) {
   let badge = 'TRANSMISIÓN EN PAUSA';
   let title = sceneData.title || 'YA VOLVEMOS';
   let sub = sceneData.subtitle || 'Enseguida regresamos';
+  let badgeClass = 'badge-brb';
 
   if (sceneData.type === 'starting') {
     badge = 'INICIANDO TRANSMISIÓN';
     if (!sceneData.title) title = 'ESTAMOS POR EMPEZAR';
     if (!sceneData.subtitle) sub = 'La transmisión comenzará en breve • Prepara tu birra';
+    badgeClass = 'badge-starting';
   } else if (sceneData.type === 'ended') {
     badge = 'STREAM FINALIZADO';
     if (!sceneData.title) title = 'STREAM FINALIZADO';
     if (!sceneData.subtitle) sub = '¡Muchas gracias por acompañarnos hoy! • Nos vemos en el próximo stream';
+    badgeClass = 'badge-ended';
   } else if (sceneData.type === 'brb') {
     badge = 'TRANSMISIÓN EN PAUSA';
     if (!sceneData.title) title = 'YA VOLVEMOS';
     if (!sceneData.subtitle) sub = 'Breve pausa comercial • Enseguida regresamos';
+    badgeClass = 'badge-brb';
   }
 
-  sceneBadgeText.textContent = badge;
-  sceneTitle.textContent = title;
-  sceneSubtitle.textContent = sub;
+  return { badge, title, sub, badgeClass, type: sceneData.type || 'brb' };
+}
+
+// Aplicar textos y estilos de badge en la escena
+function applySceneContent(info) {
+  if (sceneBadgeText) sceneBadgeText.textContent = info.badge;
+  if (sceneTitle) sceneTitle.textContent = info.title;
+  if (sceneSubtitle) sceneSubtitle.textContent = info.sub;
+
+  if (sceneBadge) {
+    sceneBadge.classList.remove('badge-starting', 'badge-brb', 'badge-ended');
+    sceneBadge.classList.add(info.badgeClass);
+  }
+}
+
+// Disparar animación de transición temática BirraVerde entre escenas activas
+function triggerSceneTransition(info) {
+  if (sceneTransitionTimer) {
+    clearTimeout(sceneTransitionTimer);
+    sceneTransitionTimer = null;
+  }
+  if (sceneCleanupTimer) {
+    clearTimeout(sceneCleanupTimer);
+    sceneCleanupTimer = null;
+  }
+
+  // 1. Salida rápida estilizada de los textos actuales
+  if (sceneTextBlock) {
+    sceneTextBlock.classList.remove('is-switching-in');
+    sceneTextBlock.classList.add('is-switching-out');
+  }
+  if (sceneBadge) {
+    sceneBadge.classList.remove('is-switching-in');
+    sceneBadge.classList.add('is-switching-out');
+  }
+
+  // 2. Disparar Stinger cibernético de BirraVerde
+  if (sceneStinger) {
+    sceneStinger.classList.remove('is-active');
+    void sceneStinger.offsetWidth; // Trigger reflow
+    sceneStinger.classList.add('is-active');
+  }
+
+  // 3. Pulso de choque de energía en el contenedor del logo BirraVerde y radar
+  if (sceneLogoWrapper) {
+    sceneLogoWrapper.classList.remove('is-pulsing');
+    void sceneLogoWrapper.offsetWidth;
+    sceneLogoWrapper.classList.add('is-pulsing');
+  }
+  if (sceneRadarGlow) {
+    sceneRadarGlow.classList.remove('is-pulsing');
+    void sceneRadarGlow.offsetWidth;
+    sceneRadarGlow.classList.add('is-pulsing');
+  }
+
+  // 4. A los 220ms (clímax del destello y barrido verde BirraVerde):
+  sceneTransitionTimer = setTimeout(() => {
+    // Reemplazar textos y estilos del nuevo estado
+    applySceneContent(info);
+
+    // Entrada limpia con resplandor para los nuevos textos
+    if (sceneTextBlock) {
+      sceneTextBlock.classList.remove('is-switching-out');
+      sceneTextBlock.classList.add('is-switching-in');
+    }
+    if (sceneBadge) {
+      sceneBadge.classList.remove('is-switching-out');
+      sceneBadge.classList.add('is-switching-in');
+    }
+
+    // 5. Al terminar la transición (~650ms), limpiar clases temporales
+    sceneCleanupTimer = setTimeout(() => {
+      if (sceneStinger) sceneStinger.classList.remove('is-active');
+      if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-in');
+      if (sceneBadge) sceneBadge.classList.remove('is-switching-in');
+      if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-pulsing');
+      if (sceneRadarGlow) sceneRadarGlow.classList.remove('is-pulsing');
+      sceneCleanupTimer = null;
+    }, 450);
+
+    sceneTransitionTimer = null;
+  }, 220);
+}
+
+// Manejo de Escena Pantalla Completa
+function showScene(sceneData) {
+  if (!sceneEl) return;
+
+  const info = getSceneInfo(sceneData);
+
+  // Si había un temporizador de salida pendiente, cancelarlo
+  if (sceneHideTimeout) {
+    clearTimeout(sceneHideTimeout);
+    sceneHideTimeout = null;
+    sceneEl.classList.remove('is-exiting');
+  }
+
+  // Verificar si la escena ya está visible y activa en pantalla
+  const isAlreadyActive = isSceneActive && 
+                          sceneEl.classList.contains('is-active') && 
+                          !sceneEl.classList.contains('is-exiting');
+
+  // CASO A: Si ya estamos en una animación activa (ej: pasar de "ya vuelvo" a "stream finalizado")
+  if (isAlreadyActive) {
+    // Si la información no cambió, ignorar para evitar transiciones innecesarias
+    if (currentSceneType === info.type && 
+        currentSceneTitle === info.title && 
+        currentSceneSubtitle === info.sub) {
+      return;
+    }
+
+    currentSceneType = info.type;
+    currentSceneTitle = info.title;
+    currentSceneSubtitle = info.sub;
+
+    // Ejecutar transición cinemática BirraVerde sin quitar is-active ni mostrar la escena de atrás
+    triggerSceneTransition(info);
+    return;
+  }
+
+  // CASO B: Entrada inicial desde escena inactiva / apagada
+  isSceneActive = true;
+  currentSceneType = info.type;
+  currentSceneTitle = info.title;
+  currentSceneSubtitle = info.sub;
+
+  applySceneContent(info);
+
+  // Limpiar estados de transición residuales
+  if (sceneStinger) sceneStinger.classList.remove('is-active');
+  if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-out', 'is-switching-in');
+  if (sceneBadge) sceneBadge.classList.remove('is-switching-out', 'is-switching-in');
+  if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-pulsing');
+  if (sceneRadarGlow) sceneRadarGlow.classList.remove('is-pulsing');
 
   sceneEl.classList.remove('is-exiting');
   sceneEl.classList.remove('is-active');
-  void sceneEl.offsetWidth; // Trigger reflow
+  void sceneEl.offsetWidth; // Trigger reflow para la entrada inicial
 
   sceneEl.classList.add('is-active');
 }
@@ -188,6 +328,25 @@ function hideScene() {
     clearTimeout(sceneHideTimeout);
     sceneHideTimeout = null;
   }
+  if (sceneTransitionTimer) {
+    clearTimeout(sceneTransitionTimer);
+    sceneTransitionTimer = null;
+  }
+  if (sceneCleanupTimer) {
+    clearTimeout(sceneCleanupTimer);
+    sceneCleanupTimer = null;
+  }
+
+  isSceneActive = false;
+  currentSceneType = null;
+  currentSceneTitle = '';
+  currentSceneSubtitle = '';
+
+  if (sceneStinger) sceneStinger.classList.remove('is-active');
+  if (sceneTextBlock) sceneTextBlock.classList.remove('is-switching-out', 'is-switching-in');
+  if (sceneBadge) sceneBadge.classList.remove('is-switching-out', 'is-switching-in');
+  if (sceneLogoWrapper) sceneLogoWrapper.classList.remove('is-pulsing');
+  if (sceneRadarGlow) sceneRadarGlow.classList.remove('is-pulsing');
 
   sceneEl.classList.remove('is-active');
   sceneEl.classList.add('is-exiting');

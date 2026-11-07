@@ -652,3 +652,303 @@ html, body {
   0% { height: 4px; opacity: 0.4; }
   100% { height: 26px; opacity: 1; }
 }
+
+/* ============================================================
+   STINGER DE TRANSICIÓN BIRRAVERDE ENTRE ESCENAS ACTIVAS
+   (Efecto cinematográfico cibernético sin mostrar la escena de atrás)
+   ============================================================ */
+
+.scene-transition-stinger {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.scene-transition-stinger.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Destello general de fondo verde cyber durante el cambio */
+.stinger-flare {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 255, 102, 0.3) 0%, rgba(0, 255, 102, 0.08) 40%, transparent 70%);
+  opacity: 0;
+}
+
+.scene-transition-stinger.is-active .stinger-flare {
+  animation: flareFlash 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes flareFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+/* Franjas / Cuchillas cortantes angulares cyber (Stinger Slashes) */
+.stinger-slash {
+  position: absolute;
+  top: -50%;
+  width: 170%;
+  height: 200%;
+  transform: rotate(-25deg);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.stinger-slash-1 {
+  left: -170%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 255, 102, 0.1) 25%,
+    rgba(0, 255, 102, 0.7) 48%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(0, 255, 102, 0.7) 52%,
+    rgba(0, 255, 102, 0.1) 75%,
+    transparent 100%
+  );
+  box-shadow: 0 0 50px rgba(0, 255, 102, 0.85);
+}
+
+.stinger-slash-2 {
+  left: -190%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 200, 80, 0.2) 35%,
+    rgba(0, 255, 102, 0.6) 50%,
+    transparent 65%
+  );
+}
+
+.scene-transition-stinger.is-active .stinger-slash-1 {
+  opacity: 1;
+  animation: slashWipe1 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.scene-transition-stinger.is-active .stinger-slash-2 {
+  opacity: 1;
+  animation: slashWipe2 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) 0.04s forwards;
+}
+
+@keyframes slashWipe1 {
+  0% { left: -170%; }
+  100% { left: 140%; }
+}
+
+@keyframes slashWipe2 {
+  0% { left: -190%; }
+  100% { left: 120%; }
+}
+
+/* Destello central con Emblema / Logo BirraVerde */
+.stinger-center-burst {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 52;
+}
+
+.stinger-logo-img {
+  max-width: 520px;
+  height: auto;
+  filter: drop-shadow(0 0 35px #00ff66) drop-shadow(0 0 70px rgba(0, 255, 102, 0.7)) brightness(1.35);
+}
+
+.scene-transition-stinger.is-active .stinger-center-burst {
+  animation: centerLogoBurst 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes centerLogoBurst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.75);
+    filter: blur(10px);
+  }
+  35% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1.06);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.28);
+    filter: blur(8px);
+  }
+}
+
+/* Haz de luz anamórfico horizontal */
+.stinger-light-streak {
+  position: absolute;
+  top: 45%;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 255, 102, 0.8) 25%,
+    #ffffff 50%,
+    rgba(0, 255, 102, 0.8) 75%,
+    transparent 100%
+  );
+  box-shadow: 0 0 25px rgba(0, 255, 102, 1), 0 0 50px rgba(0, 255, 102, 0.6);
+  opacity: 0;
+  transform: scaleX(0.1);
+  z-index: 51;
+}
+
+.scene-transition-stinger.is-active .stinger-light-streak {
+  animation: streakExpand 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes streakExpand {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.1);
+  }
+  30% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.3);
+  }
+}
+
+/* Pulso de impacto en el contenedor del logo y radar glow */
+.scene-logo-wrapper.is-pulsing {
+  animation: logoTransitionPulse 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes logoTransitionPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 102, 0.2);
+  }
+  35% {
+    transform: scale(1.04);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 60px rgba(0, 255, 102, 0.8), inset 0 0 25px rgba(0, 255, 102, 0.4);
+    border-color: rgba(0, 255, 102, 0.9);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 102, 0.2);
+  }
+}
+
+.cyber-radar-glow.is-pulsing {
+  animation: radarTransitionPulse 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes radarTransitionPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.7;
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 1;
+    background: radial-gradient(circle, rgba(0, 255, 102, 0.4) 0%, rgba(0, 255, 102, 0.1) 50%, transparent 70%);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 0.8;
+  }
+}
+
+/* Transición suave y limpia de Textos (Salida y Entrada sincronizadas) */
+.scene-text-block.is-switching-out,
+.scene-badge.is-switching-out {
+  animation: sceneTextOut 0.22s cubic-bezier(0.7, 0, 0.84, 0) forwards !important;
+}
+
+.scene-text-block.is-switching-in,
+.scene-badge.is-switching-in {
+  animation: sceneTextIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes sceneTextOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.96);
+    filter: blur(6px);
+  }
+}
+
+@keyframes sceneTextIn {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(1.03);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* Estilos de badges por tipo de escena */
+.scene-badge.badge-starting {
+  background: rgba(0, 255, 102, 0.12);
+  border-color: rgba(0, 255, 102, 0.6);
+  color: #00ff66;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+}
+.scene-badge.badge-starting .scene-dot {
+  background-color: #00ff66;
+  box-shadow: 0 0 8px #00ff66;
+}
+
+.scene-badge.badge-brb {
+  background: rgba(234, 179, 8, 0.12);
+  border-color: rgba(234, 179, 8, 0.6);
+  color: #facc15;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+}
+.scene-badge.badge-brb .scene-dot {
+  background-color: #facc15;
+  box-shadow: 0 0 8px #facc15;
+}
+
+.scene-badge.badge-ended {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #f87171;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+}
+.scene-badge.badge-ended .scene-dot {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}

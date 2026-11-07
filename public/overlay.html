@@ -54,8 +54,19 @@
     <div id="fullscreen-scene">
       <div class="scene-backdrop">
         <div class="cyber-grid-3d"></div>
-        <div class="cyber-radar-glow"></div>
+        <div class="cyber-radar-glow" id="scene-radar-glow"></div>
         <div class="cyber-scanline"></div>
+      </div>
+
+      <!-- Efecto de Transición Stinger Cyber BirraVerde (Activo durante el cambio entre escenas) -->
+      <div class="scene-transition-stinger" id="scene-stinger">
+        <div class="stinger-flare"></div>
+        <div class="stinger-slash stinger-slash-1"></div>
+        <div class="stinger-slash stinger-slash-2"></div>
+        <div class="stinger-center-burst">
+          <img src="/assets/logo-birraverde.png" class="stinger-logo-img" alt="BirraVerde">
+        </div>
+        <div class="stinger-light-streak"></div>
       </div>
 
       <div class="scene-content">
@@ -64,17 +75,17 @@
           <span id="scene-badge-text">TRANSMISIÓN EN PAUSA</span>
         </div>
 
-        <div class="scene-logo-wrapper">
+        <div class="scene-logo-wrapper" id="scene-logo-wrapper">
           <div class="scene-logo-shimmer"></div>
           <img src="/assets/logo-birraverde.png" alt="BirraVerde" class="scene-logo-img" id="scene-logo">
         </div>
 
-        <div class="scene-text-block">
+        <div class="scene-text-block" id="scene-text-block">
           <h1 class="scene-title" id="scene-title">YA VOLVEMOS</h1>
           <p class="scene-subtitle" id="scene-subtitle">Breve pausa comercial • Enseguida regresamos</p>
         </div>
 
-        <div class="scene-visualizer">
+        <div class="scene-visualizer" id="scene-visualizer">
           <span class="bar bar-1"></span>
           <span class="bar bar-2"></span>
           <span class="bar bar-3"></span>
