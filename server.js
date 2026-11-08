@@ -749,6 +749,28 @@ app.get('/api/multicam/state', (req, res) => {
   });
 });
 
+// Endpoint de diagnóstico del estado de PostgreSQL / SQL
+app.get('/api/db-status', async (req, res) => {
+  const dbInfo = {
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    isPostgresConnected: isDbReady,
+    storageType: isDbReady ? 'PostgreSQL (Cloud SQL)' : 'Local JSON Files (data/)',
+    serverUptimeSeconds: Math.round(process.uptime()),
+    nodeEnv: process.env.NODE_ENV || 'production'
+  };
+
+  if (dbPool && isDbReady) {
+    try {
+      const result = await dbPool.query('SELECT key, updated_at FROM app_storage');
+      dbInfo.storedKeys = result.rows;
+    } catch (e) {
+      dbInfo.queryError = e.message;
+    }
+  }
+
+  res.json(dbInfo);
+});
+
 app.post('/api/multicam/settings', (req, res) => {
   multicamSettings = { ...multicamSettings, ...req.body };
   saveMulticamSettings();
