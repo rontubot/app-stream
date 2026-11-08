@@ -1757,16 +1757,17 @@ html, body {
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%) translateY(35px) scale(0.96);
-  z-index: 450; /* Centrado abajo, dinámico de stream (por debajo de escenas de pantalla completa) */
+  z-index: 99999; /* Máxima prioridad: visible sobre cualquier escena o cámara */
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .stream-bottom-chat.is-active {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0) scale(1);
-  pointer-events: auto;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+  pointer-events: auto !important;
 }
 
 .chat-hud-glow {
@@ -1960,13 +1961,13 @@ html, body {
    (Las escenas de pantalla completa tienen prioridad absoluta)
    ============================================================ */
 body.scene-active #stream-top-hud,
-body.scene-active #stream-bottom-chat,
+body.scene-active #stream-bottom-chat:not(.is-active),
 body.scene-active .slot-wrapper,
 body.vs-active #stream-top-hud,
-body.vs-active #stream-bottom-chat,
+body.vs-active #stream-bottom-chat:not(.is-active),
 body.vs-active .slot-wrapper,
-#fullscreen-scene.is-active ~ #stream-bottom-chat,
-.vs-box-screen.is-active ~ #stream-bottom-chat {
+#fullscreen-scene.is-active ~ #stream-bottom-chat:not(.is-active),
+.vs-box-screen.is-active ~ #stream-bottom-chat:not(.is-active) {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -1978,10 +1979,10 @@ body.vs-active #stream-top-hud {
   transform: translateX(-50%) translateY(-35px) scale(0.95) !important;
 }
 
-body.scene-active #stream-bottom-chat,
-body.vs-active #stream-bottom-chat,
-#fullscreen-scene.is-active ~ #stream-bottom-chat,
-.vs-box-screen.is-active ~ #stream-bottom-chat {
+body.scene-active #stream-bottom-chat:not(.is-active),
+body.vs-active #stream-bottom-chat:not(.is-active),
+#fullscreen-scene.is-active ~ #stream-bottom-chat:not(.is-active),
+.vs-box-screen.is-active ~ #stream-bottom-chat:not(.is-active) {
   transform: translateX(-50%) translateY(45px) scale(0.95) !important;
 }
 
@@ -2009,7 +2010,7 @@ body.vs-active #stream-bottom-chat,
 
 /* Si la escena multicam está activa en modo grid completo, suprime los overlays auxiliares */
 body.multicam-grid-active #stream-top-hud,
-body.multicam-grid-active #stream-bottom-chat {
+body.multicam-grid-active #stream-bottom-chat:not(.is-active) {
   opacity: 0 !important;
   visibility: hidden !important;
   transition: opacity 0.35s ease !important;

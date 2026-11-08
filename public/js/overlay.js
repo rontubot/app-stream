@@ -616,6 +616,9 @@ function playTTS(text, user) {
 
   try {
     window.speechSynthesis.cancel(); // Cancelar cualquier audio anterior
+    if (typeof window.speechSynthesis.resume === 'function') {
+      window.speechSynthesis.resume();
+    }
 
     const cleanUser = (user || 'Alguien').replace(/^@/, '');
     const phrase = `${cleanUser} dice: ${text}`;
@@ -627,7 +630,7 @@ function playTTS(text, user) {
 
     // Buscar voces en español disponibles
     const voices = window.speechSynthesis.getVoices();
-    const esVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('es'));
+    const esVoice = voices.find(v => v.lang && (v.lang.toLowerCase().startsWith('es') || v.lang.toLowerCase().includes('spanish')));
     if (esVoice) {
       utterance.voice = esVoice;
     }
@@ -655,11 +658,6 @@ function playTTS(text, user) {
 socket.on('chat-announcement', (payload) => {
   if (!streamBottomChat || !payload) return;
 
-  // Si hay una escena de pantalla completa o tabla VS activa, no mostrar ni reproducir voz sobre ella
-  if (isSceneActive || isVsActive) {
-    return;
-  }
-
   if (chatDismissTimeout) clearTimeout(chatDismissTimeout);
 
   if (chatHudUsername) chatHudUsername.textContent = payload.user || '@espectador';
@@ -670,7 +668,7 @@ socket.on('chat-announcement', (payload) => {
     chatHudTime.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   }
 
-  // Mostrar recuadro inferior
+  // Mostrar recuadro inferior siempre (máxima prioridad)
   streamBottomChat.classList.add('is-active');
 
   // Si TTS está habilitado, pronunciar
