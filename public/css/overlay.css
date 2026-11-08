@@ -1985,3 +1985,32 @@ body.vs-active #stream-bottom-chat,
   transform: translateX(-50%) translateY(45px) scale(0.95) !important;
 }
 
+
+
+/* ============================================================
+   CAPA DE ESCENA MULTICAM EN OVERLAY PRINCIPAL
+   ============================================================ */
+.scene-multicam-layer {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s ease;
+  z-index: 25;
+}
+
+.scene-multicam-layer.is-active {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Si la escena multicam está activa en modo grid completo, suprime los overlays auxiliares */
+body.multicam-grid-active #stream-top-hud,
+body.multicam-grid-active #stream-bottom-chat {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: opacity 0.35s ease !important;
+}

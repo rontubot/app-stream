@@ -478,6 +478,13 @@ socket.on('state-update', (state) => {
   if (state.chatOverlay) {
     updateChatOverlayState(state.chatOverlay);
   }
+
+  // Banco de Animaciones: Escena Multicam / Videollamada en Vivo
+  if (state.multicam && state.multicam.isActive) {
+    showMulticamOverlay();
+  } else {
+    hideMulticamOverlay();
+  }
 });
 
 // ============================================================
@@ -676,3 +683,410 @@ socket.on('chat-announcement', (payload) => {
     streamBottomChat.classList.remove('is-active');
   }, 12000);
 });
+
+
+// ============================================================
+// MOTOR MULTICAM INTEGRADO EN EL OVERLAY PRINCIPAL (WEBRTC RECEIVER)
+// ============================================================
+const sceneMulticamLayer = document.getElementById('scene-multicam');
+const multicamStage = document.getElementById('multicam-stage');
+const camsContainer = document.getElementById('cams-container');
+const audioContainer = document.getElementById('audio-container');
+
+let isMulticamActive = false;
+
+function showMulticamOverlay() {
+  if (isMulticamActive) return;
+  isMulticamActive = true;
+
+  if (sceneMulticamLayer) {
+    sceneMulticamLayer.classList.add('is-active');
+  }
+
+  // Si está en modo grid completo, añadir clase a body para suprimir HUD superior si se desea
+  if (multicamSettingsCurrent.activeScene === 'grid') {
+    document.body.classList.add('multicam-grid-active');
+  } else {
+    document.body.classList.remove('multicam-grid-active');
+  }
+}
+
+function hideMulticamOverlay() {
+  if (!isMulticamActive) return;
+  isMulticamActive = false;
+
+  if (sceneMulticamLayer) {
+    sceneMulticamLayer.classList.remove('is-active');
+  }
+  document.body.classList.remove('multicam-grid-active');
+}
+
+// Configuración WebRTC con STUN y TURN Relay
+const MULTICAM_RTC_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:openrelay.metered.ca:80' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
+  ],
+  iceCandidatePoolSize: 10
+};
+
+const MULTICAM_AVATAR_GRADIENTS = [
+  'linear-gradient(135deg, #10b981, #047857)',
+  'linear-gradient(135deg, #06b6d4, #0e7490)',
+  'linear-gradient(135deg, #8b5cf6, #5b21b6)',
+  'linear-gradient(135deg, #f59e0b, #b45309)',
+  'linear-gradient(135deg, #ec4899, #be185d)',
+  'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+  'linear-gradient(135deg, #f43f5e, #9f1239)'
+];
+
+function getMulticamGradient(name) {
+  if (!name) return MULTICAM_AVATAR_GRADIENTS[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return MULTICAM_AVATAR_GRADIENTS[Math.abs(hash) % MULTICAM_AVATAR_GRADIENTS.length];
+}
+
+const multicamOverlayPeerId = 'obs-main-' + Math.random().toString(36).substring(2, 7);
+const multicamRoomId = 'main';
+
+let multicamSettingsCurrent = {
+  activeScene: 'pip-corner-tr',
+  showLabels: true,
+  audioMutedOverall: false
+};
+
+const multicamKnownPeers = new Map();
+const multicamPeerConnections = new Map();
+const multicamRemoteStreams = new Map();
+const multicamAudioAnalysers = new Map();
+const multicamPendingIceCandidates = new Map();
+
+// Conectarse a la sala de multicam como overlay receptor en el socket existente
+socket.on('connect', () => {
+  socket.emit('multicam-join', {
+    roomId: multicamRoomId,
+    peerId: multicamOverlayPeerId,
+    role: 'overlay',
+    userInfo: {
+      name: 'OBS Main Overlay',
+      hasVideo: false,
+      hasAudio: false
+    }
+  }, (res) => {
+    if (res && res.settings) {
+      applyMulticamSettings(res.settings);
+    }
+    if (res && Array.isArray(res.peers)) {
+      res.peers.forEach(peer => {
+        if (peer.role !== 'overlay' && peer.id !== multicamOverlayPeerId) {
+          multicamKnownPeers.set(peer.id, peer);
+          prepareMulticamPeerConnection(peer.id);
+        }
+      });
+      renderAllMulticamCams();
+    }
+  });
+});
+
+socket.on('multicam-settings-updated', (settings) => {
+  applyMulticamSettings(settings);
+});
+
+function applyMulticamSettings(settings) {
+  if (!settings) return;
+  multicamSettingsCurrent = { ...multicamSettingsCurrent, ...settings };
+  if (multicamStage) {
+    multicamStage.className = 'scene-' + (multicamSettingsCurrent.activeScene || 'pip-corner-tr');
+  }
+  if (isMulticamActive) {
+    if (multicamSettingsCurrent.activeScene === 'grid') {
+      document.body.classList.add('multicam-grid-active');
+    } else {
+      document.body.classList.remove('multicam-grid-active');
+    }
+  }
+}
+
+socket.on('multicam-peers-updated', ({ peers }) => {
+  if (!Array.isArray(peers)) return;
+
+  const incomingIds = new Set();
+  peers.forEach(peer => {
+    if (peer.role !== 'overlay' && peer.id !== multicamOverlayPeerId) {
+      incomingIds.add(peer.id);
+      const existing = multicamKnownPeers.get(peer.id);
+      multicamKnownPeers.set(peer.id, peer);
+
+      if (!existing) {
+        prepareMulticamPeerConnection(peer.id);
+      }
+    }
+  });
+
+  multicamKnownPeers.forEach((p, id) => {
+    if (!incomingIds.has(id)) {
+      cleanupMulticamPeer(id);
+    }
+  });
+
+  renderAllMulticamCams();
+});
+
+socket.on('multicam-peer-left', ({ peerId }) => {
+  cleanupMulticamPeer(peerId);
+  renderAllMulticamCams();
+});
+
+function prepareMulticamPeerConnection(remotePeerId) {
+  if (multicamPeerConnections.has(remotePeerId)) {
+    return multicamPeerConnections.get(remotePeerId);
+  }
+
+  const pc = new RTCPeerConnection(MULTICAM_RTC_CONFIG);
+  multicamPeerConnections.set(remotePeerId, pc);
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      socket.emit('multicam-signal', {
+        toPeerId: remotePeerId,
+        fromPeerId: multicamOverlayPeerId,
+        roomId: multicamRoomId,
+        signal: { type: 'candidate', candidate: event.candidate }
+      });
+    }
+  };
+
+  pc.ontrack = (event) => {
+    const stream = event.streams[0] || new MediaStream([event.track]);
+    multicamRemoteStreams.set(remotePeerId, stream);
+
+    attachMulticamAudio(remotePeerId, stream);
+    setupMulticamSpeakingDetector(remotePeerId, stream);
+    renderAllMulticamCams();
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+      cleanupMulticamPeer(remotePeerId);
+      renderAllMulticamCams();
+    }
+  };
+
+  return pc;
+}
+
+socket.on('multicam-signal', async ({ fromPeerId, signal }) => {
+  let pc = multicamPeerConnections.get(fromPeerId);
+  if (!pc) {
+    pc = prepareMulticamPeerConnection(fromPeerId);
+  }
+
+  try {
+    if (signal.type === 'offer') {
+      await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+      const pending = multicamPendingIceCandidates.get(fromPeerId) || [];
+      for (const cand of pending) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) {}
+      }
+      multicamPendingIceCandidates.delete(fromPeerId);
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socket.emit('multicam-signal', {
+        toPeerId: fromPeerId,
+        fromPeerId: multicamOverlayPeerId,
+        roomId: multicamRoomId,
+        signal: { type: 'answer', sdp: pc.localDescription }
+      });
+    } else if (signal.type === 'answer') {
+      await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+      const pending = multicamPendingIceCandidates.get(fromPeerId) || [];
+      for (const cand of pending) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) {}
+      }
+      multicamPendingIceCandidates.delete(fromPeerId);
+    } else if (signal.type === 'candidate' && signal.candidate) {
+      if (pc.remoteDescription && pc.remoteDescription.type) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        } catch (e) {}
+      } else {
+        if (!multicamPendingIceCandidates.has(fromPeerId)) multicamPendingIceCandidates.set(fromPeerId, []);
+        multicamPendingIceCandidates.get(fromPeerId).push(signal.candidate);
+      }
+    }
+  } catch (err) {
+    console.error('[Overlay Multicam] Error de señal WebRTC:', err);
+  }
+});
+
+function cleanupMulticamPeer(peerId) {
+  if (multicamPeerConnections.has(peerId)) {
+    multicamPeerConnections.get(peerId).close();
+    multicamPeerConnections.delete(peerId);
+  }
+  multicamRemoteStreams.delete(peerId);
+  multicamKnownPeers.delete(peerId);
+  multicamPendingIceCandidates.delete(peerId);
+
+  if (multicamAudioAnalysers.has(peerId)) {
+    try { multicamAudioAnalysers.get(peerId).context.close(); } catch (e) {}
+    multicamAudioAnalysers.delete(peerId);
+  }
+
+  const audioElem = document.getElementById('audio-' + peerId);
+  if (audioElem) audioElem.remove();
+
+  const card = document.getElementById('cam-card-' + peerId);
+  if (card) card.remove();
+}
+
+function attachMulticamAudio(peerId, stream) {
+  if (!audioContainer) return;
+  if (stream.getAudioTracks().length === 0) return;
+
+  let audioElem = document.getElementById('audio-' + peerId);
+  if (!audioElem) {
+    audioElem = document.createElement('audio');
+    audioElem.id = 'audio-' + peerId;
+    audioElem.autoplay = true;
+    audioElem.playsInline = true;
+    audioContainer.appendChild(audioElem);
+  }
+  audioElem.srcObject = stream;
+  audioElem.muted = !!multicamSettingsCurrent.audioMutedOverall;
+  audioElem.play().catch(e => console.warn('[Overlay Multicam] Audio play error:', e));
+}
+
+function setupMulticamSpeakingDetector(peerId, stream) {
+  if (multicamAudioAnalysers.has(peerId) || stream.getAudioTracks().length === 0) return;
+
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    const audioContext = new AudioCtx();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.4;
+    source.connect(analyser);
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    multicamAudioAnalysers.set(peerId, { context: audioContext, analyser, source });
+
+    function check() {
+      if (!multicamAudioAnalysers.has(peerId)) return;
+      analyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+      const avg = sum / bufferLength;
+      const isSpeaking = avg > 15;
+
+      const card = document.getElementById('cam-card-' + peerId);
+      if (card) {
+        if (isSpeaking) {
+          card.classList.add('is-speaking');
+        } else {
+          card.classList.remove('is-speaking');
+        }
+      }
+
+      requestAnimationFrame(check);
+    }
+    check();
+  } catch (e) {
+    console.warn('[Overlay Multicam] AudioContext error:', e);
+  }
+}
+
+function renderAllMulticamCams() {
+  if (!multicamStage || !camsContainer) return;
+
+  const visiblePeers = Array.from(multicamKnownPeers.values())
+    .filter(peer => !peer.isHidden)
+    .sort((a, b) => {
+      if (a.slot !== null && b.slot !== null) return a.slot - b.slot;
+      if (a.slot !== null) return -1;
+      if (b.slot !== null) return 1;
+      return a.joinedAt - b.joinedAt;
+    });
+
+  multicamStage.setAttribute('data-count', visiblePeers.length);
+
+  const visibleIds = new Set(visiblePeers.map(p => p.id));
+  Array.from(camsContainer.children).forEach(child => {
+    const pId = child.getAttribute('data-peer-id');
+    if (pId && !visibleIds.has(pId)) child.remove();
+  });
+
+  visiblePeers.forEach(peer => {
+    renderMulticamCamCard(peer);
+  });
+}
+
+function renderMulticamCamCard(peer) {
+  let card = document.getElementById('cam-card-' + peer.id);
+  const stream = multicamRemoteStreams.get(peer.id);
+  const hasActiveVideo = peer.hasVideo && stream && stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
+
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'cam-card-' + peer.id;
+    card.className = 'cam-card';
+    card.setAttribute('data-peer-id', peer.id);
+    camsContainer.appendChild(card);
+  }
+
+  const gradient = getMulticamGradient(peer.name);
+  const initials = peer.initials || 'BV';
+
+  card.innerHTML = `
+    <video id="video-${peer.id}" autoplay playsinline class="cam-video ${hasActiveVideo ? '' : 'hidden'}"></video>
+
+    <div id="avatar-box-${peer.id}" class="cam-avatar-box ${hasActiveVideo ? 'hidden' : ''}">
+      <div class="cam-avatar-circle" style="background: ${peer.photo ? 'none' : gradient}">
+        ${peer.photo ? `<img src="${peer.photo}" class="cam-avatar-img" alt="${peer.name}">` : `<span>${initials}</span>`}
+      </div>
+    </div>
+
+    <div class="cam-lower-third">
+      <span class="cam-status-dot ${hasActiveVideo ? '' : 'no-video'}"></span>
+      <span class="cam-name-text">${peer.name || 'Invitado'}</span>
+      <svg class="cam-speaking-indicator" viewBox="0 0 24 24" fill="none" stroke="#00ff66" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+      </svg>
+    </div>
+  `;
+
+  if (hasActiveVideo) {
+    const vElem = card.querySelector('#video-' + peer.id);
+    if (vElem && stream) {
+      vElem.srcObject = stream;
+      vElem.play().catch(e => console.warn('[Overlay Multicam] Video play retry:', e));
+    }
+  }
+}

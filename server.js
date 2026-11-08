@@ -194,6 +194,10 @@ let liveState = {
     fight: null,
     shownAt: null
   },
+  multicam: {
+    isActive: false,
+    shownAt: null
+  },
   topHud: {
     isVisible: true,
     customText: ''
@@ -883,6 +887,30 @@ io.on('connection', (socket) => {
 
   socket.on('hide-vs', () => {
     liveState.vs.isActive = false;
+    io.emit('state-update', liveState);
+  });
+
+  // 5.b.2. Banco de Animaciones - Escena Multicam / Videollamada en Vivo
+  socket.on('show-multicam', (data) => {
+    if (data && data.scene) {
+      multicamSettings.activeScene = data.scene;
+      saveMulticamSettings();
+      io.emit('multicam-settings-updated', multicamSettings);
+    }
+    liveState.multicam = {
+      isActive: true,
+      shownAt: Date.now()
+    };
+    saveSettings();
+    io.emit('state-update', liveState);
+  });
+
+  socket.on('hide-multicam', () => {
+    liveState.multicam = {
+      isActive: false,
+      shownAt: null
+    };
+    saveSettings();
     io.emit('state-update', liveState);
   });
 

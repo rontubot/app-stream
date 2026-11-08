@@ -833,7 +833,7 @@
         <div class="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
           <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyber-card border border-cyber-border text-xs font-mono text-gray-300">
             <span class="w-2 h-2 rounded-full bg-cyber-green"></span>
-            <span id="label-total-scenes">1 Escena Configurada</span>
+            <span id="label-total-scenes">2 Escenas Configuradas</span>
           </div>
         </div>
       </div>
@@ -887,20 +887,44 @@
             </div>
           </div>
 
-          <!-- Tarjeta 2: Nueva Escena / Próximas Animaciones -->
-          <div class="border-2 border-dashed border-cyber-border hover:border-gray-500 rounded-xl p-5 flex flex-col items-center justify-center text-center bg-cyber-dark/40 transition-all group">
-            <div class="w-12 h-12 rounded-full bg-cyber-card border border-cyber-border flex items-center justify-center text-gray-400 group-hover:text-cyber-green group-hover:border-cyber-green transition-colors mb-3">
-              <i data-lucide="plus" class="w-6 h-6"></i>
+          <!-- Tarjeta 2: Multicam / Videollamada en Vivo -->
+          <div id="card-scene-multicam" class="scene-catalog-card group cursor-pointer bg-cyber-card border border-cyber-border hover:border-cyan-400 rounded-xl p-4 transition-all duration-200 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-cyan-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-cyan-500/20 transition-all"></div>
+
+            <div>
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="w-14 h-14 rounded-xl bg-black/60 border border-cyber-border flex items-center justify-center p-1.5 shrink-0 group-hover:border-cyan-400/60 transition-colors">
+                  <div class="w-9 h-9 rounded-lg bg-cyan-400/10 border border-cyan-400 flex items-center justify-center text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+                    <i data-lucide="video" class="w-5 h-5"></i>
+                  </div>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                  <span class="px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-400 text-[10px] font-mono font-bold border border-cyan-400/40 uppercase">
+                    MULTICAM EN VIVO
+                  </span>
+                  <span id="badge-multicam-status" class="px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px] font-mono border border-gray-700">
+                    DISPONIBLE
+                  </span>
+                </div>
+              </div>
+
+              <h4 class="text-base font-bold font-chakra text-white group-hover:text-cyan-400 transition-colors uppercase tracking-wide">
+                Cámaras de Invitados
+              </h4>
+              <p class="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                Sobrecámara en esquinas transparentes o mosaico completo, con iniciales Teams y audio en vivo.
+              </p>
             </div>
-            <h4 class="text-sm font-bold font-chakra text-gray-300 uppercase tracking-wide mb-1">
-              ¿Nueva Escena / Animación?
-            </h4>
-            <p class="text-xs text-gray-500 max-w-xs leading-relaxed mb-3">
-              Podemos agregar nuevas escenas temáticas (ruletas, torneos, marcadores en vivo) y se sumarán de forma organizada a este banco.
-            </p>
-            <span class="text-[10px] font-mono px-2 py-1 rounded bg-cyber-card border border-cyber-border text-gray-400">
-              SISTEMA MODULAR ACTIVO
-            </span>
+
+            <div class="pt-4 mt-3 border-t border-cyber-border/60 flex items-center justify-between">
+              <span id="card-multicam-count" class="text-[11px] text-gray-400 font-mono flex items-center gap-1">
+                <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i> <span id="label-multicam-active-count">0 en llamada</span>
+              </span>
+              <button id="btn-toggle-multicam-panel" type="button" class="px-3 py-1.5 rounded-lg bg-cyan-400/10 border border-cyan-400/40 hover:bg-cyan-400 hover:text-black text-cyan-400 text-xs font-chakra font-bold transition-all flex items-center gap-1.5">
+                <span id="text-toggle-multicam-panel">ABRIR CONSOLA</span>
+                <i data-lucide="chevron-down" id="icon-toggle-multicam-panel" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -976,6 +1000,77 @@
           <!-- Ficha de Vista Previa Rápida del Combate Seleccionado -->
           <div id="fight-preview-strip" class="bg-black/40 border border-cyber-border/70 rounded-xl p-3 sm:p-4 transition-all">
             <!-- Renderizado dinámico desde JS -->
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================================
+           MÓDULO DE LA ESCENA: MULTICAM (CONSOLA DE CONTROL RÁPIDO)
+           ============================================================ -->
+      <div id="scene-module-multicam" class="hidden">
+        <section class="bg-gradient-to-br from-cyber-dark to-[#081519] border border-cyan-400/40 rounded-xl p-4 sm:p-5 shadow-[0_0_25px_rgba(6,182,212,0.15)] space-y-4 relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 pb-3 border-b border-cyber-border/70">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-cyan-400/10 border border-cyan-400 flex items-center justify-center text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)] shrink-0">
+                <i data-lucide="video" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-sm sm:text-base font-bold font-chakra uppercase tracking-wide text-white flex items-center gap-2">
+                    CONSOLA: CÁMARAS MULTICAM
+                  </h2>
+                  <span class="px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-400 text-[10px] font-mono font-bold border border-cyan-400/40 uppercase">
+                    FUENTE OBS ÚNICA
+                  </span>
+                </div>
+                <p class="text-[11px] text-gray-400">Lanza las cámaras sobre el mismo overlay /overlay en tiempo real</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
+              <!-- Indicador de Multicam Activo en Pantalla -->
+              <div id="multicam-active-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase transition-all">
+                <span class="w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0" id="multicam-active-dot"></span>
+                <span id="multicam-active-text" class="truncate">SIN CÁMARAS EN PANTALLA</span>
+              </div>
+
+              <!-- Botón Colapsar Panel -->
+              <button id="btn-collapse-multicam-panel" type="button" class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-cyber-card border border-transparent hover:border-cyber-border transition-all" title="Contraer consola">
+                <i data-lucide="chevron-up" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Barra de Control Rápido: Modo y Lanzamiento -->
+          <div class="bg-black/40 border border-cyber-border/70 rounded-xl p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div class="flex items-center gap-3 flex-1">
+              <label class="text-xs font-chakra font-bold text-gray-300 uppercase shrink-0 flex items-center gap-1.5">
+                <i data-lucide="layout" class="w-3.5 h-3.5 text-cyan-400"></i> Modo:
+              </label>
+              <select id="select-multicam-scene-quick" class="flex-1 bg-cyber-dark border border-cyber-border hover:border-cyan-400 rounded-lg px-3 py-2 text-white font-rajdhani text-sm font-bold uppercase tracking-wider focus:outline-none focus:border-cyan-400 cursor-pointer">
+                <option value="pip-corner-tr">Esquina Sup. Der. (Stream Transparente)</option>
+                <option value="pip-corner-br">Esquina Inf. Der.</option>
+                <option value="pip-corner-tl">Esquina Sup. Izq.</option>
+                <option value="pip-sidebar-right">Columna Lateral Derecha</option>
+                <option value="pip-bottom-bar">Barra Horizontal Inferior</option>
+                <option value="grid">Mosaico Completo (Grid Full)</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="btn-launch-multicam-scene" type="button" class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-cyan-400 text-black font-chakra font-extrabold text-xs uppercase hover:brightness-110 transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-black"></i>
+                <span>LANZAR MULTICAM AL STREAM</span>
+              </button>
+              <button id="btn-hide-multicam-scene" type="button" class="px-3.5 py-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5">
+                <i data-lucide="square" class="w-3 h-3 fill-current"></i>
+                <span>QUITAR MULTICAM</span>
+              </button>
+              <a href="/guest" target="_blank" class="px-3 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyan-400 text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5" title="Abrir sala de invitados">
+                <i data-lucide="external-link" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span class="hidden md:inline">SALA INVITADO</span>
+              </a>
+            </div>
           </div>
         </section>
       </div>

@@ -84,6 +84,22 @@ const btnOpenCreateFight = document.getElementById('btn-open-create-fight');
 const btnOpenEditFight = document.getElementById('btn-open-edit-fight');
 const fightPreviewStrip = document.getElementById('fight-preview-strip');
 
+// Banco de Animaciones: Escena Multicam en Vivo DOM
+const cardSceneMulticam = document.getElementById('card-scene-multicam');
+const btnToggleMulticamPanel = document.getElementById('btn-toggle-multicam-panel');
+const textToggleMulticamPanel = document.getElementById('text-toggle-multicam-panel');
+const iconToggleMulticamPanel = document.getElementById('icon-toggle-multicam-panel');
+const btnCollapseMulticamPanel = document.getElementById('btn-collapse-multicam-panel');
+const sceneModuleMulticam = document.getElementById('scene-module-multicam');
+const badgeMulticamStatus = document.getElementById('badge-multicam-status');
+const labelMulticamActiveCount = document.getElementById('label-multicam-active-count');
+const multicamActiveIndicator = document.getElementById('multicam-active-indicator');
+const multicamActiveDot = document.getElementById('multicam-active-dot');
+const multicamActiveText = document.getElementById('multicam-active-text');
+const selectMulticamSceneQuick = document.getElementById('select-multicam-scene-quick');
+const btnLaunchMulticamScene = document.getElementById('btn-launch-multicam-scene');
+const btnHideMulticamScene = document.getElementById('btn-hide-multicam-scene');
+
 // Modal de Combate Boxeo DOM
 const fightModal = document.getElementById('fight-modal');
 const fightModalTitle = document.getElementById('fight-modal-title');
@@ -536,6 +552,30 @@ socket.on('state-update', (state) => {
       vsActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
       if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
       if (vsActiveText) vsActiveText.textContent = 'SIN COMBATE EN VIVO';
+    }
+  }
+
+  // Estado del Banco de Animaciones: Multicam en Vivo
+  const isMulticamLive = !!(state.multicam && state.multicam.isActive);
+  if (badgeMulticamStatus) {
+    if (isMulticamLive) {
+      badgeMulticamStatus.className = 'px-2 py-0.5 rounded bg-cyan-400 text-black text-[10px] font-mono font-bold animate-pulse shadow-[0_0_10px_rgba(6,182,212,0.6)]';
+      badgeMulticamStatus.textContent = 'EN VIVO OBS';
+    } else {
+      badgeMulticamStatus.className = 'px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px] font-mono border border-gray-700';
+      badgeMulticamStatus.textContent = 'DISPONIBLE';
+    }
+  }
+
+  if (multicamActiveIndicator) {
+    if (isMulticamLive) {
+      multicamActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-400/20 text-cyan-400 border border-cyan-400/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(6,182,212,0.3)]';
+      if (multicamActiveDot) multicamActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping';
+      if (multicamActiveText) multicamActiveText.textContent = `CÁMARAS EN PANTALLA`;
+    } else {
+      multicamActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
+      if (multicamActiveDot) multicamActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+      if (multicamActiveText) multicamActiveText.textContent = 'SIN CÁMARAS EN PANTALLA';
     }
   }
 
@@ -1651,6 +1691,85 @@ if (btnCollapseVeladaPanel) {
 }
 
 // ============================================================
+// BANCO DE ANIMACIONES: ESCENA MULTICAM
+// ============================================================
+let isMulticamPanelOpen = false;
+
+function toggleMulticamModule(forceState) {
+  if (typeof forceState === 'boolean') {
+    isMulticamPanelOpen = forceState;
+  } else {
+    isMulticamPanelOpen = !isMulticamPanelOpen;
+  }
+
+  if (sceneModuleMulticam) {
+    if (isMulticamPanelOpen) {
+      sceneModuleMulticam.classList.remove('hidden');
+      if (textToggleMulticamPanel) textToggleMulticamPanel.textContent = 'OCULTAR';
+      if (iconToggleMulticamPanel) iconToggleMulticamPanel.setAttribute('data-lucide', 'chevron-up');
+      if (cardSceneMulticam) {
+        cardSceneMulticam.classList.add('border-cyan-400', 'shadow-[0_0_20px_rgba(6,182,212,0.2)]');
+      }
+      setTimeout(() => {
+        sceneModuleMulticam.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    } else {
+      sceneModuleMulticam.classList.add('hidden');
+      if (textToggleMulticamPanel) textToggleMulticamPanel.textContent = 'ABRIR CONSOLA';
+      if (iconToggleMulticamPanel) iconToggleMulticamPanel.setAttribute('data-lucide', 'chevron-down');
+      if (cardSceneMulticam) {
+        cardSceneMulticam.classList.remove('border-cyan-400', 'shadow-[0_0_20px_rgba(6,182,212,0.2)]');
+      }
+    }
+    refreshIcons();
+  }
+}
+
+if (btnToggleMulticamPanel) {
+  btnToggleMulticamPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMulticamModule();
+  });
+}
+
+if (cardSceneMulticam) {
+  cardSceneMulticam.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-toggle-multicam-panel')) return;
+    toggleMulticamModule();
+  });
+}
+
+if (btnCollapseMulticamPanel) {
+  btnCollapseMulticamPanel.addEventListener('click', () => {
+    toggleMulticamModule(false);
+  });
+}
+
+// Lanzar Multicam a la misma fuente /overlay de OBS
+if (btnLaunchMulticamScene) {
+  btnLaunchMulticamScene.addEventListener('click', () => {
+    const sceneMode = selectMulticamSceneQuick ? selectMulticamSceneQuick.value : 'pip-corner-tr';
+    socket.emit('show-multicam', { scene: sceneMode });
+    showToast('🎬 Cámaras Multicam lanzadas al stream en /overlay');
+  });
+}
+
+if (btnHideMulticamScene) {
+  btnHideMulticamScene.addEventListener('click', () => {
+    socket.emit('hide-multicam');
+    showToast('✕ Cámaras Multicam retiradas de /overlay');
+  });
+}
+
+if (selectMulticamSceneQuick) {
+  selectMulticamSceneQuick.addEventListener('change', () => {
+    const scene = selectMulticamSceneQuick.value;
+    socket.emit('multicam-change-scene', { scene });
+    showToast(`📐 Modo cambiado a: ${scene}`);
+  });
+}
+
+// ============================================================
 // OVERLAY SUPERIOR DINÁMICO (HUD BIRRAVERDE Y BARRA DE EVENTOS)
 // ============================================================
 if (btnToggleTopHud) {
@@ -1874,6 +1993,7 @@ function renderAdminPeersList(peers) {
   // Actualizar badges
   if (multicamPeersBadge) multicamPeersBadge.textContent = `${count} ${count === 1 ? 'conectado' : 'conectados'}`;
   if (multicamOnlineCount) multicamOnlineCount.textContent = `${count} PARTICIPANTES`;
+  if (labelMulticamActiveCount) labelMulticamActiveCount.textContent = `${count} en llamada`;
   if (navBadgeMulticamCount) {
     if (count > 0) {
       navBadgeMulticamCount.textContent = count;
