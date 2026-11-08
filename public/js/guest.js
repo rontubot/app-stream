@@ -1,18 +1,21 @@
 /**
  * BirraVerde Multicam - Cliente de Invitado / Sala de Videollamada
- * Soporte WebRTC Mesh + Iniciales estilo Teams + Audio Meter + Screen Share
+ * Soporte WebRTC Mesh Ultra-Robusto + Audio Independiente + Iniciales Teams + Screen Share
  */
 
 (function () {
   'use strict';
 
-  // Configuración WebRTC con STUN público de Google
+  // Configuración WebRTC con múltiples servidores STUN públicos
   const RTC_CONFIG = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
-    ]
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    ],
+    iceCandidatePoolSize: 10
   };
 
   // Paleta de gradientes atractivos estilo Teams / Cyber
@@ -32,8 +35,7 @@
     for (let i = 0; i < name.length; i++) {
       hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const index = Math.abs(hash) % AVATAR_GRADIENTS.length;
-    return AVATAR_GRADIENTS[index];
+    return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
   }
 
   function computeInitials(name) {
@@ -66,21 +68,22 @@
     selectedAudioId: ''
   };
 
-  // Mapa de conexiones WebRTC con otros peers: peerId -> RTCPeerConnection
-  const peerConnections = new Map();
-  // Streams remotos guardados: peerId -> MediaStream
-  const remoteStreams = new Map();
-  // Info de peers conocidos en la sala: peerId -> peerData
-  const knownPeers = new Map();
+  // Mapas de WebRTC
+  const peerConnections = new Map();       // peerId -> RTCPeerConnection
+  const remoteStreams = new Map();         // peerId -> MediaStream
+  const knownPeers = new Map();            // peerId -> peerData
+  const pendingIceCandidates = new Map();  // peerId -> Array<candidate>
 
   // Socket
   const socket = io();
 
-  // Elementos del DOM
+  // Elementos DOM
   const lobbyView = document.getElementById('lobby-view');
   const callView = document.getElementById('call-view');
   const connDot = document.getElementById('conn-dot');
   const connText = document.getElementById('conn-text');
+  const audioUnlockBanner = document.getElementById('audio-unlock-banner');
+  const remoteAudiosContainer = document.getElementById('remote-audios-container');
 
   // Lobby Inputs
   const inputName = document.getElementById('input-guest-name');
@@ -112,24 +115,34 @@
   const btnCallShareScreen = document.getElementById('btn-call-share-screen');
   const btnCallLeave = document.getElementById('btn-call-leave');
 
-  // URL Params (posibilidad de pasar ?name=... o ?room=...)
+  // Desbloqueo de Audio por clic en el banner
+  if (audioUnlockBanner) {
+    audioUnlockBanner.addEventListener('click', () => {
+      unlockAllAudio();
+      audioUnlockBanner.classList.add('hidden');
+    });
+  }
+
+  function unlockAllAudio() {
+    if (state.audioContext && state.audioContext.state === 'suspended') {
+      state.audioContext.resume();
+    }
+    if (remoteAudiosContainer) {
+      Array.from(remoteAudiosContainer.children).forEach(audio => {
+        audio.play().catch(e => console.warn('Retry play error:', e));
+      });
+    }
+  }
+
+  // URL Params
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('room')) {
-    state.roomId = urlParams.get('room');
-  }
-  if (urlParams.get('name')) {
-    inputName.value = urlParams.get('name');
-  }
+  if (urlParams.get('room')) state.roomId = urlParams.get('room');
+  if (urlParams.get('name')) inputName.value = urlParams.get('name');
 
-  // ============================================================
-  // INICIALIZACIÓN Y PERMISOS DE MEDIOS
-  // ============================================================
-
-  // Cargar nombre guardado en LocalStorage si existe
+  // Cargar perfil guardado
   const savedName = localStorage.getItem('birra_multicam_name');
-  if (savedName && !inputName.value) {
-    inputName.value = savedName;
-  }
+  if (savedName && !inputName.value) inputName.value = savedName;
+
   const savedPhoto = localStorage.getItem('birra_multicam_photo');
   if (savedPhoto) {
     state.photo = savedPhoto;
@@ -142,7 +155,7 @@
 
   updateLobbyPreview();
 
-  // Listar dispositivos de medios
+  // Listar dispositivos
   async function enumerateDevices() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -161,19 +174,33 @@
         }
       });
     } catch (err) {
-      console.warn('No se pudieron listar dispositivos aún:', err);
+      console.warn('No se pudieron listar dispositivos:', err);
     }
   }
 
-  // Iniciar stream local para preview
+  // Crear pista dummy de video para que el SDP siempre tenga video preparado
+  function createSilentVideoTrack() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#070a0d';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const stream = canvas.captureStream(5);
+    const track = stream.getVideoTracks()[0];
+    track.enabled = false;
+    return track;
+  }
+
+  // Iniciar stream local
   async function initLocalStream(requestVideo = false) {
     try {
+      // Intentar pedir audio y video si se solicitó video
       const constraints = {
         audio: state.selectedAudioId ? { deviceId: { exact: state.selectedAudioId } } : true,
         video: requestVideo ? (state.selectedVideoId ? { deviceId: { exact: state.selectedVideoId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1280 }, height: { ideal: 720 } }) : false
       };
 
-      // Si ya existía stream previo, detener sus tracks
       if (state.localStream) {
         state.localStream.getTracks().forEach(t => t.stop());
       }
@@ -182,10 +209,14 @@
       state.hasVideo = requestVideo;
       state.hasAudio = true;
 
-      // Dispositivos ahora etiquetados
+      // Si no se pidió video, agregar pista dummy para que las conexiones WebRTC iniciales ya contemplen video
+      if (!requestVideo || state.localStream.getVideoTracks().length === 0) {
+        const dummyTrack = createSilentVideoTrack();
+        state.localStream.addTrack(dummyTrack);
+      }
+
       await enumerateDevices();
 
-      // Configurar preview de video
       if (requestVideo) {
         previewVideo.srcObject = state.localStream;
         previewVideo.classList.remove('hidden');
@@ -200,33 +231,35 @@
         btnToggleCamLobby.innerHTML = '<i data-lucide="video" class="w-4 h-4 text-cyber-green"></i> <span>Encender Cámara</span>';
       }
 
-      // Iniciar Vúmetro de audio
       setupAudioMeter(state.localStream);
-
       if (window.lucide) lucide.createIcons();
     } catch (err) {
-      console.warn('Error al obtener stream local:', err);
-      badgeCamState.innerHTML = '<i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-yellow-500"></i> Sin permisos de cámara/mic';
-      if (window.lucide) lucide.createIcons();
+      console.warn('getUserMedia falló, intentando solo audio:', err);
+      try {
+        state.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        state.localStream.addTrack(createSilentVideoTrack());
+        state.hasVideo = false;
+        state.hasAudio = true;
+        setupAudioMeter(state.localStream);
+      } catch (err2) {
+        console.error('Sin acceso a micrófono ni cámara:', err2);
+      }
     }
   }
 
-  // Intentar iniciar audio inicialmente para verificar micro
   initLocalStream(false);
 
-  // Vúmetro con Web Audio API
+  // Vúmetro de audio
   function setupAudioMeter(stream) {
     try {
-      if (state.audioContext) {
-        state.audioContext.close();
-      }
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
+      if (state.audioContext) state.audioContext.close();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
 
       const audioTracks = stream.getAudioTracks();
       if (!audioTracks || audioTracks.length === 0) return;
 
-      state.audioContext = new AudioContext();
+      state.audioContext = new AudioCtx();
       state.audioSource = state.audioContext.createMediaStreamSource(stream);
       state.audioAnalyser = state.audioContext.createAnalyser();
       state.audioAnalyser.fftSize = 256;
@@ -241,15 +274,11 @@
         state.audioAnalyser.getByteFrequencyData(dataArray);
 
         let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
+        for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
         const avg = sum / bufferLength;
         const percent = Math.min(100, Math.round((avg / 80) * 100));
 
-        if (micLevelBar) {
-          micLevelBar.style.width = percent + '%';
-        }
+        if (micLevelBar) micLevelBar.style.width = percent + '%';
         if (micTestStatus) {
           if (percent > 18) {
             micTestStatus.textContent = 'Detectando voz';
@@ -260,7 +289,6 @@
           }
         }
 
-        // Si ya estamos en la llamada, actualizar halo local
         if (state.isJoined) {
           const localBox = document.getElementById('card-peer-' + state.peerId);
           if (localBox) {
@@ -282,9 +310,7 @@
     }
   }
 
-  // ============================================================
-  // PREVIEW REACTIVO ESTILO TEAMS
-  // ============================================================
+  // Previsualización de Iniciales Teams
   function updateLobbyPreview() {
     const rawName = inputName.value.trim();
     state.name = rawName || 'Tu Nombre';
@@ -309,7 +335,6 @@
     localStorage.setItem('birra_multicam_name', inputName.value.trim());
   });
 
-  // Subir Foto opcional
   inputAvatarFile.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -322,11 +347,7 @@
       avatarFilename.textContent = file.name;
       btnRemoveAvatar.classList.remove('hidden');
       updateLobbyPreview();
-
-      // Si ya está en la sala, notificar actualización
-      if (state.isJoined) {
-        notifyProfileUpdate();
-      }
+      if (state.isJoined) notifyProfileUpdate();
     };
     reader.readAsDataURL(file);
   });
@@ -338,18 +359,14 @@
     avatarFilename.textContent = 'Sin foto (usar iniciales)';
     btnRemoveAvatar.classList.add('hidden');
     updateLobbyPreview();
-    if (state.isJoined) {
-      notifyProfileUpdate();
-    }
+    if (state.isJoined) notifyProfileUpdate();
   });
 
-  // Toggle Cámara en Lobby
   btnToggleCamLobby.addEventListener('click', async () => {
     const newVideoState = !state.hasVideo;
     await initLocalStream(newVideoState);
   });
 
-  // Toggle Micrófono en Lobby
   btnToggleMicLobby.addEventListener('click', () => {
     state.hasAudio = !state.hasAudio;
     if (state.localStream) {
@@ -365,12 +382,9 @@
     if (window.lucide) lucide.createIcons();
   });
 
-  // Selección de dispositivos
   selectVideoDevice.addEventListener('change', async () => {
     state.selectedVideoId = selectVideoDevice.value;
-    if (state.hasVideo) {
-      await initLocalStream(true);
-    }
+    if (state.hasVideo) await initLocalStream(true);
   });
 
   selectAudioDevice.addEventListener('change', async () => {
@@ -393,10 +407,7 @@
     state.name = enteredName;
     state.initials = computeInitials(state.name);
 
-    // Asegurar que AudioContext esté activo por política de interacción de navegadores
-    if (state.audioContext && state.audioContext.state === 'suspended') {
-      state.audioContext.resume();
-    }
+    unlockAllAudio();
 
     joinMulticamRoom();
   });
@@ -422,16 +433,15 @@
         lobbyView.classList.add('hidden');
         callView.classList.remove('hidden');
 
-        // Renderizar tarjeta local en el grid de la llamada
         renderLocalParticipant();
 
-        // Procesar peers existentes y conectarse
         if (Array.isArray(res.peers)) {
           res.peers.forEach(peer => {
-            if (peer.id !== state.peerId && peer.role !== 'overlay') {
+            if (peer.id !== state.peerId) {
               knownPeers.set(peer.id, peer);
-              // Como soy el recién llegado, los peers existentes iniciarán la conexión o la inicio yo
-              createPeerConnection(peer.id, true);
+              // Determinar si soy el iniciador hacia este peer
+              const isInitiator = shouldInitiate(peer.id, peer.role);
+              createPeerConnection(peer.id, isInitiator);
             }
           });
           updateParticipantsCount();
@@ -457,6 +467,15 @@
   // ============================================================
   // WEBRTC SIGNALING Y CONEXIONES MESH
   // ============================================================
+
+  // Regla Determinista de Iniciador (Evita Colisión / Glare)
+  function shouldInitiate(remotePeerId, remoteRole) {
+    // Siempre iniciar oferta hacia el overlay de OBS
+    if (remoteRole === 'overlay') return true;
+    // Entre invitados, el peer con ID alfabéticamente mayor crea el offer
+    return state.peerId > remotePeerId;
+  }
+
   function createPeerConnection(remotePeerId, isInitiator = false) {
     if (peerConnections.has(remotePeerId)) {
       return peerConnections.get(remotePeerId);
@@ -465,14 +484,14 @@
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnections.set(remotePeerId, pc);
 
-    // Añadir tracks locales si existen
+    // Añadir tracks locales (audio y video/dummy)
     if (state.localStream) {
       state.localStream.getTracks().forEach(track => {
         pc.addTrack(track, state.localStream);
       });
     }
 
-    // Manejo de ICE Candidates
+    // ICE Candidates locales
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('multicam-signal', {
@@ -484,14 +503,19 @@
       }
     };
 
-    // Recibir tracks remotos
+    // Tracks remotos entrantes
     pc.ontrack = (event) => {
       const stream = event.streams[0] || new MediaStream([event.track]);
       remoteStreams.set(remotePeerId, stream);
+
+      // Conectar audio remoto independiente (vital para que suene siempre)
+      attachRemoteAudio(remotePeerId, stream);
+
       renderRemoteParticipant(remotePeerId, stream);
     };
 
     pc.onconnectionstatechange = () => {
+      console.log(`[WebRTC] Peer ${remotePeerId} state:`, pc.connectionState);
       if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         cleanupPeer(remotePeerId);
       }
@@ -511,7 +535,7 @@
             signal: { type: 'offer', sdp: pc.localDescription }
           });
         })
-        .catch(err => console.error('Error creando offer:', err));
+        .catch(err => console.error('Error creando offer hacia', remotePeerId, err));
     }
 
     return pc;
@@ -527,8 +551,13 @@
     try {
       if (signal.type === 'offer') {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+        // Vaciar cola de candidatos ICE pendientes
+        await flushPendingIceCandidates(fromPeerId, pc);
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+
         socket.emit('multicam-signal', {
           toPeerId: fromPeerId,
           fromPeerId: state.peerId,
@@ -537,34 +566,59 @@
         });
       } else if (signal.type === 'answer') {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+        // Vaciar candidatos pendientes
+        await flushPendingIceCandidates(fromPeerId, pc);
       } else if (signal.type === 'candidate' && signal.candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        if (pc.remoteDescription && pc.remoteDescription.type) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+          } catch (e) {
+            console.warn('Error agregando candidate:', e);
+          }
+        } else {
+          // Encolar candidato para cuando remoteDescription esté listo
+          if (!pendingIceCandidates.has(fromPeerId)) {
+            pendingIceCandidates.set(fromPeerId, []);
+          }
+          pendingIceCandidates.get(fromPeerId).push(signal.candidate);
+        }
       }
     } catch (err) {
-      console.error('Error procesando señal WebRTC:', err);
+      console.error('Error procesando señal WebRTC de', fromPeerId, err);
     }
   });
+
+  async function flushPendingIceCandidates(fromPeerId, pc) {
+    const list = pendingIceCandidates.get(fromPeerId) || [];
+    for (const cand of list) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(cand));
+      } catch (e) {
+        console.warn('Error vaciando candidato encolado:', e);
+      }
+    }
+    pendingIceCandidates.delete(fromPeerId);
+  }
 
   // Lista de peers actualizada desde el servidor
   socket.on('multicam-peers-updated', ({ peers }) => {
     if (!Array.isArray(peers)) return;
 
     peers.forEach(peer => {
-      if (peer.id !== state.peerId && peer.role !== 'overlay') {
+      if (peer.id !== state.peerId) {
         const isNew = !knownPeers.has(peer.id);
         knownPeers.set(peer.id, peer);
 
         if (isNew && state.isJoined) {
-          // Iniciar conexión con el nuevo peer
-          createPeerConnection(peer.id, true);
+          const isInitiator = shouldInitiate(peer.id, peer.role);
+          createPeerConnection(peer.id, isInitiator);
         } else {
-          // Actualizar render si cambió perfil o video/audio
           renderRemoteParticipant(peer.id, remoteStreams.get(peer.id));
         }
       }
     });
 
-    // Limpiar peers que ya no están
     const currentIds = new Set(peers.map(p => p.id));
     knownPeers.forEach((p, id) => {
       if (!currentIds.has(id)) {
@@ -592,14 +646,40 @@
     }
     remoteStreams.delete(peerId);
     knownPeers.delete(peerId);
+    pendingIceCandidates.delete(peerId);
 
     const card = document.getElementById('card-peer-' + peerId);
     if (card) card.remove();
+
+    const audioElem = document.getElementById('remote-audio-' + peerId);
+    if (audioElem) audioElem.remove();
   }
 
   function updateParticipantsCount() {
-    const total = 1 + knownPeers.size;
+    const total = 1 + Array.from(knownPeers.values()).filter(p => p.role !== 'overlay').length;
     participantsCountBadge.textContent = `${total} ${total === 1 ? 'participante' : 'participantes'}`;
+  }
+
+  // ============================================================
+  // AUDIO REMOTO INDEPENDIENTE
+  // ============================================================
+  function attachRemoteAudio(peerId, stream) {
+    if (!remoteAudiosContainer) return;
+    if (stream.getAudioTracks().length === 0) return;
+
+    let audioElem = document.getElementById('remote-audio-' + peerId);
+    if (!audioElem) {
+      audioElem = document.createElement('audio');
+      audioElem.id = 'remote-audio-' + peerId;
+      audioElem.autoplay = true;
+      audioElem.playsInline = true;
+      remoteAudiosContainer.appendChild(audioElem);
+    }
+    audioElem.srcObject = stream;
+    audioElem.play().catch(err => {
+      console.warn('Autoplay bloqueado para audio remoto, mostrando banner:', err);
+      if (audioUnlockBanner) audioUnlockBanner.classList.remove('hidden');
+    });
   }
 
   // ============================================================
@@ -649,7 +729,7 @@
 
   function renderRemoteParticipant(peerId, stream) {
     const peerData = knownPeers.get(peerId);
-    if (!peerData) return;
+    if (!peerData || peerData.role === 'overlay') return;
 
     let card = document.getElementById('card-peer-' + peerId);
     if (!card) {
@@ -659,7 +739,7 @@
       participantsGrid.appendChild(card);
     }
 
-    const hasVideo = peerData.hasVideo && stream && stream.getVideoTracks().length > 0;
+    const hasVideo = peerData.hasVideo && stream && stream.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
     const gradient = getGradientForName(peerData.name);
 
     card.innerHTML = `
@@ -688,6 +768,7 @@
     const vElem = card.querySelector('#call-video-' + peerId);
     if (vElem && stream) {
       vElem.srcObject = stream;
+      vElem.play().catch(e => console.warn('Video play retry:', e));
     }
 
     if (window.lucide) lucide.createIcons();
@@ -710,39 +791,42 @@
 
   btnCallToggleCam.addEventListener('click', async () => {
     state.hasVideo = !state.hasVideo;
+
     if (state.hasVideo) {
-      // Pedir track de video
       try {
         const vStream = await navigator.mediaDevices.getUserMedia({
           video: state.selectedVideoId ? { deviceId: { exact: state.selectedVideoId } } : true
         });
-        const newTrack = vStream.getVideoTracks()[0];
+        const realVideoTrack = vStream.getVideoTracks()[0];
 
-        // Reemplazar o añadir track a las conexiones WebRTC
+        // Reemplazar pista en todas las conexiones WebRTC
         peerConnections.forEach(pc => {
           const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
           if (sender) {
-            sender.replaceTrack(newTrack);
+            sender.replaceTrack(realVideoTrack);
           } else {
-            pc.addTrack(newTrack, state.localStream);
+            pc.addTrack(realVideoTrack, state.localStream);
           }
         });
 
         // Actualizar localStream
         state.localStream.getVideoTracks().forEach(t => t.stop());
-        state.localStream.addTrack(newTrack);
+        state.localStream.removeTrack(state.localStream.getVideoTracks()[0]);
+        state.localStream.addTrack(realVideoTrack);
       } catch (e) {
-        console.error('Error encendiendo video:', e);
+        console.error('Error activando video real:', e);
         state.hasVideo = false;
       }
     } else {
-      // Detener video
-      if (state.localStream) {
-        state.localStream.getVideoTracks().forEach(t => {
-          t.stop();
-          state.localStream.removeTrack(t);
-        });
-      }
+      // Poner video dummy silencioso
+      const dummyTrack = createSilentVideoTrack();
+      peerConnections.forEach(pc => {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) sender.replaceTrack(dummyTrack);
+      });
+      state.localStream.getVideoTracks().forEach(t => t.stop());
+      state.localStream.removeTrack(state.localStream.getVideoTracks()[0]);
+      state.localStream.addTrack(dummyTrack);
     }
 
     btnCallToggleCam.className = `w-11 h-11 rounded-xl border flex items-center justify-center transition-all shadow-md ${
@@ -761,18 +845,15 @@
 
         peerConnections.forEach(pc => {
           const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-          if (sender) {
-            sender.replaceTrack(screenTrack);
-          } else {
-            pc.addTrack(screenTrack, state.screenStream);
-          }
+          if (sender) sender.replaceTrack(screenTrack);
         });
 
         screenTrack.onended = () => {
           state.screenStream = null;
           btnCallShareScreen.classList.remove('bg-cyan-500/20', 'border-cyan-400');
           if (state.hasVideo) {
-            initLocalStream(true);
+            btnCallToggleCam.click();
+            btnCallToggleCam.click();
           }
         };
 
@@ -787,14 +868,12 @@
     }
   });
 
-  // Salir de la sala
   btnCallLeave.addEventListener('click', () => {
     if (confirm('¿Deseas salir de la llamada?')) {
       window.location.reload();
     }
   });
 
-  // Socket connection status
   socket.on('connect', () => {
     connDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green';
     connText.textContent = state.isJoined ? 'En Sala: ' + state.roomId : 'Listo para entrar';

@@ -240,6 +240,15 @@
     </div>
   </main>
 
+  <!-- Banner de desbloqueo de audio por políticas del navegador -->
+  <div id="audio-unlock-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-cyber-green text-black px-4 py-2.5 rounded-xl font-chakra font-bold text-xs sm:text-sm shadow-[0_0_25px_rgba(0,255,102,0.8)] cursor-pointer flex items-center gap-2">
+    <i data-lucide="volume-2" class="w-4 h-4"></i>
+    <span>El navegador pausó el audio. Haz clic aquí para escuchar a los participantes.</span>
+  </div>
+
+  <!-- Contenedor invisible de pistas de audio remotas -->
+  <div id="remote-audios-container" style="display:none;"></div>
+
   <!-- ============================================================
        FOOTER
        ============================================================ -->

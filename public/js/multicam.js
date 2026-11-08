@@ -10,8 +10,11 @@
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
-    ]
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    ],
+    iceCandidatePoolSize: 10
   };
 
   const AVATAR_GRADIENTS = [
@@ -30,8 +33,7 @@
     for (let i = 0; i < name.length; i++) {
       hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const index = Math.abs(hash) % AVATAR_GRADIENTS.length;
-    return AVATAR_GRADIENTS[index];
+    return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
   }
 
   // Estado del overlay
@@ -44,24 +46,25 @@
     audioMutedOverall: false
   };
 
-  // Mapas de peers, streams y analizadores de audio
-  const knownPeers = new Map();         // peerId -> peerData
-  const peerConnections = new Map();    // peerId -> RTCPeerConnection
-  const remoteStreams = new Map();      // peerId -> MediaStream
-  const audioAnalysers = new Map();     // peerId -> { context, analyser, source }
+  // Mapas
+  const knownPeers = new Map();            // peerId -> peerData
+  const peerConnections = new Map();       // peerId -> RTCPeerConnection
+  const remoteStreams = new Map();         // peerId -> MediaStream
+  const audioAnalysers = new Map();        // peerId -> { context, analyser, source }
+  const pendingIceCandidates = new Map();   // peerId -> Array<candidate>
 
   // Elementos DOM
   const stage = document.getElementById('multicam-stage');
   const camsContainer = document.getElementById('cams-container');
   const audioContainer = document.getElementById('audio-container');
 
-  // Conexión Socket.io
+  // Socket
   const socket = io();
 
   socket.on('connect', () => {
-    console.log('[OBS Multicam] Conectado al servidor con ID:', socket.id);
+    console.log('[OBS Multicam] Conectado al socket como Overlay:', socket.id);
 
-    // Unirse a la sala como overlay (solo receptor)
+    // Unirse a la sala como overlay (receptor puro)
     socket.emit('multicam-join', {
       roomId,
       peerId: overlayPeerId,
@@ -79,7 +82,7 @@
         res.peers.forEach(peer => {
           if (peer.role !== 'overlay' && peer.id !== overlayPeerId) {
             knownPeers.set(peer.id, peer);
-            connectToPeer(peer.id);
+            preparePeerConnection(peer.id);
           }
         });
         renderAllCams();
@@ -87,7 +90,6 @@
     });
   });
 
-  // Configuración actualizada desde el panel de host
   socket.on('multicam-settings-updated', (settings) => {
     applySettings(settings);
   });
@@ -95,12 +97,9 @@
   function applySettings(settings) {
     if (!settings) return;
     currentSettings = { ...currentSettings, ...settings };
-
-    // Actualizar clase de escena en el escenario
     stage.className = 'scene-' + (currentSettings.activeScene || 'pip-corner-tr');
   }
 
-  // Lista de participantes actualizada
   socket.on('multicam-peers-updated', ({ peers }) => {
     if (!Array.isArray(peers)) return;
 
@@ -113,12 +112,11 @@
         knownPeers.set(peer.id, peer);
 
         if (!existing) {
-          connectToPeer(peer.id);
+          preparePeerConnection(peer.id);
         }
       }
     });
 
-    // Limpiar peers que se hayan ido
     knownPeers.forEach((p, id) => {
       if (!incomingIds.has(id)) {
         cleanupPeer(id);
@@ -136,8 +134,10 @@
   // ============================================================
   // WEBRTC SIGNALING (Receptor)
   // ============================================================
-  function connectToPeer(remotePeerId) {
-    if (peerConnections.has(remotePeerId)) return;
+  function preparePeerConnection(remotePeerId) {
+    if (peerConnections.has(remotePeerId)) {
+      return peerConnections.get(remotePeerId);
+    }
 
     const pc = new RTCPeerConnection(RTC_CONFIG);
     peerConnections.set(remotePeerId, pc);
@@ -157,36 +157,43 @@
       const stream = event.streams[0] || new MediaStream([event.track]);
       remoteStreams.set(remotePeerId, stream);
 
-      // Conectar audio para que OBS reproduzca el sonido de la llamada
       attachAudioTrack(remotePeerId, stream);
-
-      // Iniciar detector de voz para este peer
       setupSpeakingDetector(remotePeerId, stream);
-
       renderAllCams();
     };
 
     pc.onconnectionstatechange = () => {
+      console.log(`[OBS Multicam] Conexión con ${remotePeerId}:`, pc.connectionState);
       if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         cleanupPeer(remotePeerId);
         renderAllCams();
       }
     };
+
+    return pc;
   }
 
-  // Señales WebRTC entrantes
+  // Señales entrantes de los participantes (Offers, ICE Candidates)
   socket.on('multicam-signal', async ({ fromPeerId, signal }) => {
     let pc = peerConnections.get(fromPeerId);
     if (!pc) {
-      connectToPeer(fromPeerId);
-      pc = peerConnections.get(fromPeerId);
+      pc = preparePeerConnection(fromPeerId);
     }
 
     try {
       if (signal.type === 'offer') {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+        // Vaciar candidatos pendientes
+        const pending = pendingIceCandidates.get(fromPeerId) || [];
+        for (const cand of pending) {
+          try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) {}
+        }
+        pendingIceCandidates.delete(fromPeerId);
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+
         socket.emit('multicam-signal', {
           toPeerId: fromPeerId,
           fromPeerId: overlayPeerId,
@@ -195,11 +202,25 @@
         });
       } else if (signal.type === 'answer') {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+        const pending = pendingIceCandidates.get(fromPeerId) || [];
+        for (const cand of pending) {
+          try { await pc.addIceCandidate(new RTCIceCandidate(cand)); } catch (e) {}
+        }
+        pendingIceCandidates.delete(fromPeerId);
       } else if (signal.type === 'candidate' && signal.candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        if (pc.remoteDescription && pc.remoteDescription.type) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+          } catch (e) {
+            console.warn('[OBS Multicam] Error agregando candidato:', e);
+          }
+        } else {
+          if (!pendingIceCandidates.has(fromPeerId)) pendingIceCandidates.set(fromPeerId, []);
+          pendingIceCandidates.get(fromPeerId).push(signal.candidate);
+        }
       }
     } catch (err) {
-      console.error('[OBS Multicam] Error al procesar señal WebRTC:', err);
+      console.error('[OBS Multicam] Error procesando señal WebRTC:', err);
     }
   });
 
@@ -210,29 +231,27 @@
     }
     remoteStreams.delete(peerId);
     knownPeers.delete(peerId);
+    pendingIceCandidates.delete(peerId);
 
-    // Detener audio context
     if (audioAnalysers.has(peerId)) {
       try {
-        const item = audioAnalysers.get(peerId);
-        item.context.close();
+        audioAnalysers.get(peerId).context.close();
       } catch (e) {}
       audioAnalysers.delete(peerId);
     }
 
-    // Remover elemento de audio
     const audioElem = document.getElementById('audio-' + peerId);
     if (audioElem) audioElem.remove();
 
-    // Remover card del DOM
     const card = document.getElementById('cam-card-' + peerId);
     if (card) card.remove();
   }
 
   // ============================================================
-  // GESTIÓN DE AUDIO Y DETECCIÓN DE HABLA
+  // AUDIO EN OBS
   // ============================================================
   function attachAudioTrack(peerId, stream) {
+    if (!audioContainer) return;
     if (stream.getAudioTracks().length === 0) return;
 
     let audioElem = document.getElementById('audio-' + peerId);
@@ -245,6 +264,7 @@
     }
     audioElem.srcObject = stream;
     audioElem.muted = !!currentSettings.audioMutedOverall;
+    audioElem.play().catch(e => console.warn('[OBS Multicam] Audio play error:', e));
   }
 
   function setupSpeakingDetector(peerId, stream) {
@@ -271,9 +291,7 @@
 
         analyser.getByteFrequencyData(dataArray);
         let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
+        for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
         const avg = sum / bufferLength;
         const isSpeaking = avg > 15;
 
@@ -296,27 +314,22 @@
   }
 
   // ============================================================
-  // RENDERIZADO VISUAL DE TODAS LAS CÁMARAS
+  // RENDERIZADO VISUAL
   // ============================================================
   function renderAllCams() {
-    // Filtrar participantes visibles (no ocultos por el host)
     const visiblePeers = Array.from(knownPeers.values())
       .filter(peer => !peer.isHidden)
       .sort((a, b) => {
-        // Ordenar por slot manual si existe, o por joinedAt
         if (a.slot !== null && b.slot !== null) return a.slot - b.slot;
         if (a.slot !== null) return -1;
         if (b.slot !== null) return 1;
         return a.joinedAt - b.joinedAt;
       });
 
-    // Actualizar data-count para que el CSS adapte el Grid
     stage.setAttribute('data-count', visiblePeers.length);
 
-    // Conjunto de IDs visibles actuales
     const visibleIds = new Set(visiblePeers.map(p => p.id));
 
-    // Remover tarjetas que ya no deben estar visibles
     Array.from(camsContainer.children).forEach(child => {
       const pId = child.getAttribute('data-peer-id');
       if (pId && !visibleIds.has(pId)) {
@@ -324,7 +337,6 @@
       }
     });
 
-    // Renderizar o actualizar cada cámara
     visiblePeers.forEach(peer => {
       renderCamCard(peer);
     });
@@ -343,22 +355,18 @@
       camsContainer.appendChild(card);
     }
 
-    // Gradiente dinámico de fondo para iniciales estilo Teams
     const gradient = getGradientForName(peer.name);
     const initials = peer.initials || 'BV';
 
     card.innerHTML = `
-      <!-- Video Element -->
       <video id="video-${peer.id}" autoplay playsinline class="cam-video ${hasActiveVideo ? '' : 'hidden'}"></video>
 
-      <!-- Avatar Box (Teams Initials o Foto) -->
       <div id="avatar-box-${peer.id}" class="cam-avatar-box ${hasActiveVideo ? 'hidden' : ''}">
         <div class="cam-avatar-circle" style="background: ${peer.photo ? 'none' : gradient}">
           ${peer.photo ? `<img src="${peer.photo}" class="cam-avatar-img" alt="${peer.name}">` : `<span>${initials}</span>`}
         </div>
       </div>
 
-      <!-- Lower Third: Nombre y Estado -->
       <div class="cam-lower-third">
         <span class="cam-status-dot ${hasActiveVideo ? '' : 'no-video'}"></span>
         <span class="cam-name-text">${peer.name || 'Invitado'}</span>
@@ -369,11 +377,11 @@
       </div>
     `;
 
-    // Vincular stream al video si existe
     if (hasActiveVideo) {
       const vElem = card.querySelector('#video-' + peer.id);
       if (vElem && stream) {
         vElem.srcObject = stream;
+        vElem.play().catch(e => console.warn('[OBS Multicam] Video play retry:', e));
       }
     }
   }
