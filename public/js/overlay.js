@@ -886,8 +886,21 @@ function prepareMulticamPeerConnection(remotePeerId) {
   };
 
   pc.ontrack = (event) => {
-    const stream = event.streams[0] || new MediaStream([event.track]);
-    multicamRemoteStreams.set(remotePeerId, stream);
+    let stream = multicamRemoteStreams.get(remotePeerId);
+    if (!stream) {
+      stream = event.streams[0] || new MediaStream();
+      multicamRemoteStreams.set(remotePeerId, stream);
+    }
+    if (event.track && !stream.getTracks().some(t => t.id === event.track.id)) {
+      stream.addTrack(event.track);
+    }
+    if (event.streams && event.streams[0]) {
+      event.streams[0].getTracks().forEach(t => {
+        if (!stream.getTracks().some(existing => existing.id === t.id)) {
+          stream.addTrack(t);
+        }
+      });
+    }
 
     attachMulticamAudio(remotePeerId, stream);
     setupMulticamSpeakingDetector(remotePeerId, stream);
@@ -1084,7 +1097,7 @@ function renderMulticamCamCard(peer) {
   const initials = peer.initials || 'BV';
 
   card.innerHTML = `
-    <video id="video-${peer.id}" autoplay playsinline class="cam-video ${hasActiveVideo ? '' : 'hidden'}"></video>
+    <video id="video-${peer.id}" autoplay playsinline muted class="cam-video ${hasActiveVideo ? '' : 'hidden'}"></video>
 
     <div id="avatar-box-${peer.id}" class="cam-avatar-box ${hasActiveVideo ? 'hidden' : ''}">
       <div class="cam-avatar-circle" style="background: ${peer.photo ? 'none' : gradient}">
@@ -1104,11 +1117,19 @@ function renderMulticamCamCard(peer) {
     </div>
   `;
 
-  if (hasActiveVideo) {
-    const vElem = card.querySelector('#video-' + peer.id);
-    if (vElem && stream) {
-      vElem.srcObject = stream;
+  const vElem = card.querySelector('#video-' + peer.id);
+  if (vElem) {
+    vElem.muted = true;
+    vElem.defaultMuted = true;
+    vElem.volume = 0;
+    if (hasActiveVideo && stream) {
+      // AISLAR PISTAS: El elemento <video> SOLO debe contener pistas de video, NUNCA de audio.
+      // El audio en el overlay se procesa exclusivamente vía attachMulticamAudio en <audio id="audio-${peer.id}">
+      const videoTracks = stream.getVideoTracks();
+      vElem.srcObject = videoTracks.length > 0 ? new MediaStream(videoTracks) : null;
       vElem.play().catch(e => console.warn('[Overlay Multicam] Video play retry:', e));
+    } else {
+      vElem.srcObject = null;
     }
   }
 }

@@ -816,7 +816,8 @@
       audioElem.playsInline = true;
       remoteAudiosContainer.appendChild(audioElem);
     }
-    audioElem.srcObject = stream;
+    const audioTracks = stream.getAudioTracks();
+    audioElem.srcObject = audioTracks.length > 0 ? new MediaStream(audioTracks) : stream;
     audioElem.play().catch(err => {
       console.warn('Autoplay bloqueado para audio remoto, mostrando banner:', err);
       if (audioUnlockBanner) audioUnlockBanner.classList.remove('hidden');
@@ -861,8 +862,14 @@
     `;
 
     const vElem = card.querySelector('#call-local-video');
-    if (vElem && state.localStream) {
-      vElem.srcObject = state.localStream;
+    if (vElem) {
+      vElem.muted = true;
+      vElem.defaultMuted = true;
+      vElem.volume = 0;
+      if (state.localStream) {
+        const videoTracks = state.localStream.getVideoTracks();
+        vElem.srcObject = videoTracks.length > 0 ? new MediaStream(videoTracks) : null;
+      }
     }
 
     if (window.lucide) lucide.createIcons();
@@ -884,7 +891,7 @@
     const gradient = getGradientForName(peerData.name);
 
     card.innerHTML = `
-      <video id="call-video-${peerId}" autoplay playsinline class="w-full h-full object-cover ${hasVideo ? '' : 'hidden'}"></video>
+      <video id="call-video-${peerId}" autoplay playsinline muted class="w-full h-full object-cover ${hasVideo ? '' : 'hidden'}"></video>
       <div id="call-avatar-${peerId}" class="w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-b from-cyber-card to-cyber-black ${hasVideo ? 'hidden' : ''}">
         <div class="w-24 h-24 rounded-full border-4 border-cyber-border flex items-center justify-center text-3xl font-bold font-chakra tracking-wider shadow-xl overflow-hidden" style="background: ${peerData.photo ? 'none' : gradient}">
           ${peerData.photo ? `<img src="${peerData.photo}" class="w-full h-full object-cover" alt="${peerData.name}">` : `<span>${peerData.initials || 'IN'}</span>`}
@@ -907,9 +914,17 @@
     `;
 
     const vElem = card.querySelector('#call-video-' + peerId);
-    if (vElem && stream) {
-      vElem.srcObject = stream;
-      vElem.play().catch(e => console.warn('Video play retry:', e));
+    if (vElem) {
+      vElem.muted = true;
+      vElem.defaultMuted = true;
+      vElem.volume = 0;
+      if (hasVideo && stream) {
+        const videoTracks = stream.getVideoTracks();
+        vElem.srcObject = videoTracks.length > 0 ? new MediaStream(videoTracks) : null;
+        vElem.play().catch(e => console.warn('Video play retry:', e));
+      } else {
+        vElem.srcObject = null;
+      }
     }
 
     if (window.lucide) lucide.createIcons();

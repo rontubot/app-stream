@@ -288,7 +288,8 @@
       audioElem.playsInline = true;
       audioContainer.appendChild(audioElem);
     }
-    audioElem.srcObject = stream;
+    const audioTracks = stream.getAudioTracks();
+    audioElem.srcObject = audioTracks.length > 0 ? new MediaStream(audioTracks) : stream;
     const peerData = knownPeers.get(peerId);
     const isHost = !!(peerData && (peerData.isHost || peerData.role === 'host'));
     const isMuted = isHost || !!currentSettings.audioMutedOverall || (peerData && peerData.isStreamMuted);
@@ -394,7 +395,7 @@
     const initials = peer.initials || 'BV';
 
     card.innerHTML = `
-      <video id="video-${peer.id}" autoplay playsinline class="cam-video ${hasActiveVideo ? '' : 'hidden'}"></video>
+      <video id="video-${peer.id}" autoplay playsinline muted class="cam-video ${hasActiveVideo ? '' : 'hidden'}"></video>
 
       <div id="avatar-box-${peer.id}" class="cam-avatar-box ${hasActiveVideo ? 'hidden' : ''}">
         <div class="cam-avatar-circle" style="background: ${peer.photo ? 'none' : gradient}">
@@ -412,11 +413,17 @@
       </div>
     `;
 
-    if (hasActiveVideo) {
-      const vElem = card.querySelector('#video-' + peer.id);
-      if (vElem && stream) {
-        vElem.srcObject = stream;
+    const vElem = card.querySelector('#video-' + peer.id);
+    if (vElem) {
+      vElem.muted = true;
+      vElem.defaultMuted = true;
+      vElem.volume = 0;
+      if (hasActiveVideo && stream) {
+        const videoTracks = stream.getVideoTracks();
+        vElem.srcObject = videoTracks.length > 0 ? new MediaStream(videoTracks) : null;
         vElem.play().catch(e => console.warn('[OBS Multicam] Video play retry:', e));
+      } else {
+        vElem.srcObject = null;
       }
     }
   }
