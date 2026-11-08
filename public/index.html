@@ -230,6 +230,22 @@
               </button>
             </div>
           </div>
+
+          <!-- Banner Informativo de Conexión en Vivo con Kick Chat -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/40 text-xs">
+            <div class="flex items-center gap-2.5">
+              <span id="kick-chat-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+              <div>
+                <span class="font-chakra font-bold text-emerald-300 uppercase tracking-wide">KICK CHAT EN VIVO:</span>
+                <span class="text-gray-300 font-mono ml-1">Escribe <code class="text-emerald-400 font-bold bg-black/40 px-1.5 py-0.5 rounded border border-emerald-500/30">!anuncio &lt;texto&gt;</code> en el chat y saldrá en el overlay con voz TTS.</span>
+              </div>
+            </div>
+            <a href="https://kick.com/popout/birraverde/chat" target="_blank" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500 hover:text-black text-emerald-300 font-chakra font-bold text-xs flex items-center gap-1.5 transition-all shrink-0">
+              <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+              <span>Abrir Chat de Kick</span>
+              <i data-lucide="external-link" class="w-3 h-3"></i>
+            </a>
+          </div>
         </div>
 
       </section>
@@ -903,75 +919,101 @@
               </span>
             </div>
 
-            <!-- Botones de Escenas -->
+            <!-- Botones de las 6 Escenas Oficiales -->
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-              <!-- Escena 1: Esquina Superior Derecha -->
+              <!-- Escena 1: Esquina Izquierda Arriba -->
+              <button type="button" data-scene="pip-corner-tl" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-cyan-400 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+                <div class="flex items-center justify-between">
+                  <i data-lucide="corner-up-left" class="w-5 h-5 text-cyan-400"></i>
+                  <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-400 font-bold">1</span>
+                </div>
+                <div>
+                  <p class="text-xs font-chakra font-bold">Izq. Arriba</p>
+                  <p class="text-[10px] text-gray-400">Esquina Sup. Izq.</p>
+                </div>
+              </button>
+
+              <!-- Escena 2: Esquina Izquierda Abajo -->
+              <button type="button" data-scene="pip-corner-bl" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-cyan-400 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+                <div class="flex items-center justify-between">
+                  <i data-lucide="corner-down-left" class="w-5 h-5 text-cyan-400"></i>
+                  <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-400 font-bold">2</span>
+                </div>
+                <div>
+                  <p class="text-xs font-chakra font-bold">Izq. Abajo</p>
+                  <p class="text-[10px] text-gray-400">Esquina Inf. Izq.</p>
+                </div>
+              </button>
+
+              <!-- Escena 3: Esquina Derecha Arriba -->
               <button type="button" data-scene="pip-corner-tr" class="btn-scene-select p-3 rounded-xl border-2 text-left transition-all flex flex-col justify-between gap-2 border-cyan-400 bg-cyan-400/10 text-white shadow-[0_0_12px_rgba(6,182,212,0.2)]">
                 <div class="flex items-center justify-between">
-                  <i data-lucide="layout-grid" class="w-5 h-5 text-cyan-400"></i>
-                  <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-400 text-black font-bold">STREAM</span>
+                  <i data-lucide="corner-up-right" class="w-5 h-5 text-cyan-400"></i>
+                  <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-400 text-black font-bold">3</span>
                 </div>
                 <div>
-                  <p class="text-xs font-chakra font-bold">Esquina Sup. Der.</p>
-                  <p class="text-[10px] text-gray-400">Fondo transparente</p>
+                  <p class="text-xs font-chakra font-bold">Der. Arriba</p>
+                  <p class="text-[10px] text-gray-400">Esquina Sup. Der.</p>
                 </div>
               </button>
 
-              <!-- Escena 2: Esquina Inferior Derecha -->
-              <button type="button" data-scene="pip-corner-br" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+              <!-- Escena 4: Esquina Derecha Abajo -->
+              <button type="button" data-scene="pip-corner-br" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-cyan-400 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
                 <div class="flex items-center justify-between">
-                  <i data-lucide="corner-down-right" class="w-5 h-5 text-gray-400"></i>
+                  <i data-lucide="corner-down-right" class="w-5 h-5 text-cyan-400"></i>
+                  <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-400 font-bold">4</span>
                 </div>
                 <div>
-                  <p class="text-xs font-chakra font-bold">Esquina Inf. Der.</p>
-                  <p class="text-[10px] text-gray-400">Miniaturas abajo</p>
+                  <p class="text-xs font-chakra font-bold">Der. Abajo</p>
+                  <p class="text-[10px] text-gray-400">Esquina Inf. Der.</p>
                 </div>
               </button>
 
-              <!-- Escena 3: Esquina Superior Izquierda -->
-              <button type="button" data-scene="pip-corner-tl" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+              <!-- Escena 5: Abajo (Barra Inferior) -->
+              <button type="button" data-scene="pip-bottom-bar" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-cyan-400 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
                 <div class="flex items-center justify-between">
-                  <i data-lucide="corner-up-left" class="w-5 h-5 text-gray-400"></i>
+                  <i data-lucide="panel-bottom" class="w-5 h-5 text-cyan-400"></i>
+                  <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-400 font-bold">5</span>
                 </div>
                 <div>
-                  <p class="text-xs font-chakra font-bold">Esquina Sup. Izq.</p>
-                  <p class="text-[10px] text-gray-400">Arriba a la izquierda</p>
-                </div>
-              </button>
-
-              <!-- Escena 4: Barra Lateral Derecha -->
-              <button type="button" data-scene="pip-sidebar-right" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
-                <div class="flex items-center justify-between">
-                  <i data-lucide="panel-right" class="w-5 h-5 text-gray-400"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-chakra font-bold">Columna Lateral</p>
-                  <p class="text-[10px] text-gray-400">Borde lateral derecho</p>
-                </div>
-              </button>
-
-              <!-- Escena 5: Barra Inferior -->
-              <button type="button" data-scene="pip-bottom-bar" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
-                <div class="flex items-center justify-between">
-                  <i data-lucide="panel-bottom" class="w-5 h-5 text-gray-400"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-chakra font-bold">Barra Inferior</p>
-                  <p class="text-[10px] text-gray-400">Podcast / Tira baja</p>
+                  <p class="text-xs font-chakra font-bold">Abajo (Barra)</p>
+                  <p class="text-[10px] text-gray-400">Tira inferior horizontal</p>
                 </div>
               </button>
 
               <!-- Escena 6: Mosaico Completo (Grid) -->
-              <button type="button" data-scene="grid" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+              <button type="button" data-scene="grid" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-cyber-green text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
                 <div class="flex items-center justify-between">
                   <i data-lucide="grid" class="w-5 h-5 text-cyber-green"></i>
                   <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green font-bold">LÁSER</span>
                 </div>
                 <div>
-                  <p class="text-xs font-chakra font-bold">Mosaico Completo</p>
-                  <p class="text-[10px] text-gray-400">Grid + Fondo BirraVerde</p>
+                  <p class="text-xs font-chakra font-bold">Mosaico (Grid)</p>
+                  <p class="text-[10px] text-gray-400">Fondo Láser BirraVerde</p>
                 </div>
               </button>
+            </div>
+
+            <!-- Control de Tamaño / Escala de Cámaras (Slider) -->
+            <div class="mt-4 pt-3.5 border-t border-cyber-border/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-cyber-card/40 p-3 rounded-xl border border-cyber-border/60">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0">
+                  <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <span class="text-xs font-chakra font-bold text-white uppercase tracking-wider">Tamaño de Cámaras en Stream</span>
+                  <p class="text-[10px] text-gray-400">Ajusta la escala en tiempo real para cualquiera de las 6 escenas</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 w-full sm:w-auto">
+                <input type="range" id="range-multicam-scale" min="0.5" max="1.5" step="0.05" value="1.0" class="w-full sm:w-48 h-2 bg-cyber-dark rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                <span id="label-multicam-scale-val" class="px-2.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 font-mono text-xs font-bold border border-cyan-400/40 min-w-[55px] text-center">100%</span>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" class="btn-preset-scale px-2 py-1 rounded bg-cyber-card border border-cyber-border hover:border-cyan-400 text-[10px] font-mono font-bold text-gray-300 hover:text-white transition-all" data-scale="0.75">75%</button>
+                  <button type="button" class="btn-preset-scale px-2 py-1 rounded bg-cyber-card border border-cyber-border hover:border-cyan-400 text-[10px] font-mono font-bold text-gray-300 hover:text-white transition-all" data-scale="1.0">100%</button>
+                  <button type="button" class="btn-preset-scale px-2 py-1 rounded bg-cyber-card border border-cyber-border hover:border-cyan-400 text-[10px] font-mono font-bold text-gray-300 hover:text-white transition-all" data-scale="1.25">125%</button>
+                </div>
+              </div>
             </div>
           </div>
 

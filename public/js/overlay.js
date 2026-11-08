@@ -815,6 +815,9 @@ function applyMulticamSettings(settings) {
   multicamSettingsCurrent = { ...multicamSettingsCurrent, ...settings };
   if (multicamStage) {
     multicamStage.className = 'scene-' + (multicamSettingsCurrent.activeScene || 'pip-corner-tr');
+    if (typeof multicamSettingsCurrent.camScale !== 'undefined') {
+      multicamStage.style.setProperty('--cam-scale', multicamSettingsCurrent.camScale);
+    }
   }
   if (isMulticamActive) {
     if (multicamSettingsCurrent.activeScene === 'grid') {
@@ -835,12 +838,14 @@ socket.on('multicam-peers-updated', ({ peers }) => {
       const existing = multicamKnownPeers.get(peer.id);
       multicamKnownPeers.set(peer.id, peer);
 
-      // Actualizar mute específico de stream en audio activo
+      // Actualizar mute específico de stream en audio activo (el Anfitrión NUNCA suena en OBS para evitar eco)
       const audioElem = document.getElementById('audio-' + peer.id);
       if (audioElem) {
-        const isMuted = !!multicamSettingsCurrent.audioMutedOverall || !!peer.isStreamMuted;
+        const isHost = !!(peer.isHost || peer.role === 'host');
+        const isMuted = isHost || !!multicamSettingsCurrent.audioMutedOverall || !!peer.isStreamMuted;
         audioElem.muted = isMuted;
         audioElem.volume = isMuted ? 0 : 1;
+        if (isMuted) audioElem.pause();
       }
 
       if (!existing) {
@@ -983,10 +988,15 @@ function attachMulticamAudio(peerId, stream) {
   }
   audioElem.srcObject = stream;
   const peerData = multicamKnownPeers.get(peerId);
-  const isMuted = !!multicamSettingsCurrent.audioMutedOverall || (peerData && peerData.isStreamMuted);
+  const isHost = !!(peerData && (peerData.isHost || peerData.role === 'host'));
+  const isMuted = isHost || !!multicamSettingsCurrent.audioMutedOverall || (peerData && peerData.isStreamMuted);
   audioElem.muted = !!isMuted;
   audioElem.volume = isMuted ? 0 : 1;
-  audioElem.play().catch(e => console.warn('[Overlay Multicam] Audio play error:', e));
+  if (!isMuted) {
+    audioElem.play().catch(e => console.warn('[Overlay Multicam] Audio play error:', e));
+  } else {
+    audioElem.pause();
+  }
 }
 
 function setupMulticamSpeakingDetector(peerId, stream) {
@@ -1087,6 +1097,7 @@ function renderMulticamCamCard(peer) {
     <div class="cam-lower-third">
       <span class="cam-status-dot ${hasActiveVideo ? '' : 'no-video'}"></span>
       <span class="cam-name-text">${peer.name || 'Invitado'}</span>
+      ${peer.isHost ? '<span style="background: rgba(6, 182, 212, 0.3); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.6); font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-family: monospace;">👑 HOST</span>' : ''}
       ${peer.isStreamMuted ? '<span style="background: rgba(239, 68, 68, 0.3); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-family: sans-serif;">MUTE STREAM</span>' : ''}
       <svg class="cam-speaking-indicator" viewBox="0 0 24 24" fill="none" stroke="#00ff66" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>

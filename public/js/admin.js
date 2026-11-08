@@ -1892,17 +1892,68 @@ if (btnHideAnnouncement) {
   });
 }
 
+// Conexión y Notificaciones de Kick Chat
+socket.on('kick-chat-status', (status) => {
+  const kickDot = document.getElementById('kick-chat-dot');
+  if (kickDot) {
+    if (status && status.connected) {
+      kickDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0';
+      kickDot.title = 'Conectado a Kick Chat @birraverde';
+    } else {
+      kickDot.className = 'w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse shrink-0';
+      kickDot.title = 'Reconectando a Kick Chat...';
+    }
+  }
+});
+
+socket.on('chat-announcement', (payload) => {
+  if (payload && payload.source === 'kick') {
+    showToast(`📢 Anuncio de Kick (${payload.user}): "${payload.text}"`);
+  }
+});
+
 // ============================================================
 // LÓGICA DEL SISTEMA MULTICAM (HOST ADMIN)
 // ============================================================
 const SCENE_NAMES = {
-  'pip-corner-tr': 'Esquina Sup. Derecha (Stream Transparente)',
-  'pip-corner-br': 'Esquina Inf. Derecha',
-  'pip-corner-tl': 'Esquina Sup. Izquierda',
-  'pip-sidebar-right': 'Columna Lateral Derecha',
-  'pip-bottom-bar': 'Barra Horizontal Inferior',
-  'grid': 'Mosaico Completo (Grid)'
+  'pip-corner-tl': 'Esquina Sup. Izquierda (Arriba Izq.)',
+  'pip-corner-bl': 'Esquina Inf. Izquierda (Abajo Izq.)',
+  'pip-corner-tr': 'Esquina Sup. Derecha (Arriba Der.)',
+  'pip-corner-br': 'Esquina Inf. Derecha (Abajo Der.)',
+  'pip-bottom-bar': 'Barra Inferior (Abajo)',
+  'grid': 'Mosaico Completo (Fondo Láser BirraVerde)'
 };
+
+const rangeMulticamScale = document.getElementById('range-multicam-scale');
+const labelMulticamScaleVal = document.getElementById('label-multicam-scale-val');
+
+function updateScaleUI(scaleVal) {
+  if (scaleVal === undefined || scaleVal === null) return;
+  const pct = Math.round(Number(scaleVal) * 100);
+  if (labelMulticamScaleVal) labelMulticamScaleVal.textContent = pct + '%';
+  if (rangeMulticamScale && Math.abs(parseFloat(rangeMulticamScale.value) - Number(scaleVal)) > 0.01) {
+    rangeMulticamScale.value = scaleVal;
+  }
+}
+
+if (rangeMulticamScale) {
+  rangeMulticamScale.addEventListener('input', () => {
+    const scaleVal = parseFloat(rangeMulticamScale.value);
+    updateScaleUI(scaleVal);
+    socket.emit('multicam-save-settings', { camScale: scaleVal });
+  });
+}
+
+document.querySelectorAll('.btn-preset-scale').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const scaleVal = parseFloat(btn.getAttribute('data-scale'));
+    if (!isNaN(scaleVal)) {
+      updateScaleUI(scaleVal);
+      socket.emit('multicam-save-settings', { camScale: scaleVal });
+      showToast(`📏 Escala de cámaras ajustada: ${Math.round(scaleVal * 100)}%`);
+    }
+  });
+});
 
 // 1. Copiar Enlaces
 if (btnCopyGuestLink) {
@@ -1964,8 +2015,9 @@ if (btnReloadMulticamPreview && multicamPreviewIframe) {
 
 // 4. Sincronización de Configuración desde el Servidor
 socket.on('multicam-settings-updated', (settings) => {
-  if (settings && settings.activeScene) {
-    updateActiveSceneUI(settings.activeScene);
+  if (settings) {
+    if (settings.activeScene) updateActiveSceneUI(settings.activeScene);
+    if (typeof settings.camScale !== 'undefined') updateScaleUI(settings.camScale);
   }
 });
 
@@ -2035,21 +2087,24 @@ function renderAdminPeersList(peers) {
     const initials = peer.initials || 'IN';
     const isHidden = !!peer.isHidden;
     const isStreamMuted = !!peer.isStreamMuted;
+    const isHost = !!(peer.isHost || peer.role === 'host');
     const gradient = getInitialsGradient(peer.name);
 
     html += `
-      <div class="bg-cyber-card border ${isHidden ? 'border-cyber-border/40 opacity-75' : 'border-cyber-border'} rounded-xl p-3.5 space-y-3 shadow-md transition-all hover:border-cyan-400/50">
+      <div class="bg-cyber-card border ${isHost ? 'border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)]' : (isHidden ? 'border-cyber-border/40 opacity-75' : 'border-cyber-border')} rounded-xl p-3.5 space-y-3 shadow-md transition-all hover:border-cyan-400/50">
         <!-- Fila Superior: Avatar + Info Usuario + Badges -->
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-3 min-w-0">
-            <div class="w-11 h-11 rounded-full border-2 ${peer.hasAudio ? 'border-cyber-green' : 'border-cyber-border'} flex items-center justify-center font-chakra font-bold text-sm text-white shrink-0 overflow-hidden shadow-inner relative" style="background: ${peer.photo ? 'none' : gradient}">
+            <div class="w-11 h-11 rounded-full border-2 ${isHost ? 'border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.4)]' : (peer.hasAudio ? 'border-cyber-green' : 'border-cyber-border')} flex items-center justify-center font-chakra font-bold text-sm text-white shrink-0 overflow-hidden shadow-inner relative" style="background: ${peer.photo ? 'none' : gradient}">
               ${peer.photo ? `<img src="${peer.photo}" class="w-full h-full object-cover" alt="${peer.name}">` : `<span>${initials}</span>`}
               ${isStreamMuted ? '<span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-amber-500 border border-black flex items-center justify-center text-[8px]" title="Silenciado en Stream OBS">🔇</span>' : ''}
+              ${isHost ? '<span class="absolute top-0 right-0 w-4 h-4 rounded-full bg-cyan-400 border border-black flex items-center justify-center text-[9px]" title="Anfitrión / Streamer">👑</span>' : ''}
             </div>
 
             <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <h4 class="text-sm font-chakra font-bold text-white truncate max-w-[150px] sm:max-w-[200px]">${peer.name || 'Invitado'}</h4>
+                ${isHost ? `<span class="px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 text-[9px] font-mono font-bold">👑 ANFITRIÓN (SIN ECO)</span>` : ''}
                 ${isHidden ? `<span class="px-1.5 py-0.5 rounded bg-cyber-red/20 text-cyber-red text-[9px] font-mono font-bold">OCULTO EN OBS</span>` : ''}
                 ${isStreamMuted ? `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[9px] font-mono font-bold">MUTE EN STREAM</span>` : ''}
               </div>
@@ -2068,31 +2123,37 @@ function renderAdminPeersList(peers) {
         </div>
 
         <!-- Fila Inferior: Botones de Control de Audio, Video y Moderación -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-cyber-border/60">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-cyber-border/60">
           
+          <!-- 0. Designar / Quitar Anfitrión (Host) -->
+          <button type="button" onclick="toggleHostPeer('${peer.id}', ${!isHost})" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${isHost ? 'bg-cyan-500 text-black border-cyan-400 font-extrabold shadow-[0_0_10px_rgba(6,182,212,0.4)]' : 'bg-cyan-500/10 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20'}" title="${isHost ? 'Quitar rol de anfitrión' : 'Asignar como Anfitrión (elimina su eco en OBS)'}">
+            <span>👑</span>
+            <span class="truncate">${isHost ? 'Es Host' : 'Hacer Host'}</span>
+          </button>
+
           <!-- 1. Mute en Stream (OBS) pero en la llamada privada sí se escucha -->
           <button type="button" onclick="toggleStreamMute('${peer.id}', ${!isStreamMuted})" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${isStreamMuted ? 'bg-amber-500/20 border-amber-500 text-amber-300 hover:bg-amber-500/30' : 'bg-cyan-500/10 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20'}" title="${isStreamMuted ? 'Hacer sonar en Stream OBS' : 'Silenciar en Stream OBS (pero seguir oyendo en la sala privada)'}">
             <i data-lucide="${isStreamMuted ? 'volume-x' : 'volume-2'}" class="w-3.5 h-3.5"></i>
-            <span class="truncate">${isStreamMuted ? 'Mudo en Stream' : 'Audio al Stream'}</span>
+            <span class="truncate">${isStreamMuted ? 'Mudo Stream' : 'Audio Stream'}</span>
           </button>
 
           <!-- 2. Silenciar Micrófono General (Mute en toda la llamada) -->
           <button type="button" onclick="forceMutePeer('${peer.id}', '${escapeHtml(peer.name)}')" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${peer.hasAudio ? 'bg-cyber-card border-cyber-border text-gray-300 hover:border-yellow-500 hover:text-yellow-400' : 'bg-cyber-red/20 border-cyber-red text-cyber-red'}" title="Silenciar micrófono de este participante en toda la llamada">
             <i data-lucide="mic-off" class="w-3.5 h-3.5"></i>
-            <span class="truncate">${peer.hasAudio ? 'Silenciar Mic' : 'Mic Muteado'}</span>
+            <span class="truncate">${peer.hasAudio ? 'Mute Mic' : 'Mic OFF'}</span>
           </button>
 
           <!-- 3. Toggle Cámara en OBS (Ocultar/Mostrar) -->
           <button type="button" onclick="togglePeerVisibility('${peer.id}', ${!isHidden})" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${isHidden ? 'bg-cyber-card border-cyber-border text-gray-400 hover:text-white' : 'bg-cyber-green/10 border-cyber-green text-cyber-green hover:bg-cyber-green hover:text-black'}" title="${isHidden ? 'Mostrar cámara en OBS' : 'Ocultar cámara en OBS'}">
             <i data-lucide="${isHidden ? 'eye-off' : 'eye'}" class="w-3.5 h-3.5"></i>
-            <span class="truncate">${isHidden ? 'Cámara Oculta' : 'Cámara Visible'}</span>
+            <span class="truncate">${isHidden ? 'Oculta' : 'Visible'}</span>
           </button>
 
           <!-- 4. Acciones de Moderación: Expulsar y Banear IP -->
           <div class="flex items-center gap-1">
             <button type="button" onclick="kickMulticamPeer('${peer.id}', '${escapeHtml(peer.name)}')" class="flex-1 px-2 py-1.5 rounded-lg bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600 hover:text-white text-xs font-chakra font-bold flex items-center justify-center gap-1 transition-all" title="Expulsar de la llamada">
               <i data-lucide="door-open" class="w-3.5 h-3.5"></i>
-              <span>Expulsar</span>
+              <span>Kick</span>
             </button>
 
             <button type="button" onclick="banPeerIp('${peer.id}', '${escapeHtml(peer.name)}', '${peer.clientIp || ''}')" class="px-2.5 py-1.5 rounded-lg bg-red-950 border border-red-600 text-red-400 hover:bg-red-600 hover:text-white text-xs font-chakra font-bold flex items-center justify-center gap-1 transition-all" title="Expulsar y Banear por IP">
@@ -2109,6 +2170,16 @@ function renderAdminPeersList(peers) {
   multicamAdminPeersList.innerHTML = html;
   refreshIcons();
 }
+
+// 0. Designar / Quitar Anfitrión (Host)
+window.toggleHostPeer = function(peerId, isHost) {
+  socket.emit('multicam-set-host', {
+    roomId: 'main',
+    peerId: peerId,
+    isHost: isHost
+  });
+  showToast(isHost ? '👑 Asignado como Host (Audio desactivado en OBS para evitar eco)' : 'Rol de Host retirado');
+};
 
 // 1. Alternar Mute en Stream (pero en sala se sigue escuchando)
 window.toggleStreamMute = function(peerId, isMuted) {

@@ -71,6 +71,7 @@
     initials: 'BV',
     hasVideo: false,
     hasAudio: true,
+    isHost: false,
     isJoined: false,
     localStream: null,
     screenStream: null,
@@ -106,6 +107,7 @@
   const avatarFilename = document.getElementById('avatar-filename');
   const selectVideoDevice = document.getElementById('select-video-device');
   const selectAudioDevice = document.getElementById('select-audio-device');
+  const checkIsHost = document.getElementById('check-is-host');
   const btnToggleCamLobby = document.getElementById('btn-toggle-cam-lobby');
   const btnToggleMicLobby = document.getElementById('btn-toggle-mic-lobby');
   const btnJoinRoom = document.getElementById('btn-join-room');
@@ -157,6 +159,19 @@
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('room')) state.roomId = urlParams.get('room');
   if (urlParams.get('name')) inputName.value = urlParams.get('name');
+
+  // Detectar y configurar Anfitrión (Host)
+  if (urlParams.get('host') === 'true' || urlParams.get('host') === '1' || localStorage.getItem('birra_multicam_is_host') === 'true') {
+    state.isHost = true;
+    if (checkIsHost) checkIsHost.checked = true;
+  }
+  if (checkIsHost) {
+    checkIsHost.addEventListener('change', () => {
+      state.isHost = checkIsHost.checked;
+      localStorage.setItem('birra_multicam_is_host', state.isHost ? 'true' : 'false');
+      if (state.isJoined) notifyProfileUpdate();
+    });
+  }
 
   // Cargar perfil guardado
   const savedName = localStorage.getItem('birra_multicam_name');
@@ -214,9 +229,14 @@
   // Iniciar stream local
   async function initLocalStream(requestVideo = false) {
     try {
-      // Intentar pedir audio y video si se solicitó video
+      // Intentar pedir audio y video si se solicitó video con cancelación de eco activa
       const constraints = {
-        audio: state.selectedAudioId ? { deviceId: { exact: state.selectedAudioId } } : true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          ...(state.selectedAudioId ? { deviceId: { exact: state.selectedAudioId } } : {})
+        },
         video: requestVideo ? (state.selectedVideoId ? { deviceId: { exact: state.selectedVideoId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1280 }, height: { ideal: 720 } }) : false
       };
 
@@ -438,13 +458,14 @@
     socket.emit('multicam-join', {
       roomId: state.roomId,
       peerId: state.peerId,
-      role: 'guest',
+      role: state.isHost ? 'host' : 'guest',
       userInfo: {
         name: state.name,
         photo: state.photo,
         initials: state.initials,
         hasVideo: state.hasVideo,
-        hasAudio: state.hasAudio
+        hasAudio: state.hasAudio,
+        isHost: state.isHost
       }
     }, (res) => {
       if (res && res.success) {
@@ -477,7 +498,8 @@
         photo: state.photo,
         initials: state.initials,
         hasVideo: state.hasVideo,
-        hasAudio: state.hasAudio
+        hasAudio: state.hasAudio,
+        isHost: state.isHost
       }
     });
     renderLocalParticipant();

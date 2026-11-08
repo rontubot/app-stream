@@ -344,12 +344,13 @@ function saveFights(fightsList, persistDb = true) {
 
 // Configuración y gestión de Multicam / Videollamadas
 let multicamSettings = {
-  activeScene: 'pip-corner-tr', // 'grid' | 'pip-corner-tr' | 'pip-corner-br' | 'pip-corner-tl' | 'pip-sidebar-right' | 'pip-bottom-bar'
+  activeScene: 'pip-corner-tr', // 'grid' | 'pip-corner-tr' | 'pip-corner-br' | 'pip-corner-tl' | 'pip-corner-bl' | 'pip-bottom-bar'
   showLabels: true,
   audioMutedOverall: false,
   aspectRatio: '16/9', // '16/9' | '4/3' | '1/1'
   borderGlow: true,
   streamBackgroundMode: true,
+  camScale: 1.0, // Escala de cámaras (0.5 a 1.5)
   scale: 100, // porcentaje de escala visual
   maxVisibleCams: 6
 };
@@ -1269,11 +1270,13 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const isHost = !!(userInfo.isHost || role === 'host');
     const peerData = {
       id: peerId,
       socketId: socket.id,
       roomId,
-      role, // 'guest' | 'host' | 'overlay'
+      role: isHost ? 'host' : role, // 'guest' | 'host' | 'overlay'
+      isHost: isHost,
       name: userInfo.name || 'Invitado',
       photo: userInfo.photo || '',
       initials,
@@ -1331,8 +1334,23 @@ io.on('connection', (socket) => {
       if (typeof userInfo.photo === 'string') peer.photo = userInfo.photo;
       if (typeof userInfo.hasVideo === 'boolean') peer.hasVideo = userInfo.hasVideo;
       if (typeof userInfo.hasAudio === 'boolean') peer.hasAudio = userInfo.hasAudio;
+      if (typeof userInfo.isHost === 'boolean') {
+        peer.isHost = userInfo.isHost;
+        peer.role = userInfo.isHost ? 'host' : 'guest';
+      }
       if (userInfo.initials) peer.initials = userInfo.initials;
 
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
+
+  // Designar / Desmarcar Anfitrión (Host) desde panel o cliente
+  socket.on('multicam-set-host', ({ roomId = 'main', peerId, isHost }) => {
+    if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
+      multicamRooms[roomId].peers[peerId].isHost = !!isHost;
+      multicamRooms[roomId].peers[peerId].role = isHost ? 'host' : 'guest';
       const currentPeers = getRoomPeers(roomId);
       io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
       io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
@@ -1448,6 +1466,9 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Enviar estado de Kick Chat al conectarse el socket
+  socket.emit('kick-chat-status', kickChatState);
+
   // Manejo de desconexión para limpiar WebRTC
   socket.on('disconnect', () => {
     const roomId = socket.multicamRoomId;
@@ -1462,6 +1483,189 @@ io.on('connection', (socket) => {
   });
 });
 
+// ============================================================
+// INTEGRACIÓN KICK CHAT EN VIVO (!anuncio <texto> -> Banner + TTS)
+// Canal: birraverde | ID: 113928888 | Chatroom ID: 113639376
+// URL: https://kick.com/popout/birraverde/chat
+// ============================================================
+const KICK_CHANNEL_SLUG = 'birraverde';
+const KICK_CHANNEL_ID = '113928888';
+const KICK_CHATROOM_ID = '113639376';
+
+let kickChatState = {
+  connected: false,
+  lastPing: null,
+  channel: KICK_CHANNEL_SLUG,
+  chatroomId: KICK_CHATROOM_ID,
+  recentAnnouncements: []
+};
+
+const seenKickMsgIds = new Set();
+let kickWsInstance = null;
+
+app.get('/api/kick/status', (req, res) => {
+  res.json(kickChatState);
+});
+
+async function initKickChatListener() {
+  const clientId = 'kick-bot-' + Math.random().toString(36).substring(2, 9);
+  console.log(`[Kick Chat] Iniciando conexión para canal "${KICK_CHANNEL_SLUG}"...`);
+
+  try {
+    // 1. Obtener URL de WebSocket de Centrifugo asignada por Kick
+    const connRes = await fetch(`https://web.kick.com/api/v1/realtime/channels/${KICK_CHANNEL_ID}/chat/connection`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      body: JSON.stringify({
+        client: { id: clientId, type: 'web' },
+        capabilities: { accepted_providers: [{ provider: 'centrifugo' }] }
+      })
+    });
+    const connData = await connRes.json();
+    const wsUrl = connData?.data?.connections?.[0]?.credentials?.url;
+
+    if (!wsUrl) {
+      throw new Error('No se recibió la URL del WebSocket de Kick');
+    }
+
+    // 2. Obtener Token de Autenticación de Conexión
+    const authRes = await fetch('https://web.kick.com/api/v1/realtime/auth/connection', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      body: JSON.stringify({ client_id: clientId })
+    });
+    const authData = await authRes.json();
+    const token = authData?.data?.token;
+
+    console.log(`[Kick Chat] Conectando WebSocket a ${wsUrl}...`);
+    const ws = new WebSocket(wsUrl);
+    kickWsInstance = ws;
+
+    let pingInterval = null;
+
+    ws.onopen = () => {
+      console.log('[Kick Chat] WebSocket abierto. Autenticando con Centrifugo...');
+      ws.send(JSON.stringify({
+        connect: token ? { token } : {},
+        id: 1
+      }));
+
+      // Mantener heartbeat vivo con pings cada 25s
+      pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send('{}');
+        }
+      }, 25000);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const raw = event.data ? event.data.toString() : '';
+        if (!raw || raw === '{}') return; // Pong / heartbeat
+
+        const msg = JSON.parse(raw);
+
+        // Conexión exitosa -> Suscribir al canal de chatroom de birraverde
+        if (msg.id === 1 && msg.connect) {
+          console.log(`[Kick Chat] Autenticado. Suscribiéndose al chatroom ${KICK_CHATROOM_ID}...`);
+          ws.send(JSON.stringify({
+            subscribe: { channel: `chatrooms.${KICK_CHATROOM_ID}.v2` },
+            id: 2
+          }));
+          return;
+        }
+
+        if (msg.id === 2 && msg.subscribe) {
+          kickChatState.connected = true;
+          console.log(`[Kick Chat] ✅ CONECTADO AL CHAT DE KICK (@${KICK_CHANNEL_SLUG})`);
+          io.emit('kick-chat-status', kickChatState);
+          return;
+        }
+
+        // Procesar mensajes entrantes del canal
+        if (msg.pub && msg.pub.data) {
+          let chatData = msg.pub.data;
+          if (typeof chatData === 'string') {
+            try { chatData = JSON.parse(chatData); } catch (e) {}
+          }
+
+          if (chatData.data && typeof chatData.data === 'string') {
+            try { chatData = JSON.parse(chatData.data); } catch (e) {}
+          }
+
+          const messageId = chatData.id || (chatData.sender?.id ? `${chatData.sender.id}_${Date.now()}` : null);
+          if (messageId && seenKickMsgIds.has(messageId)) return;
+          if (messageId) {
+            seenKickMsgIds.add(messageId);
+            if (seenKickMsgIds.size > 200) {
+              const first = seenKickMsgIds.values().next().value;
+              seenKickMsgIds.delete(first);
+            }
+          }
+
+          const content = (chatData.content || chatData.message || chatData.text || '').trim();
+          const sender = chatData.sender?.username || chatData.sender?.slug || chatData.author || 'Espectador Kick';
+
+          console.log(`[Kick Chat] @${sender}: ${content}`);
+
+          // Comprobar si el mensaje es un comando !anuncio <texto>
+          const match = content.match(/^!anuncio(?:\s+([\s\S]+))?$/i);
+          if (match) {
+            const announcementText = (match[1] || '').trim();
+            if (announcementText) {
+              console.log(`[Kick Chat] 📢 ¡COMANDO !anuncio DETECTADO de @${sender}: "${announcementText}"`);
+              const payload = {
+                user: `@${sender}`,
+                text: announcementText,
+                prefix: '!anuncio',
+                tts: liveState.chatOverlay.ttsEnabled,
+                timestamp: Date.now(),
+                source: 'kick'
+              };
+
+              liveState.chatOverlay.isVisible = true;
+              liveState.chatOverlay.lastMessage = payload;
+              io.emit('state-update', liveState);
+              io.emit('chat-announcement', payload);
+
+              kickChatState.recentAnnouncements.unshift(payload);
+              if (kickChatState.recentAnnouncements.length > 20) {
+                kickChatState.recentAnnouncements.pop();
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Kick Chat] Error al procesar mensaje de WebSocket:', err);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.warn('[Kick Chat] Error en WebSocket:', err.message || err);
+    };
+
+    ws.onclose = () => {
+      kickChatState.connected = false;
+      io.emit('kick-chat-status', kickChatState);
+      if (pingInterval) clearInterval(pingInterval);
+      console.warn('[Kick Chat] WebSocket cerrado. Reintentando reconexión en 5s...');
+      setTimeout(initKickChatListener, 5000);
+    };
+
+  } catch (err) {
+    kickChatState.connected = false;
+    io.emit('kick-chat-status', kickChatState);
+    console.warn('[Kick Chat] Falló inicialización:', err.message, 'Reintentando en 8s...');
+    setTimeout(initKickChatListener, 8000);
+  }
+}
+
 server.listen(PORT, () => {
   console.log(`===============================================`);
   console.log(`🚀 Stream Overlay App corriendo en puerto ${PORT}`);
@@ -1470,5 +1674,9 @@ server.listen(PORT, () => {
   console.log(`📹 Fuente OBS Multicam: http://localhost:${PORT}/multicam`);
   console.log(`👥 Sala de Invitados:  http://localhost:${PORT}/guest`);
   console.log(`💾 Persistencia:       ACTIVA`);
+  console.log(`🟢 Kick Chat Bot:      @${KICK_CHANNEL_SLUG} (Canal ${KICK_CHANNEL_ID})`);
   console.log(`===============================================`);
+
+  // Iniciar conexión automática con el chat en vivo de Kick
+  setTimeout(initKickChatListener, 1500);
 });

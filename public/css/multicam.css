@@ -535,105 +535,93 @@ body.multicam-grid-active .multicam-laser-sweep .laser-beam {
   top: 53%;
 }
 
-/* 1. ESCENA GRID (Mosaico Completo) */
+/* 1. ESCENA GRID (Mosaico Completo con Fondo BirraVerde) */
 .scene-grid #cams-container {
   position: absolute;
-  top: 50%;
+  top: 52%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 1760px;
-  height: 960px;
+  transform: translate(-50%, -50%) scale(var(--cam-scale, 1));
+  transform-origin: center center;
+  width: 1720px;
+  max-width: 92vw;
+  height: 860px;
+  max-height: 82vh;
   display: grid;
-  gap: 24px;
-  align-items: center;
+  gap: 20px;
+  align-content: center;
   justify-content: center;
+  align-items: center;
+  justify-items: center;
   z-index: 10;
+  box-sizing: border-box;
 }
 
-/* Adaptación dinámica según cantidad de cámaras en Grid */
+.scene-grid .cam-card {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  margin: auto;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Adaptación dinámica según cantidad de cámaras en Grid para evitar solapamientos */
 .scene-grid[data-count="1"] #cams-container {
-  grid-template-columns: minmax(700px, 1200px);
+  grid-template-columns: minmax(0, 1200px);
+  grid-template-rows: minmax(0, 675px);
 }
 .scene-grid[data-count="1"] .cam-card {
-  width: 1200px;
-  max-height: 675px;
-  margin: auto;
+  width: 1180px !important;
+  max-height: 664px !important;
 }
 
 .scene-grid[data-count="2"] #cams-container {
-  grid-template-columns: repeat(2, 1fr);
-  max-width: 1680px;
+  grid-template-columns: repeat(2, minmax(0, 800px));
+  grid-template-rows: minmax(0, 450px);
+  max-width: 1640px;
 }
 
 .scene-grid[data-count="3"] #cams-container {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 540px));
+  grid-template-rows: minmax(0, 305px);
+  max-width: 1680px;
 }
 
 .scene-grid[data-count="4"] #cams-container {
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 760px));
+  grid-template-rows: repeat(2, minmax(0, 410px));
+  gap: 22px;
+  max-width: 1560px;
+  max-height: 850px;
 }
 
 .scene-grid[data-count="5"] #cams-container,
 .scene-grid[data-count="6"] #cams-container {
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 520px));
+  grid-template-rows: repeat(2, minmax(0, 290px));
+  gap: 20px;
+  max-width: 1600px;
+  max-height: 620px;
+}
+
+.scene-grid[data-count="7"] #cams-container,
+.scene-grid[data-count="8"] #cams-container {
+  grid-template-columns: repeat(4, minmax(0, 390px));
+  grid-template-rows: repeat(2, minmax(0, 220px));
+  gap: 16px;
+  max-width: 1640px;
 }
 
 /* ============================================================
    2. ESCENAS DE ESQUINAS Y FONDOS TRANSPARENTES (STREAM / GAMEPLAY)
-   Todo el centro es 100% transparente
+   Todo el centro es 100% transparente para ver el juego / pantalla
+   Soporte dinámico para escala variable (--cam-scale)
    ============================================================ */
 
-/* Esquina Superior Derecha (pip-corner-tr) */
-.scene-pip-corner-tr #cams-container {
-  position: absolute;
-  top: 35px;
-  right: 35px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-height: 1010px;
-  align-items: flex-end;
-}
-
-.scene-pip-corner-tr .cam-card {
-  width: 360px;
-  border-width: 2px;
-  border-color: rgba(34, 47, 61, 0.85);
-  background: rgba(14, 20, 27, 0.92);
-}
-
-/* Si hay más de 3 cámaras en la esquina, se acomodan en 2 columnas compactas */
-.scene-pip-corner-tr[data-count="3"] .cam-card,
-.scene-pip-corner-tr[data-count="4"] .cam-card {
-  width: 330px;
-}
-
-.scene-pip-corner-tr[data-count="5"] #cams-container,
-.scene-pip-corner-tr[data-count="6"] #cams-container {
-  display: grid;
-  grid-template-columns: repeat(2, 320px);
-}
-
-/* Esquina Inferior Derecha (pip-corner-br) */
-.scene-pip-corner-br #cams-container {
-  position: absolute;
-  bottom: 35px;
-  right: 35px;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 16px;
-  max-height: 1010px;
-  align-items: flex-end;
-}
-
-.scene-pip-corner-br .cam-card {
-  width: 360px;
-  background: rgba(14, 20, 27, 0.92);
-}
-
-/* Esquina Superior Izquierda (pip-corner-tl) */
+/* 2.1 Esquina Superior Izquierda (pip-corner-tl) */
 .scene-pip-corner-tl #cams-container {
   position: absolute;
   top: 35px;
@@ -643,14 +631,16 @@ body.multicam-grid-active .multicam-laser-sweep .laser-beam {
   gap: 16px;
   max-height: 1010px;
   align-items: flex-start;
+  transform-origin: top left;
 }
 
 .scene-pip-corner-tl .cam-card {
-  width: 360px;
-  background: rgba(14, 20, 27, 0.92);
+  width: calc(360px * var(--cam-scale, 1)) !important;
+  max-width: 80vw;
+  background: rgba(14, 20, 27, 0.94);
 }
 
-/* Esquina Inferior Izquierda (pip-corner-bl) */
+/* 2.2 Esquina Inferior Izquierda (pip-corner-bl) */
 .scene-pip-corner-bl #cams-container {
   position: absolute;
   bottom: 35px;
@@ -660,31 +650,63 @@ body.multicam-grid-active .multicam-laser-sweep .laser-beam {
   gap: 16px;
   max-height: 1010px;
   align-items: flex-start;
+  transform-origin: bottom left;
 }
 
 .scene-pip-corner-bl .cam-card {
-  width: 360px;
-  background: rgba(14, 20, 27, 0.92);
+  width: calc(360px * var(--cam-scale, 1)) !important;
+  max-width: 80vw;
+  background: rgba(14, 20, 27, 0.94);
 }
 
-/* Barra Lateral Derecha (pip-sidebar-right) */
-.scene-pip-sidebar-right #cams-container {
+/* 2.3 Esquina Superior Derecha (pip-corner-tr) */
+.scene-pip-corner-tr #cams-container {
   position: absolute;
-  top: 40px;
+  top: 35px;
   right: 35px;
-  bottom: 40px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 18px;
+  gap: 16px;
+  max-height: 1010px;
+  align-items: flex-end;
+  transform-origin: top right;
 }
 
-.scene-pip-sidebar-right .cam-card {
-  width: 350px;
-  background: rgba(14, 20, 27, 0.92);
+.scene-pip-corner-tr .cam-card {
+  width: calc(360px * var(--cam-scale, 1)) !important;
+  max-width: 80vw;
+  border-width: 2px;
+  border-color: rgba(34, 47, 61, 0.85);
+  background: rgba(14, 20, 27, 0.94);
 }
 
-/* Barra Horizontal Inferior (pip-bottom-bar) */
+/* Si hay más de 3 cámaras en la esquina superior derecha */
+.scene-pip-corner-tr[data-count="5"] #cams-container,
+.scene-pip-corner-tr[data-count="6"] #cams-container {
+  display: grid;
+  grid-template-columns: repeat(2, calc(320px * var(--cam-scale, 1)));
+}
+
+/* 2.4 Esquina Inferior Derecha (pip-corner-br) */
+.scene-pip-corner-br #cams-container {
+  position: absolute;
+  bottom: 35px;
+  right: 35px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 16px;
+  max-height: 1010px;
+  align-items: flex-end;
+  transform-origin: bottom right;
+}
+
+.scene-pip-corner-br .cam-card {
+  width: calc(360px * var(--cam-scale, 1)) !important;
+  max-width: 80vw;
+  background: rgba(14, 20, 27, 0.94);
+}
+
+/* 2.5 Barra Horizontal Inferior (pip-bottom-bar) */
 .scene-pip-bottom-bar #cams-container {
   position: absolute;
   bottom: 35px;
@@ -696,9 +718,11 @@ body.multicam-grid-active .multicam-laser-sweep .laser-beam {
   align-items: flex-end;
   gap: 18px;
   max-width: 1850px;
+  transform-origin: bottom center;
 }
 
 .scene-pip-bottom-bar .cam-card {
-  width: 340px;
-  background: rgba(14, 20, 27, 0.92);
+  width: calc(340px * var(--cam-scale, 1)) !important;
+  max-width: 80vw;
+  background: rgba(14, 20, 27, 0.94);
 }

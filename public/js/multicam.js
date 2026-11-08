@@ -112,6 +112,9 @@
     if (!settings) return;
     currentSettings = { ...currentSettings, ...settings };
     stage.className = 'scene-' + (currentSettings.activeScene || 'pip-corner-tr');
+    if (typeof currentSettings.camScale !== 'undefined') {
+      stage.style.setProperty('--cam-scale', currentSettings.camScale);
+    }
   }
 
   socket.on('multicam-peers-updated', ({ peers }) => {
@@ -127,9 +130,11 @@
 
         const audioElem = document.getElementById('audio-' + peer.id);
         if (audioElem) {
-          const isMuted = !!currentSettings.audioMutedOverall || !!peer.isStreamMuted;
+          const isHost = !!(peer.isHost || peer.role === 'host');
+          const isMuted = isHost || !!currentSettings.audioMutedOverall || !!peer.isStreamMuted;
           audioElem.muted = isMuted;
           audioElem.volume = isMuted ? 0 : 1;
+          if (isMuted) audioElem.pause();
         }
 
         if (!existing) {
@@ -285,10 +290,15 @@
     }
     audioElem.srcObject = stream;
     const peerData = knownPeers.get(peerId);
-    const isMuted = !!currentSettings.audioMutedOverall || (peerData && peerData.isStreamMuted);
+    const isHost = !!(peerData && (peerData.isHost || peerData.role === 'host'));
+    const isMuted = isHost || !!currentSettings.audioMutedOverall || (peerData && peerData.isStreamMuted);
     audioElem.muted = !!isMuted;
     audioElem.volume = isMuted ? 0 : 1;
-    audioElem.play().catch(e => console.warn('[OBS Multicam] Audio play error:', e));
+    if (!isMuted) {
+      audioElem.play().catch(e => console.warn('[OBS Multicam] Audio play error:', e));
+    } else {
+      audioElem.pause();
+    }
   }
 
   function setupSpeakingDetector(peerId, stream) {
