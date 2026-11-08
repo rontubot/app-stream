@@ -1543,8 +1543,9 @@ async function initKickChatListener() {
     const authData = await authRes.json();
     const token = authData?.data?.token;
 
+    const WebSocketClient = globalThis.WebSocket || require('ws');
     console.log(`[Kick Chat] Conectando WebSocket a ${wsUrl}...`);
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocketClient(wsUrl);
     kickWsInstance = ws;
 
     let pingInterval = null;
@@ -1558,7 +1559,7 @@ async function initKickChatListener() {
 
       // Mantener heartbeat vivo con pings cada 25s
       pingInterval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
+        if (ws.readyState === 1) { // 1 = OPEN
           ws.send('{}');
         }
       }, 25000);
