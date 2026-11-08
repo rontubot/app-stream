@@ -141,6 +141,11 @@
     if (state.audioContext && state.audioContext.state === 'suspended') {
       state.audioContext.resume();
     }
+    remoteAudioAnalysers.forEach(item => {
+      if (item.context && item.context.state === 'suspended') {
+        item.context.resume().catch(e => console.warn(e));
+      }
+    });
     if (remoteAudiosContainer) {
       Array.from(remoteAudiosContainer.children).forEach(audio => {
         audio.play().catch(e => console.warn('Retry play error:', e));
@@ -525,6 +530,13 @@
       // Conectar audio remoto independiente (vital para que suene siempre)
       attachRemoteAudio(remotePeerId, stream);
 
+      // Activar detector de voz para halo brillante en la llamada
+      if (event.track && event.track.kind === 'audio') {
+        setupRemoteSpeakingDetector(remotePeerId, new MediaStream([event.track]));
+      } else {
+        setupRemoteSpeakingDetector(remotePeerId, stream);
+      }
+
       renderRemoteParticipant(remotePeerId, stream);
     };
 
@@ -662,6 +674,13 @@
     knownPeers.delete(peerId);
     pendingIceCandidates.delete(peerId);
 
+    if (remoteAudioAnalysers.has(peerId)) {
+      try {
+        remoteAudioAnalysers.get(peerId).context.close();
+      } catch (e) {}
+      remoteAudioAnalysers.delete(peerId);
+    }
+
     const card = document.getElementById('card-peer-' + peerId);
     if (card) card.remove();
 
@@ -672,6 +691,65 @@
   function updateParticipantsCount() {
     const total = 1 + Array.from(knownPeers.values()).filter(p => p.role !== 'overlay').length;
     participantsCountBadge.textContent = `${total} ${total === 1 ? 'participante' : 'participantes'}`;
+  }
+
+  // ============================================================
+  // DETECTOR DE VOZ REMOTO (HALO BRILLANTE EN /GUEST)
+  // ============================================================
+  const remoteAudioAnalysers = new Map();
+
+  function setupRemoteSpeakingDetector(peerId, stream) {
+    if (remoteAudioAnalysers.has(peerId)) {
+      const current = remoteAudioAnalysers.get(peerId);
+      if (current.hasAudioTrack) return;
+      if (stream.getAudioTracks().length === 0) return;
+      try { current.context.close(); } catch (e) {}
+      remoteAudioAnalysers.delete(peerId);
+    }
+    if (!stream || stream.getAudioTracks().length === 0) return;
+
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      const audioContext = new AudioCtx();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.4;
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      remoteAudioAnalysers.set(peerId, { context: audioContext, analyser, source, hasAudioTrack: true });
+
+      function checkSpeaking() {
+        if (!remoteAudioAnalysers.has(peerId)) return;
+        analyser.getByteFrequencyData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+        const avg = sum / bufferLength;
+
+        const peerData = knownPeers.get(peerId);
+        const hasAudio = peerData ? peerData.hasAudio !== false : true;
+        const isSpeaking = avg > 14 && hasAudio;
+
+        const card = document.getElementById('card-peer-' + peerId);
+        if (card) {
+          if (isSpeaking) {
+            card.classList.add('speaking-glow');
+          } else {
+            card.classList.remove('speaking-glow');
+          }
+        }
+        requestAnimationFrame(checkSpeaking);
+      }
+      requestAnimationFrame(checkSpeaking);
+    } catch (e) {
+      console.warn('Error en detector de voz para peer remoto:', peerId, e);
+    }
   }
 
   // ============================================================

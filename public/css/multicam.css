@@ -33,6 +33,11 @@ html, body {
   overflow: hidden;
 }
 
+#cams-container {
+  position: relative;
+  z-index: 10;
+}
+
 /* ============================================================
    CARD INDIVIDUAL DE CÁMARA
    ============================================================ */
@@ -195,6 +200,193 @@ html, body {
    ESCENAS Y LAYOUTS
    ============================================================ */
 
+/* FONDO ANIMADO BIRRAVERDE (SOLO PARA MODO MOSAICO COMPLETO)
+   Cubre el 100% de la pantalla para tapar todo el fondo del stream */
+.multicam-grid-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  background: radial-gradient(circle at 50% 45%, #0d141b 0%, #06090c 70%, #020405 100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s ease;
+}
+
+/* Solo se activa en la escena de Mosaico (scene-grid) para tapar toda la pantalla */
+.scene-grid .multicam-grid-backdrop,
+#multicam-stage.scene-grid .multicam-grid-backdrop,
+body.multicam-grid-active .multicam-grid-backdrop {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* En todas las escenas de esquina y laterales (PIP) el fondo es 100% transparente para mostrar el stream */
+.scene-pip-corner-tr .multicam-grid-backdrop,
+.scene-pip-corner-tl .multicam-grid-backdrop,
+.scene-pip-corner-br .multicam-grid-backdrop,
+.scene-pip-corner-bl .multicam-grid-backdrop,
+.scene-pip-sidebar-r .multicam-grid-backdrop,
+.scene-pip-sidebar-l .multicam-grid-backdrop,
+.scene-pip-bottom-bar .multicam-grid-backdrop {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  display: none !important;
+}
+
+/* Grid cyber 3D en perspectiva */
+.multicam-grid-backdrop .cyber-grid-3d {
+  position: absolute;
+  bottom: -40%;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 255, 102, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 102, 0.15) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transform: perspective(400px) rotateX(75deg);
+  animation: multicamGridTravel 8s linear infinite;
+  mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, transparent 80%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, transparent 80%);
+}
+
+@keyframes multicamGridTravel {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 60px; }
+}
+
+/* Anillos radar / pulsación central verde */
+.multicam-grid-backdrop .cyber-radar-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 750px;
+  height: 750px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 255, 102, 0.18) 0%, rgba(0, 255, 102, 0.03) 45%, transparent 70%);
+  pointer-events: none;
+  animation: multicamRadarPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes multicamRadarPulse {
+  0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+}
+
+/* Línea de barrido sutil */
+.multicam-grid-backdrop .cyber-scanline {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 102, 0.6) 50%, transparent 100%);
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.8);
+  opacity: 0.4;
+  animation: multicamScanline 6s linear infinite;
+}
+
+@keyframes multicamScanline {
+  0% { top: -20px; }
+  100% { top: 105%; }
+}
+
+/* Haz Láser Verde BirraVerde que recorre de arriba a abajo continuamente */
+.multicam-laser-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.multicam-laser-sweep .laser-beam {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 90px;
+  top: -120px;
+  pointer-events: none;
+}
+
+.scene-grid .multicam-laser-sweep .laser-beam,
+#multicam-stage.scene-grid .multicam-laser-sweep .laser-beam,
+body.multicam-grid-active .multicam-laser-sweep .laser-beam {
+  animation: multicamLaserScanDown 4.5s cubic-bezier(0.25, 1, 0.35, 1) infinite;
+}
+
+@keyframes multicamLaserScanDown {
+  0% {
+    top: -120px;
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  32% {
+    top: 105%;
+    opacity: 1;
+  }
+  35% {
+    top: 105%;
+    opacity: 0;
+  }
+  100% {
+    top: 105%;
+    opacity: 0;
+  }
+}
+
+.multicam-laser-sweep .laser-core {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 255, 102, 0.3) 10%,
+    rgba(0, 255, 102, 0.95) 30%,
+    #ffffff 50%,
+    rgba(0, 255, 102, 0.95) 70%,
+    rgba(0, 255, 102, 0.3) 90%,
+    transparent 100%
+  );
+  box-shadow: 
+    0 0 15px #00ff66,
+    0 0 30px rgba(0, 255, 102, 0.9),
+    0 0 50px rgba(0, 255, 102, 0.5);
+}
+
+.multicam-laser-sweep .laser-trail {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  background: linear-gradient(to top, rgba(0, 255, 102, 0.16) 0%, rgba(0, 255, 102, 0.04) 50%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 85%, transparent 100%);
+}
+
+.multicam-laser-sweep .laser-glare {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 10px;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.9) 0%, rgba(0, 255, 102, 0.5) 50%, transparent 80%);
+  box-shadow: 0 0 20px #00ff66;
+}
+
 /* 1. ESCENA GRID (Mosaico Completo) */
 .scene-grid #cams-container {
   position: absolute;
@@ -207,6 +399,7 @@ html, body {
   gap: 24px;
   align-items: center;
   justify-content: center;
+  z-index: 10;
 }
 
 /* Adaptación dinámica según cantidad de cámaras en Grid */
