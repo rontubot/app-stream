@@ -25,6 +25,7 @@ const DATA_FILE = path.join(DATA_DIR, 'presenters.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const FIGHTS_FILE = path.join(DATA_DIR, 'fights.json');
 const MULTICAM_FILE = path.join(DATA_DIR, 'multicam.json');
+const BANNED_IPS_FILE = path.join(DATA_DIR, 'banned_ips.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
 // ============================================================
@@ -133,6 +134,15 @@ async function syncDataFromDatabase() {
       changed = true;
     } else {
       await saveToDb('multicam', multicamSettings);
+    }
+
+    // Sincronizar IPs Baneadas
+    if (dbData.banned_ips && Array.isArray(dbData.banned_ips)) {
+      bannedIps = new Set(dbData.banned_ips);
+      saveBannedIps(false);
+      changed = true;
+    } else {
+      await saveToDb('banned_ips', Array.from(bannedIps));
     }
 
     if (changed) {
@@ -385,11 +395,50 @@ function getRoomPeers(roomId) {
   return Object.values(multicamRooms[roomId].peers);
 }
 
+// Búsqueda de IP real del cliente (con soporte para proxies de Railway/Cloudflare)
+function getClientIp(socket) {
+  const forwarded = socket.handshake.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return socket.handshake.address || (socket.conn && socket.conn.remoteAddress) || '127.0.0.1';
+}
+
+let bannedIps = new Set();
+
+function loadBannedIps() {
+  try {
+    if (fs.existsSync(BANNED_IPS_FILE)) {
+      const list = JSON.parse(fs.readFileSync(BANNED_IPS_FILE, 'utf-8'));
+      if (Array.isArray(list)) bannedIps = new Set(list);
+    }
+  } catch (err) {
+    console.error('Error al cargar banned_ips:', err);
+  }
+  return bannedIps;
+}
+
+function saveBannedIps(persistDb = true) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const list = Array.from(bannedIps);
+    fs.writeFileSync(BANNED_IPS_FILE, JSON.stringify(list, null, 2), 'utf-8');
+    if (persistDb) {
+      saveToDb('banned_ips', list);
+    }
+    return true;
+  } catch (err) {
+    console.error('Error al guardar banned_ips:', err);
+    return false;
+  }
+}
+
 // Inicialización de datos
 let savedSettings = loadSettings();
 let presenters = loadPresenters();
 let fights = loadFights();
 loadMulticamSettings();
+loadBannedIps();
 
 // Si no hay combates por primera vez, creamos los por defecto para La Velada del Caos
 if (fights.length === 0) {
@@ -1189,6 +1238,7 @@ io.on('connection', (socket) => {
   // Enviar estado actual a nuevos clientes conectados
   socket.emit('multicam-settings-updated', multicamSettings);
   socket.emit('multicam-admin-peers-updated', { roomId: 'main', peers: getRoomPeers('main') });
+  socket.emit('multicam-banned-ips-updated', { bannedIps: Array.from(bannedIps) });
 
   // Unirse a una sala (Invitado, Host u Overlay de OBS)
   socket.on('multicam-join', ({ roomId = 'main', peerId, userInfo = {}, role = 'guest' }, callback) => {
@@ -1211,6 +1261,14 @@ io.on('connection', (socket) => {
     }
     if (!initials) initials = 'BV';
 
+    const clientIp = getClientIp(socket);
+    if (role === 'guest' && bannedIps.has(clientIp)) {
+      socket.emit('multicam-banned', { reason: 'Has sido bloqueado de esta sala por el anfitrión.' });
+      if (typeof callback === 'function') callback({ success: false, banned: true, error: 'Has sido bloqueado por el anfitrión.' });
+      socket.disconnect(true);
+      return;
+    }
+
     const peerData = {
       id: peerId,
       socketId: socket.id,
@@ -1221,8 +1279,10 @@ io.on('connection', (socket) => {
       initials,
       hasVideo: userInfo.hasVideo !== false,
       hasAudio: userInfo.hasAudio !== false,
+      isStreamMuted: false, // Silenciado en stream pero audible en sala
       isHidden: false,
       slot: null,
+      clientIp,
       joinedAt: Date.now()
     };
 
@@ -1324,6 +1384,67 @@ io.on('connection', (socket) => {
       const currentPeers = getRoomPeers(roomId);
       io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
       io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
+
+  // Silenciar en Stream (en OBS queda mudo pero en la sala privada se sigue escuchando)
+  socket.on('multicam-toggle-stream-mute', ({ roomId = 'main', peerId, isStreamMuted }) => {
+    if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
+      multicamRooms[roomId].peers[peerId].isStreamMuted = !!isStreamMuted;
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
+
+  // Forzar mute de micrófono al participante (en toda la sala)
+  socket.on('multicam-force-mute-peer', ({ roomId = 'main', peerId }) => {
+    if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
+      const targetSocketId = multicamRooms[roomId].peers[peerId].socketId;
+      multicamRooms[roomId].peers[peerId].hasAudio = false;
+      io.to(targetSocketId).emit('multicam-force-mute');
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
+
+  // Banear participante por IP
+  socket.on('multicam-ban-peer', ({ roomId = 'main', peerId, reason }) => {
+    if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
+      const peer = multicamRooms[roomId].peers[peerId];
+      const targetSocketId = peer.socketId;
+      const ip = peer.clientIp;
+
+      if (ip && ip !== 'unknown') {
+        bannedIps.add(ip);
+        saveBannedIps();
+      }
+
+      io.to(targetSocketId).emit('multicam-banned', { reason: reason || 'Has sido expulsado y bloqueado por el anfitrión.' });
+      delete multicamRooms[roomId].peers[peerId];
+
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.to('multicam-' + roomId).emit('multicam-peer-left', { peerId });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+      io.emit('multicam-banned-ips-updated', { bannedIps: Array.from(bannedIps) });
+    }
+  });
+
+  // Desbanear IP
+  socket.on('multicam-unban-ip', ({ ip }) => {
+    if (ip && bannedIps.has(ip)) {
+      bannedIps.delete(ip);
+      saveBannedIps();
+      io.emit('multicam-banned-ips-updated', { bannedIps: Array.from(bannedIps) });
+    }
+  });
+
+  // Obtener lista de IPs baneadas
+  socket.on('multicam-get-banned-ips', (callback) => {
+    if (typeof callback === 'function') {
+      callback({ bannedIps: Array.from(bannedIps) });
     }
   });
 

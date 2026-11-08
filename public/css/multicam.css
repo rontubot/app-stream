@@ -387,6 +387,154 @@ body.multicam-grid-active .multicam-laser-sweep .laser-beam {
   box-shadow: 0 0 20px #00ff66;
 }
 
+/* ============================================================
+   LOGOS Y BRANDING BIRRAVERDE EN FONDO MOSAICO (GRID)
+   ============================================================ */
+
+/* 1. Watermark Central Holográfico de Fondo */
+.multicam-grid-watermark-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.12;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grid-watermark-img {
+  width: 580px;
+  height: 580px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 50px rgba(0, 255, 102, 0.45));
+  animation: watermarkBreath 6s ease-in-out infinite alternate;
+}
+
+@keyframes watermarkBreath {
+  0% { transform: scale(0.95); opacity: 0.75; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+/* 2. Header Branding Superior con Logo */
+.multicam-grid-branding {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 6;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grid-brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  background: rgba(10, 16, 22, 0.88);
+  border: 1.5px solid rgba(0, 255, 102, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 255, 102, 0.25), inset 0 0 15px rgba(0, 255, 102, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.grid-brand-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px #00ff66);
+}
+
+.grid-brand-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-brand-title {
+  color: #FFFFFF;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+}
+
+.grid-brand-subtitle {
+  color: #00ff66;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+/* Adaptación dinámica según cantidad de cámaras para no tapar jamás ninguna */
+.scene-grid[data-count="1"] .multicam-grid-branding,
+#multicam-stage.scene-grid[data-count="1"] .multicam-grid-branding {
+  top: 38px;
+}
+.scene-grid[data-count="1"] .grid-watermark-img {
+  width: 720px;
+  height: 720px;
+  opacity: 0.16;
+}
+
+.scene-grid[data-count="2"] .multicam-grid-branding,
+#multicam-stage.scene-grid[data-count="2"] .multicam-grid-branding {
+  top: 45px;
+}
+.scene-grid[data-count="2"] .grid-brand-badge {
+  padding: 10px 28px;
+}
+.scene-grid[data-count="2"] .grid-brand-logo {
+  width: 44px;
+  height: 44px;
+}
+.scene-grid[data-count="2"] .grid-brand-title {
+  font-size: 24px;
+}
+
+.scene-grid[data-count="3"] .multicam-grid-branding,
+#multicam-stage.scene-grid[data-count="3"] .multicam-grid-branding {
+  top: 45px;
+}
+
+/* En mosaicos de 4, 5 y 6 (2 filas): el contenedor se ubica centrado y el logo superior se vuelve compacto */
+.scene-grid[data-count="4"] .multicam-grid-branding,
+.scene-grid[data-count="5"] .multicam-grid-branding,
+.scene-grid[data-count="6"] .multicam-grid-branding,
+#multicam-stage.scene-grid[data-count="4"] .multicam-grid-branding,
+#multicam-stage.scene-grid[data-count="5"] .multicam-grid-branding,
+#multicam-stage.scene-grid[data-count="6"] .multicam-grid-branding {
+  top: 16px;
+}
+
+.scene-grid[data-count="4"] .grid-brand-badge,
+.scene-grid[data-count="5"] .grid-brand-badge,
+.scene-grid[data-count="6"] .grid-brand-badge {
+  padding: 5px 18px;
+}
+.scene-grid[data-count="4"] .grid-brand-logo,
+.scene-grid[data-count="5"] .grid-brand-logo,
+.scene-grid[data-count="6"] .grid-brand-logo {
+  width: 28px;
+  height: 28px;
+}
+.scene-grid[data-count="4"] .grid-brand-title,
+.scene-grid[data-count="5"] .grid-brand-title,
+.scene-grid[data-count="6"] .grid-brand-title {
+  font-size: 16px;
+}
+
+.scene-grid[data-count="4"] #cams-container,
+.scene-grid[data-count="5"] #cams-container,
+.scene-grid[data-count="6"] #cams-container {
+  height: 910px;
+  top: 53%;
+}
+
 /* 1. ESCENA GRID (Mosaico Completo) */
 .scene-grid #cams-container {
   position: absolute;

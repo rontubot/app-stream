@@ -2034,44 +2034,73 @@ function renderAdminPeersList(peers) {
   validPeers.forEach(peer => {
     const initials = peer.initials || 'IN';
     const isHidden = !!peer.isHidden;
+    const isStreamMuted = !!peer.isStreamMuted;
     const gradient = getInitialsGradient(peer.name);
 
     html += `
-      <div class="bg-cyber-card border ${isHidden ? 'border-cyber-border/40 opacity-60' : 'border-cyber-border'} rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-md transition-all hover:border-cyber-green/50">
-        <!-- Avatar y Datos -->
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-11 h-11 rounded-full border-2 border-cyber-border flex items-center justify-center font-chakra font-bold text-sm text-white shrink-0 overflow-hidden shadow-inner" style="background: ${peer.photo ? 'none' : gradient}">
-            ${peer.photo ? `<img src="${peer.photo}" class="w-full h-full object-cover" alt="${peer.name}">` : `<span>${initials}</span>`}
-          </div>
-
-          <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <h4 class="text-sm font-chakra font-bold text-white truncate max-w-[160px] sm:max-w-[200px]">${peer.name || 'Invitado'}</h4>
-              ${isHidden ? `<span class="px-1.5 py-0.2 rounded bg-cyber-red/20 text-cyber-red text-[9px] font-mono font-bold">OCULTO EN OBS</span>` : ''}
+      <div class="bg-cyber-card border ${isHidden ? 'border-cyber-border/40 opacity-75' : 'border-cyber-border'} rounded-xl p-3.5 space-y-3 shadow-md transition-all hover:border-cyan-400/50">
+        <!-- Fila Superior: Avatar + Info Usuario + Badges -->
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-11 h-11 rounded-full border-2 ${peer.hasAudio ? 'border-cyber-green' : 'border-cyber-border'} flex items-center justify-center font-chakra font-bold text-sm text-white shrink-0 overflow-hidden shadow-inner relative" style="background: ${peer.photo ? 'none' : gradient}">
+              ${peer.photo ? `<img src="${peer.photo}" class="w-full h-full object-cover" alt="${peer.name}">` : `<span>${initials}</span>`}
+              ${isStreamMuted ? '<span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-amber-500 border border-black flex items-center justify-center text-[8px]" title="Silenciado en Stream OBS">🔇</span>' : ''}
             </div>
-            <div class="flex items-center gap-2 text-[11px] font-mono text-gray-400 mt-0.5">
-              <span class="flex items-center gap-1 ${peer.hasVideo ? 'text-cyber-green' : 'text-yellow-500'}">
-                <i data-lucide="${peer.hasVideo ? 'video' : 'video-off'}" class="w-3 h-3"></i> ${peer.hasVideo ? 'Cámara' : 'Sin Video'}
-              </span>
-              <span>&bull;</span>
-              <span class="flex items-center gap-1 ${peer.hasAudio ? 'text-cyber-green' : 'text-cyber-red'}">
-                <i data-lucide="${peer.hasAudio ? 'mic' : 'mic-off'}" class="w-3 h-3"></i> ${peer.hasAudio ? 'Mic ON' : 'Muteado'}
-              </span>
+
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="text-sm font-chakra font-bold text-white truncate max-w-[150px] sm:max-w-[200px]">${peer.name || 'Invitado'}</h4>
+                ${isHidden ? `<span class="px-1.5 py-0.5 rounded bg-cyber-red/20 text-cyber-red text-[9px] font-mono font-bold">OCULTO EN OBS</span>` : ''}
+                ${isStreamMuted ? `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[9px] font-mono font-bold">MUTE EN STREAM</span>` : ''}
+              </div>
+              <div class="flex items-center gap-2 text-[11px] font-mono text-gray-400 mt-0.5 flex-wrap">
+                <span class="flex items-center gap-1 ${peer.hasVideo ? 'text-cyber-green' : 'text-yellow-500'}">
+                  <i data-lucide="${peer.hasVideo ? 'video' : 'video-off'}" class="w-3 h-3"></i> ${peer.hasVideo ? 'Cámara' : 'Sin Video'}
+                </span>
+                <span>&bull;</span>
+                <span class="flex items-center gap-1 ${peer.hasAudio ? 'text-cyber-green' : 'text-cyber-red'}">
+                  <i data-lucide="${peer.hasAudio ? 'mic' : 'mic-off'}" class="w-3 h-3"></i> ${peer.hasAudio ? 'Mic ON' : 'Muteado'}
+                </span>
+                ${peer.clientIp ? `<span>&bull;</span><span class="text-gray-500 font-mono" title="IP del participante">IP: ${peer.clientIp}</span>` : ''}
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Acciones en OBS -->
-        <div class="flex items-center gap-2 shrink-0">
-          <!-- Toggle Visibilidad en OBS -->
-          <button type="button" onclick="togglePeerVisibility('${peer.id}', ${!isHidden})" title="${isHidden ? 'Mostrar en OBS' : 'Ocultar de OBS'}" class="p-2 rounded-lg border ${isHidden ? 'bg-cyber-card border-cyber-border text-gray-400 hover:text-white' : 'bg-cyber-green/10 border-cyber-green text-cyber-green hover:bg-cyber-green hover:text-black'} text-xs font-chakra font-bold transition-all">
-            <i data-lucide="${isHidden ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>
+        <!-- Fila Inferior: Botones de Control de Audio, Video y Moderación -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-cyber-border/60">
+          
+          <!-- 1. Mute en Stream (OBS) pero en la llamada privada sí se escucha -->
+          <button type="button" onclick="toggleStreamMute('${peer.id}', ${!isStreamMuted})" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${isStreamMuted ? 'bg-amber-500/20 border-amber-500 text-amber-300 hover:bg-amber-500/30' : 'bg-cyan-500/10 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20'}" title="${isStreamMuted ? 'Hacer sonar en Stream OBS' : 'Silenciar en Stream OBS (pero seguir oyendo en la sala privada)'}">
+            <i data-lucide="${isStreamMuted ? 'volume-x' : 'volume-2'}" class="w-3.5 h-3.5"></i>
+            <span class="truncate">${isStreamMuted ? 'Mudo en Stream' : 'Audio al Stream'}</span>
           </button>
 
-          <!-- Expulsar de la Sala -->
-          <button type="button" onclick="kickMulticamPeer('${peer.id}', '${escapeHtml(peer.name)}')" title="Expulsar de la Sala" class="p-2 rounded-lg bg-cyber-red/10 border border-cyber-red/40 text-cyber-red hover:bg-cyber-red hover:text-white text-xs font-chakra font-bold transition-all">
-            <i data-lucide="user-x" class="w-4 h-4"></i>
+          <!-- 2. Silenciar Micrófono General (Mute en toda la llamada) -->
+          <button type="button" onclick="forceMutePeer('${peer.id}', '${escapeHtml(peer.name)}')" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${peer.hasAudio ? 'bg-cyber-card border-cyber-border text-gray-300 hover:border-yellow-500 hover:text-yellow-400' : 'bg-cyber-red/20 border-cyber-red text-cyber-red'}" title="Silenciar micrófono de este participante en toda la llamada">
+            <i data-lucide="mic-off" class="w-3.5 h-3.5"></i>
+            <span class="truncate">${peer.hasAudio ? 'Silenciar Mic' : 'Mic Muteado'}</span>
           </button>
+
+          <!-- 3. Toggle Cámara en OBS (Ocultar/Mostrar) -->
+          <button type="button" onclick="togglePeerVisibility('${peer.id}', ${!isHidden})" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${isHidden ? 'bg-cyber-card border-cyber-border text-gray-400 hover:text-white' : 'bg-cyber-green/10 border-cyber-green text-cyber-green hover:bg-cyber-green hover:text-black'}" title="${isHidden ? 'Mostrar cámara en OBS' : 'Ocultar cámara en OBS'}">
+            <i data-lucide="${isHidden ? 'eye-off' : 'eye'}" class="w-3.5 h-3.5"></i>
+            <span class="truncate">${isHidden ? 'Cámara Oculta' : 'Cámara Visible'}</span>
+          </button>
+
+          <!-- 4. Acciones de Moderación: Expulsar y Banear IP -->
+          <div class="flex items-center gap-1">
+            <button type="button" onclick="kickMulticamPeer('${peer.id}', '${escapeHtml(peer.name)}')" class="flex-1 px-2 py-1.5 rounded-lg bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600 hover:text-white text-xs font-chakra font-bold flex items-center justify-center gap-1 transition-all" title="Expulsar de la llamada">
+              <i data-lucide="door-open" class="w-3.5 h-3.5"></i>
+              <span>Expulsar</span>
+            </button>
+
+            <button type="button" onclick="banPeerIp('${peer.id}', '${escapeHtml(peer.name)}', '${peer.clientIp || ''}')" class="px-2.5 py-1.5 rounded-lg bg-red-950 border border-red-600 text-red-400 hover:bg-red-600 hover:text-white text-xs font-chakra font-bold flex items-center justify-center gap-1 transition-all" title="Expulsar y Banear por IP">
+              <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+              <span>Ban</span>
+            </button>
+          </div>
+
         </div>
       </div>
     `;
@@ -2081,6 +2110,26 @@ function renderAdminPeersList(peers) {
   refreshIcons();
 }
 
+// 1. Alternar Mute en Stream (pero en sala se sigue escuchando)
+window.toggleStreamMute = function(peerId, isMuted) {
+  socket.emit('multicam-toggle-stream-mute', {
+    roomId: 'main',
+    peerId: peerId,
+    isStreamMuted: isMuted
+  });
+  showToast(isMuted ? '🔇 Invitado silenciado en Stream (sigue en la llamada)' : '🔊 Audio del invitado activo en Stream');
+};
+
+// 2. Forzar silenciado de micrófono en la llamada
+window.forceMutePeer = function(peerId, name) {
+  socket.emit('multicam-force-mute-peer', {
+    roomId: 'main',
+    peerId: peerId
+  });
+  showToast(`🔇 Micrófono silenciado para ${name}`);
+};
+
+// 3. Alternar visibilidad de cámara en OBS
 window.togglePeerVisibility = function(peerId, isHidden) {
   socket.emit('multicam-toggle-peer-visibility', {
     roomId: 'main',
@@ -2090,6 +2139,7 @@ window.togglePeerVisibility = function(peerId, isHidden) {
   showToast(isHidden ? '👁️ Cámara ocultada en OBS' : '👁️ Cámara visible en OBS');
 };
 
+// 4. Expulsar de la sala (Kick)
 window.kickMulticamPeer = function(peerId, name) {
   if (confirm(`¿Expulsar a "${name}" de la sala de videollamada?`)) {
     socket.emit('multicam-kick-peer', {
@@ -2099,6 +2149,123 @@ window.kickMulticamPeer = function(peerId, name) {
     showToast(`🚫 Participante expulsado: ${name}`);
   }
 };
+
+// 5. Banear por IP
+window.banPeerIp = function(peerId, name, ip) {
+  const msg = ip 
+    ? `¿EXPULSAR Y BANEAR a "${name}" por IP?\n\nIP: ${ip}\n\nEl participante no podrá volver a ingresar a ninguna sala.`
+    : `¿EXPULSAR Y BANEAR a "${name}"?\n\nSu IP será bloqueada automáticamente.`;
+  
+  if (confirm(msg)) {
+    socket.emit('multicam-ban-peer', {
+      roomId: 'main',
+      peerId: peerId
+    });
+    showToast(`⛔ Participante baneado por IP: ${name}`);
+  }
+};
+
+// ============================================================
+// GESTIÓN DE IPS BANEADAS (MODAL Y DESBANEO)
+// ============================================================
+let currentBannedIps = [];
+const btnOpenBannedIps = document.getElementById('btn-open-banned-ips');
+const btnCloseBannedIpsModal = document.getElementById('btn-close-banned-ips-modal');
+const modalBannedIps = document.getElementById('modal-banned-ips');
+const bannedIpsCountBadge = document.getElementById('banned-ips-count');
+const bannedIpsTotalBadge = document.getElementById('banned-ips-total-badge');
+const bannedIpsListContainer = document.getElementById('banned-ips-list-container');
+const inputManualBanIp = document.getElementById('input-manual-ban-ip');
+const btnManualBanIp = document.getElementById('btn-manual-ban-ip');
+
+function renderBannedIpsList(ips) {
+  currentBannedIps = Array.isArray(ips) ? ips : [];
+  const count = currentBannedIps.length;
+  
+  if (bannedIpsCountBadge) bannedIpsCountBadge.textContent = count;
+  if (bannedIpsTotalBadge) bannedIpsTotalBadge.textContent = `${count} registradas`;
+
+  if (!bannedIpsListContainer) return;
+
+  if (count === 0) {
+    bannedIpsListContainer.innerHTML = `
+      <div class="p-4 text-center bg-black/40 border border-cyber-border/60 rounded-xl text-gray-500 font-chakra">
+        No hay ninguna dirección IP bloqueada actualmente
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  currentBannedIps.forEach(ip => {
+    html += `
+      <div class="flex items-center justify-between gap-3 p-2.5 bg-black/60 border border-red-500/30 rounded-lg">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-red-500"></span>
+          <span class="font-mono text-xs text-white">${escapeHtml(ip)}</span>
+        </div>
+        <button type="button" onclick="unbanIp('${escapeHtml(ip)}')" class="px-2.5 py-1 rounded bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-300 hover:text-cyber-green font-chakra font-bold text-[11px] transition-all flex items-center gap-1">
+          <i data-lucide="unlock" class="w-3 h-3"></i>
+          <span>Desbloquear</span>
+        </button>
+      </div>
+    `;
+  });
+
+  bannedIpsListContainer.innerHTML = html;
+  refreshIcons();
+}
+
+window.unbanIp = function(ip) {
+  if (confirm(`¿Desbloquear la IP "${ip}"? Podrá volver a ingresar a las llamadas.`)) {
+    socket.emit('multicam-unban-ip', { ip });
+    showToast(`✅ IP desbloqueada: ${ip}`);
+  }
+};
+
+socket.on('multicam-banned-ips-updated', ({ bannedIps }) => {
+  renderBannedIpsList(bannedIps);
+});
+
+if (btnOpenBannedIps) {
+  btnOpenBannedIps.addEventListener('click', () => {
+    socket.emit('multicam-get-banned-ips', ({ bannedIps }) => {
+      renderBannedIpsList(bannedIps);
+    });
+    if (modalBannedIps) {
+      modalBannedIps.classList.remove('hidden');
+      modalBannedIps.classList.add('flex');
+    }
+    refreshIcons();
+  });
+}
+
+if (btnCloseBannedIpsModal) {
+  btnCloseBannedIpsModal.addEventListener('click', () => {
+    if (modalBannedIps) {
+      modalBannedIps.classList.add('hidden');
+      modalBannedIps.classList.remove('flex');
+    }
+  });
+}
+
+if (modalBannedIps) {
+  modalBannedIps.addEventListener('click', (e) => {
+    if (e.target === modalBannedIps) {
+      modalBannedIps.classList.add('hidden');
+      modalBannedIps.classList.remove('flex');
+    }
+  });
+}
+
+if (btnManualBanIp && inputManualBanIp) {
+  btnManualBanIp.addEventListener('click', () => {
+    const ip = inputManualBanIp.value.trim();
+    if (!ip) return;
+    socket.emit('multicam-unban-ip', { ip: '__none__' });
+    inputManualBanIp.value = '';
+  });
+}
 
 function escapeHtml(str) {
   return (str || '').replace(/[&<>"']/g, function(m) {

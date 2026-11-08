@@ -125,6 +125,13 @@
         const existing = knownPeers.get(peer.id);
         knownPeers.set(peer.id, peer);
 
+        const audioElem = document.getElementById('audio-' + peer.id);
+        if (audioElem) {
+          const isMuted = !!currentSettings.audioMutedOverall || !!peer.isStreamMuted;
+          audioElem.muted = isMuted;
+          audioElem.volume = isMuted ? 0 : 1;
+        }
+
         if (!existing) {
           preparePeerConnection(peer.id);
         }
@@ -277,7 +284,10 @@
       audioContainer.appendChild(audioElem);
     }
     audioElem.srcObject = stream;
-    audioElem.muted = !!currentSettings.audioMutedOverall;
+    const peerData = knownPeers.get(peerId);
+    const isMuted = !!currentSettings.audioMutedOverall || (peerData && peerData.isStreamMuted);
+    audioElem.muted = !!isMuted;
+    audioElem.volume = isMuted ? 0 : 1;
     audioElem.play().catch(e => console.warn('[OBS Multicam] Audio play error:', e));
   }
 
@@ -307,7 +317,8 @@
         let sum = 0;
         for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
         const avg = sum / bufferLength;
-        const isSpeaking = avg > 15;
+        const peerData = knownPeers.get(peerId);
+        const isSpeaking = avg > 15 && (!peerData || !peerData.isStreamMuted);
 
         const card = document.getElementById('cam-card-' + peerId);
         if (card) {

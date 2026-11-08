@@ -665,6 +665,33 @@
     window.location.reload();
   });
 
+  socket.on('multicam-force-mute', () => {
+    state.hasAudio = false;
+    if (state.localStream) {
+      state.localStream.getAudioTracks().forEach(t => t.enabled = false);
+    }
+    btnCallToggleMic.className = 'w-11 h-11 rounded-xl border flex items-center justify-center transition-all shadow-md bg-cyber-red/20 border-cyber-red text-cyber-red';
+    btnCallToggleMic.innerHTML = '<i data-lucide="mic-off" class="w-5 h-5"></i>';
+    if (window.lucide) lucide.createIcons();
+    notifyProfileUpdate();
+    alert('🔇 El anfitrión ha silenciado tu micrófono.');
+  });
+
+  socket.on('multicam-banned', ({ reason }) => {
+    document.body.innerHTML = `
+      <div style="min-height: 100vh; background: #05070a; display: flex; align-items: center; justify-content: center; padding: 20px; font-family: 'Rajdhani', sans-serif; color: #fff; text-align: center;">
+        <div style="max-width: 480px; background: rgba(20, 10, 15, 0.95); border: 2px solid #ef4444; border-radius: 16px; padding: 32px; box-shadow: 0 0 35px rgba(239, 68, 68, 0.4);">
+          <div style="font-size: 50px; margin-bottom: 12px;">🚫</div>
+          <h2 style="font-size: 26px; font-weight: 800; color: #f87171; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;">ACCESO BLOQUEADO</h2>
+          <p style="font-size: 14px; color: #d1d5db; line-height: 1.6; margin-bottom: 20px;">${reason || 'Has sido bloqueado por IP de esta sala por el anfitrión.'}</p>
+          <div style="padding: 10px 16px; background: #000; border-radius: 8px; border: 1px solid #333; font-family: monospace; font-size: 12px; color: #9ca3af;">
+            IP registrada en lista de exclusión
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
   function cleanupPeer(peerId) {
     if (peerConnections.has(peerId)) {
       peerConnections.get(peerId).close();

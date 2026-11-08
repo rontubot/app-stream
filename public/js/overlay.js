@@ -835,6 +835,14 @@ socket.on('multicam-peers-updated', ({ peers }) => {
       const existing = multicamKnownPeers.get(peer.id);
       multicamKnownPeers.set(peer.id, peer);
 
+      // Actualizar mute específico de stream en audio activo
+      const audioElem = document.getElementById('audio-' + peer.id);
+      if (audioElem) {
+        const isMuted = !!multicamSettingsCurrent.audioMutedOverall || !!peer.isStreamMuted;
+        audioElem.muted = isMuted;
+        audioElem.volume = isMuted ? 0 : 1;
+      }
+
       if (!existing) {
         prepareMulticamPeerConnection(peer.id);
       }
@@ -974,7 +982,10 @@ function attachMulticamAudio(peerId, stream) {
     audioContainer.appendChild(audioElem);
   }
   audioElem.srcObject = stream;
-  audioElem.muted = !!multicamSettingsCurrent.audioMutedOverall;
+  const peerData = multicamKnownPeers.get(peerId);
+  const isMuted = !!multicamSettingsCurrent.audioMutedOverall || (peerData && peerData.isStreamMuted);
+  audioElem.muted = !!isMuted;
+  audioElem.volume = isMuted ? 0 : 1;
   audioElem.play().catch(e => console.warn('[Overlay Multicam] Audio play error:', e));
 }
 
@@ -1003,7 +1014,8 @@ function setupMulticamSpeakingDetector(peerId, stream) {
       let sum = 0;
       for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
       const avg = sum / bufferLength;
-      const isSpeaking = avg > 15;
+      const peerData = multicamKnownPeers.get(peerId);
+      const isSpeaking = avg > 15 && (!peerData || !peerData.isStreamMuted);
 
       const card = document.getElementById('cam-card-' + peerId);
       if (card) {
@@ -1075,6 +1087,7 @@ function renderMulticamCamCard(peer) {
     <div class="cam-lower-third">
       <span class="cam-status-dot ${hasActiveVideo ? '' : 'no-video'}"></span>
       <span class="cam-name-text">${peer.name || 'Invitado'}</span>
+      ${peer.isStreamMuted ? '<span style="background: rgba(239, 68, 68, 0.3); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-family: sans-serif;">MUTE STREAM</span>' : ''}
       <svg class="cam-speaking-indicator" viewBox="0 0 24 24" fill="none" stroke="#00ff66" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
         <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
