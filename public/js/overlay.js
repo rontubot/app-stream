@@ -658,6 +658,11 @@ function playTTS(text, user) {
 socket.on('chat-announcement', (payload) => {
   if (!streamBottomChat || !payload) return;
 
+  // No mostrar anuncios ni reproducir TTS sobre escenas de pantalla completa ni tabla VS
+  if (isSceneActive || isVsActive) {
+    return;
+  }
+
   if (chatDismissTimeout) clearTimeout(chatDismissTimeout);
 
   if (chatHudUsername) chatHudUsername.textContent = payload.user || '@espectador';
@@ -668,7 +673,7 @@ socket.on('chat-announcement', (payload) => {
     chatHudTime.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   }
 
-  // Mostrar recuadro inferior siempre (máxima prioridad)
+  // Mostrar recuadro inferior (visible sobre el mosaico de multicam y cámaras)
   streamBottomChat.classList.add('is-active');
 
   // Si TTS está habilitado, pronunciar
