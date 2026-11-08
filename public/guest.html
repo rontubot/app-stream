@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sala de Transmisión Multicam - BirraVerde</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            chakra: ['Chakra Petch', 'sans-serif'],
+            sans: ['Inter', 'sans-serif']
+          },
+          colors: {
+            cyber: {
+              black: '#070a0d',
+              dark: '#0e141b',
+              card: '#141c24',
+              border: '#222f3d',
+              green: '#00ff66',
+              glow: '#00ff6640',
+              red: '#ff3344'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Efecto de halo al hablar */
+    .speaking-glow {
+      box-shadow: 0 0 0 3px #00ff66, 0 0 25px rgba(0, 255, 102, 0.6) !important;
+      border-color: #00ff66 !important;
+    }
+    .video-mirror {
+      transform: scaleX(-1);
+    }
+    /* Scrollbars cyber */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #070a0d; }
+    ::-webkit-scrollbar-thumb { background: #222f3d; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00ff66; }
+  </style>
+</head>
+<body class="bg-cyber-black text-gray-100 min-h-screen font-sans selection:bg-cyber-green selection:text-black flex flex-col justify-between overflow-x-hidden">
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="border-b border-cyber-border bg-cyber-dark/95 backdrop-blur px-4 py-3 sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-cyber-green/10 border border-cyber-green flex items-center justify-center text-cyber-green shadow-[0_0_12px_rgba(0,255,102,0.3)]">
+          <i data-lucide="video" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold font-chakra tracking-wide flex items-center gap-2">
+            MULTICAM BIRRAVERDE
+            <span class="text-[10px] px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green font-mono border border-cyber-green/40">SALA EN VIVO</span>
+          </h1>
+          <p class="text-xs text-gray-400">Transmisión de audio y video para el stream</p>
+        </div>
+      </div>
+
+      <div id="room-status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-card border border-cyber-border text-xs font-mono">
+        <span id="conn-dot" class="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse"></span>
+        <span id="conn-text" class="text-gray-300">Conectando...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       SECCIÓN 1: LOBBY DE INGRESO (Antes de unirse)
+       ============================================================ -->
+  <main id="lobby-view" class="flex-1 max-w-4xl mx-auto w-full p-4 sm:p-6 flex flex-col justify-center">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 bg-cyber-dark border border-cyber-border rounded-2xl p-5 sm:p-8 shadow-2xl relative overflow-hidden">
+      <!-- Glow decorativo superior -->
+      <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-32 bg-cyber-green/10 blur-3xl pointer-events-none"></div>
+
+      <!-- Columna Izquierda: Vista previa de Cámara y Avatar Teams -->
+      <div class="md:col-span-6 flex flex-col items-center justify-center gap-4">
+        <div class="w-full relative aspect-video bg-cyber-black rounded-xl border-2 border-cyber-border overflow-hidden shadow-inner flex items-center justify-center" id="preview-wrapper">
+          <!-- Video de preview -->
+          <video id="preview-video" autoplay playsinline muted class="w-full h-full object-cover video-mirror hidden"></video>
+
+          <!-- Avatar alternativo (Foto o Iniciales Teams) -->
+          <div id="preview-avatar-box" class="w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-b from-cyber-card to-cyber-black">
+            <div id="preview-avatar-circle" class="w-28 h-28 rounded-full border-4 border-cyber-border flex items-center justify-center text-3xl font-bold font-chakra tracking-wider shadow-xl transition-all overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-900 text-white">
+              <span id="preview-initials">BV</span>
+              <img id="preview-avatar-img" class="w-full h-full object-cover hidden" alt="Avatar">
+            </div>
+            <p id="preview-avatar-name" class="mt-3 text-sm font-semibold font-chakra text-gray-300 tracking-wider">Tu Nombre</p>
+            <span class="text-[11px] text-gray-500 font-mono mt-0.5">Cámara apagada o sin video</span>
+          </div>
+
+          <!-- Badges de estado sobre el video -->
+          <div class="absolute bottom-3 left-3 flex items-center gap-2">
+            <span id="badge-cam-state" class="px-2 py-0.5 rounded bg-black/70 backdrop-blur border border-white/10 text-[11px] font-mono flex items-center gap-1">
+              <i data-lucide="video-off" class="w-3.5 h-3.5 text-cyber-red"></i> Cámara Desactivada
+            </span>
+          </div>
+        </div>
+
+        <!-- Vúmetro de audio (indicador mientras habla en el lobby) -->
+        <div class="w-full bg-cyber-card border border-cyber-border rounded-lg p-3">
+          <div class="flex items-center justify-between text-xs text-gray-400 mb-1.5 font-mono">
+            <span class="flex items-center gap-1.5"><i data-lucide="mic" class="w-3.5 h-3.5 text-cyber-green"></i> Nivel de Micrófono</span>
+            <span id="mic-test-status">Silencio</span>
+          </div>
+          <div class="w-full h-2 bg-cyber-black rounded-full overflow-hidden border border-cyber-border/60">
+            <div id="mic-level-bar" class="h-full bg-cyber-green transition-all duration-75 w-0 shadow-[0_0_8px_#00ff66]"></div>
+          </div>
+        </div>
+
+        <!-- Controles rápidos de dispositivos en preview -->
+        <div class="flex items-center gap-3 w-full">
+          <button id="btn-toggle-cam-lobby" type="button" class="flex-1 py-2.5 px-3 rounded-xl border border-cyber-border bg-cyber-card hover:bg-cyber-border/50 text-xs font-chakra font-bold flex items-center justify-center gap-2 transition-all">
+            <i data-lucide="video" class="w-4 h-4 text-cyber-green"></i>
+            <span>Encender Cámara</span>
+          </button>
+          <button id="btn-toggle-mic-lobby" type="button" class="flex-1 py-2.5 px-3 rounded-xl border border-cyber-border bg-cyber-card hover:bg-cyber-border/50 text-xs font-chakra font-bold flex items-center justify-center gap-2 transition-all">
+            <i data-lucide="mic" class="w-4 h-4 text-cyber-green"></i>
+            <span>Micrófono ON</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Columna Derecha: Configuración de Nombre, Foto y Dispositivos -->
+      <div class="md:col-span-6 flex flex-col justify-between gap-5">
+        <div>
+          <h2 class="text-xl font-bold font-chakra text-white mb-1">Prepara tu Entrada</h2>
+          <p class="text-xs text-gray-400 mb-4">Ingresa tu nombre y selecciona cómo te verás en el stream.</p>
+
+          <!-- Input Nombre -->
+          <div class="mb-4">
+            <label class="block text-xs font-chakra font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+              Tu Nombre / Apodo en el Stream <span class="text-cyber-green">*</span>
+            </label>
+            <input type="text" id="input-guest-name" maxlength="30" placeholder="Ej: Luis Hernández" class="w-full bg-cyber-black border border-cyber-border rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:border-cyber-green focus:ring-1 focus:ring-cyber-green transition-all placeholder:text-gray-600">
+            <p class="text-[11px] text-gray-500 mt-1">Si dejas la cámara apagada, se crearán tus iniciales estilo Teams.</p>
+          </div>
+
+          <!-- Opción de Subir Foto Opcional -->
+          <div class="mb-4">
+            <label class="block text-xs font-chakra font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+              Foto de Perfil (Opcional)
+            </label>
+            <div class="flex items-center gap-3">
+              <label class="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-xl bg-cyber-card border border-cyber-border hover:border-cyber-green text-xs font-chakra font-bold transition-all text-gray-200">
+                <i data-lucide="upload" class="w-4 h-4 text-cyber-green"></i>
+                <span>Subir Imagen</span>
+                <input type="file" id="input-guest-avatar-file" accept="image/*" class="hidden">
+              </label>
+              <button id="btn-remove-avatar" type="button" class="hidden px-2.5 py-2 rounded-xl bg-cyber-red/10 border border-cyber-red/40 text-cyber-red hover:bg-cyber-red/20 text-xs font-chakra font-bold transition-all">
+                Quitar Foto
+              </button>
+              <span id="avatar-filename" class="text-xs text-gray-400 truncate max-w-[150px]">Sin foto (usar iniciales)</span>
+            </div>
+          </div>
+
+          <!-- Selectores de Dispositivos de Entrada -->
+          <div class="space-y-3 pt-2 border-t border-cyber-border/60">
+            <div>
+              <label class="block text-[11px] font-mono text-gray-400 mb-1">Cámara:</label>
+              <select id="select-video-device" class="w-full bg-cyber-black border border-cyber-border rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyber-green">
+                <option value="">Cámara por defecto</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-mono text-gray-400 mb-1">Micrófono:</label>
+              <select id="select-audio-device" class="w-full bg-cyber-black border border-cyber-border rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyber-green">
+                <option value="">Micrófono por defecto</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botón de Entrada Principal -->
+        <button id="btn-join-room" type="button" class="w-full py-3.5 px-4 rounded-xl bg-cyber-green text-black font-chakra font-extrabold text-base tracking-wider hover:brightness-110 shadow-[0_0_20px_rgba(0,255,102,0.4)] transition-all flex items-center justify-center gap-2 uppercase">
+          <i data-lucide="radio" class="w-5 h-5"></i>
+          <span>Entrar a la Sala en Vivo</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================
+       SECCIÓN 2: SALA ACTIVA (Durante la llamada)
+       ============================================================ -->
+  <main id="call-view" class="hidden flex-1 flex flex-col p-3 sm:p-5 max-w-7xl mx-auto w-full h-[calc(100vh-140px)]">
+    <!-- Grid dinámico de participantes de la llamada -->
+    <div id="participants-grid" class="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr overflow-y-auto p-2">
+      <!-- Los recuadros de video/avatares se inyectan dinámicamente con JS -->
+    </div>
+
+    <!-- Barra de controles inferior flotante -->
+    <div class="mt-4 bg-cyber-dark/95 border border-cyber-border backdrop-blur-md rounded-2xl p-3 flex items-center justify-between shadow-2xl max-w-2xl mx-auto w-full">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping"></span>
+        <span class="text-xs font-chakra font-bold text-gray-200 uppercase tracking-wider hidden sm:inline">Transmitiendo</span>
+      </div>
+
+      <!-- Botones centrales -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Toggle Mic -->
+        <button id="btn-call-toggle-mic" type="button" title="Mutear Micrófono" class="w-11 h-11 rounded-xl bg-cyber-card border border-cyber-border hover:border-cyber-green text-cyber-green flex items-center justify-center transition-all shadow-md">
+          <i data-lucide="mic" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Toggle Cam -->
+        <button id="btn-call-toggle-cam" type="button" title="Apagar Cámara" class="w-11 h-11 rounded-xl bg-cyber-card border border-cyber-border hover:border-cyber-green text-cyber-green flex items-center justify-center transition-all shadow-md">
+          <i data-lucide="video" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Compartir Pantalla -->
+        <button id="btn-call-share-screen" type="button" title="Compartir Pantalla" class="w-11 h-11 rounded-xl bg-cyber-card border border-cyber-border hover:border-cyan-400 text-cyan-400 flex items-center justify-center transition-all shadow-md">
+          <i data-lucide="screen-share" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Colgar / Salir -->
+        <button id="btn-call-leave" type="button" title="Salir de la Sala" class="w-11 h-11 rounded-xl bg-cyber-red/20 border border-cyber-red text-cyber-red hover:bg-cyber-red hover:text-white flex items-center justify-center transition-all shadow-md">
+          <i data-lucide="phone-off" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span id="call-participants-count" class="text-xs font-mono px-2.5 py-1 rounded-lg bg-cyber-black border border-cyber-border text-gray-300">
+          1 participante
+        </span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="py-2.5 px-4 text-center border-t border-cyber-border/40 text-[11px] text-gray-500 font-mono">
+    BirraVerde Multicam &bull; WebRTC Ultra-Low Latency &bull; La Velada del Caos
+  </footer>
+
+  <script src="/js/guest.js"></script>
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

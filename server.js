@@ -18,6 +18,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'presenters.json');
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const FIGHTS_FILE = path.join(DATA_DIR, 'fights.json');
+const MULTICAM_FILE = path.join(DATA_DIR, 'multicam.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
 // Middleware con límite ampliado para fotos de peleadores
@@ -196,10 +197,61 @@ function saveFights(fightsList) {
   }
 }
 
+// Configuración y gestión de Multicam / Videollamadas
+let multicamSettings = {
+  activeScene: 'pip-corner-tr', // 'grid' | 'pip-corner-tr' | 'pip-corner-br' | 'pip-corner-tl' | 'pip-sidebar-right' | 'pip-bottom-bar'
+  showLabels: true,
+  audioMutedOverall: false,
+  aspectRatio: '16/9', // '16/9' | '4/3' | '1/1'
+  borderGlow: true,
+  streamBackgroundMode: true,
+  scale: 100, // porcentaje de escala visual
+  maxVisibleCams: 6
+};
+
+function loadMulticamSettings() {
+  try {
+    if (fs.existsSync(MULTICAM_FILE)) {
+      const data = JSON.parse(fs.readFileSync(MULTICAM_FILE, 'utf-8'));
+      multicamSettings = { ...multicamSettings, ...data };
+      return multicamSettings;
+    }
+  } catch (err) {
+    console.error('Error al cargar multicam settings:', err);
+  }
+  return multicamSettings;
+}
+
+function saveMulticamSettings() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(MULTICAM_FILE, JSON.stringify(multicamSettings, null, 2), 'utf-8');
+    return true;
+  } catch (err) {
+    console.error('Error al guardar multicam settings:', err);
+    return false;
+  }
+}
+
+// Memoria volátil de participantes por sala de videollamada
+let multicamRooms = {
+  main: {
+    peers: {}
+  }
+};
+
+function getRoomPeers(roomId) {
+  if (!multicamRooms[roomId]) {
+    multicamRooms[roomId] = { peers: {} };
+  }
+  return Object.values(multicamRooms[roomId].peers);
+}
+
 // Inicialización de datos
 let savedSettings = loadSettings();
 let presenters = loadPresenters();
 let fights = loadFights();
+loadMulticamSettings();
 
 // Si no hay combates por primera vez, creamos los por defecto para La Velada del Caos
 if (fights.length === 0) {
@@ -539,6 +591,53 @@ app.post('/api/upload', (req, res) => {
 // Rutas directas para OBS y Host
 app.get('/overlay', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'overlay.html'));
+});
+
+// Rutas de Sistema Multicam / Videollamada
+app.get(['/multicam', '/overlay-multicam'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'multicam.html'));
+});
+
+app.get(['/guest', '/call', '/join', '/invitado'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guest.html'));
+});
+
+app.get('/api/multicam/state', (req, res) => {
+  res.json({
+    settings: multicamSettings,
+    rooms: {
+      main: getRoomPeers('main')
+    }
+  });
+});
+
+app.post('/api/multicam/settings', (req, res) => {
+  multicamSettings = { ...multicamSettings, ...req.body };
+  saveMulticamSettings();
+  io.emit('multicam-settings-updated', multicamSettings);
+  res.json({ success: true, settings: multicamSettings });
+});
+
+app.post('/api/multicam/upload-avatar', (req, res) => {
+  try {
+    const { imageBase64, filename } = req.body;
+    if (!imageBase64) {
+      return res.status(400).json({ error: 'No se envió imagen' });
+    }
+    const matches = imageBase64.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ error: 'Formato de imagen inválido' });
+    }
+    const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1].replace('svg+xml', 'svg');
+    const cleanName = `avatar-${Date.now()}-${Math.round(Math.random() * 1e5)}.${extension}`;
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    const filePath = path.join(UPLOADS_DIR, cleanName);
+    fs.writeFileSync(filePath, Buffer.from(matches[2], 'base64'));
+    res.json({ success: true, url: `/uploads/${cleanName}` });
+  } catch (err) {
+    console.error('Error al subir avatar de invitado:', err);
+    res.status(500).json({ error: 'No se pudo guardar la imagen' });
+  }
 });
 
 app.get(['/', '/admin', '/host'], (req, res) => {
@@ -898,6 +997,164 @@ io.on('connection', (socket) => {
       if (typeof callback === 'function') callback({ success: false, error: err.message });
     }
   });
+
+  // ============================================================
+  // EVENTOS DE WEBRTC Y SALAS MULTICAM
+  // ============================================================
+
+  // Enviar estado actual a nuevos clientes conectados
+  socket.emit('multicam-settings-updated', multicamSettings);
+  socket.emit('multicam-admin-peers-updated', { roomId: 'main', peers: getRoomPeers('main') });
+
+  // Unirse a una sala (Invitado, Host u Overlay de OBS)
+  socket.on('multicam-join', ({ roomId = 'main', peerId, userInfo = {}, role = 'guest' }, callback) => {
+    if (!peerId) {
+      if (typeof callback === 'function') callback({ success: false, error: 'peerId requerido' });
+      return;
+    }
+
+    if (!multicamRooms[roomId]) {
+      multicamRooms[roomId] = { peers: {} };
+    }
+
+    // Iniciales automáticas estilo Teams (primer letra de nombre y apellido, o 2 primeras letras)
+    let initials = userInfo.initials;
+    if (!initials && userInfo.name) {
+      const parts = userInfo.name.trim().split(/\s+/);
+      initials = (parts.length > 1)
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : parts[0].substring(0, 2).toUpperCase();
+    }
+    if (!initials) initials = 'BV';
+
+    const peerData = {
+      id: peerId,
+      socketId: socket.id,
+      roomId,
+      role, // 'guest' | 'host' | 'overlay'
+      name: userInfo.name || 'Invitado',
+      photo: userInfo.photo || '',
+      initials,
+      hasVideo: userInfo.hasVideo !== false,
+      hasAudio: userInfo.hasAudio !== false,
+      isHidden: false,
+      slot: null,
+      joinedAt: Date.now()
+    };
+
+    multicamRooms[roomId].peers[peerId] = peerData;
+    socket.multicamRoomId = roomId;
+    socket.multicamPeerId = peerId;
+    socket.multicamRole = role;
+
+    socket.join('multicam-' + roomId);
+
+    const currentPeers = getRoomPeers(roomId);
+    
+    // Notificar a todos en la sala del nuevo participante
+    io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+    // Notificar también al panel de Host general
+    io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+
+    if (typeof callback === 'function') {
+      callback({
+        success: true,
+        settings: multicamSettings,
+        peerId,
+        peers: currentPeers
+      });
+    }
+  });
+
+  // Señalización WebRTC (Offer, Answer, ICE Candidate)
+  socket.on('multicam-signal', ({ toPeerId, fromPeerId, signal, roomId = 'main' }) => {
+    const room = multicamRooms[roomId];
+    if (room && room.peers[toPeerId]) {
+      const targetSocketId = room.peers[toPeerId].socketId;
+      io.to(targetSocketId).emit('multicam-signal', {
+        fromPeerId: fromPeerId || socket.multicamPeerId,
+        signal
+      });
+    }
+  });
+
+  // Actualizar perfil de participante en vivo (ej. apagar cámara, mutearse, cambiar nombre o foto)
+  socket.on('multicam-update-profile', ({ roomId = 'main', userInfo }) => {
+    const pId = socket.multicamPeerId;
+    if (pId && multicamRooms[roomId] && multicamRooms[roomId].peers[pId]) {
+      const peer = multicamRooms[roomId].peers[pId];
+      if (typeof userInfo.name === 'string') peer.name = userInfo.name;
+      if (typeof userInfo.photo === 'string') peer.photo = userInfo.photo;
+      if (typeof userInfo.hasVideo === 'boolean') peer.hasVideo = userInfo.hasVideo;
+      if (typeof userInfo.hasAudio === 'boolean') peer.hasAudio = userInfo.hasAudio;
+      if (userInfo.initials) peer.initials = userInfo.initials;
+
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
+
+  // Cambio de Escena Multicam desde el panel de Host
+  socket.on('multicam-change-scene', ({ scene }) => {
+    if (scene) {
+      multicamSettings.activeScene = scene;
+      saveMulticamSettings();
+      io.emit('multicam-settings-updated', multicamSettings);
+    }
+  });
+
+  // Guardar ajustes generales de multicam
+  socket.on('multicam-save-settings', (newSettings) => {
+    multicamSettings = { ...multicamSettings, ...newSettings };
+    saveMulticamSettings();
+    io.emit('multicam-settings-updated', multicamSettings);
+  });
+
+  // Ocultar o mostrar una cámara específica en el overlay
+  socket.on('multicam-toggle-peer-visibility', ({ roomId = 'main', peerId, isHidden }) => {
+    if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
+      multicamRooms[roomId].peers[peerId].isHidden = !!isHidden;
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
+
+  // Asignar slot / posición a una cámara
+  socket.on('multicam-assign-slot', ({ roomId = 'main', peerId, slot }) => {
+    if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
+      multicamRooms[roomId].peers[peerId].slot = slot;
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
+
+  // Expulsar participante de la sala
+  socket.on('multicam-kick-peer', ({ roomId = 'main', peerId }) => {
+    if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
+      const targetSocketId = multicamRooms[roomId].peers[peerId].socketId;
+      io.to(targetSocketId).emit('multicam-kicked');
+      delete multicamRooms[roomId].peers[peerId];
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
+
+  // Manejo de desconexión para limpiar WebRTC
+  socket.on('disconnect', () => {
+    const roomId = socket.multicamRoomId;
+    const peerId = socket.multicamPeerId;
+    if (roomId && peerId && multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
+      delete multicamRooms[roomId].peers[peerId];
+      const currentPeers = getRoomPeers(roomId);
+      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+      io.to('multicam-' + roomId).emit('multicam-peer-left', { peerId });
+      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    }
+  });
 });
 
 server.listen(PORT, () => {
@@ -905,6 +1162,8 @@ server.listen(PORT, () => {
   console.log(`🚀 Stream Overlay App corriendo en puerto ${PORT}`);
   console.log(`🎮 Panel de Host:      http://localhost:${PORT}/`);
   console.log(`🎥 Fuente OBS Overlay: http://localhost:${PORT}/overlay`);
-  console.log(`💾 Persistencia:       ACTIVA (data/presenters.json y data/settings.json)`);
+  console.log(`📹 Fuente OBS Multicam: http://localhost:${PORT}/multicam`);
+  console.log(`👥 Sala de Invitados:  http://localhost:${PORT}/guest`);
+  console.log(`💾 Persistencia:       ACTIVA`);
   console.log(`===============================================`);
 });

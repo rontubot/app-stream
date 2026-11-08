@@ -44,10 +44,26 @@ const btnHideAnnouncement = document.getElementById('btn-hide-announcement');
 
 // Navbar y Navegación de Pestañas
 const navTabMain = document.getElementById('nav-tab-main');
+const navTabMulticam = document.getElementById('nav-tab-multicam');
 const navTabAnimations = document.getElementById('nav-tab-animations');
 const navBadgeVs = document.getElementById('nav-badge-vs');
+const navBadgeMulticamCount = document.getElementById('nav-badge-multicam-count');
 const tabPanelMain = document.getElementById('tab-panel-main');
+const tabPanelMulticam = document.getElementById('tab-panel-multicam');
 const tabPanelAnimations = document.getElementById('tab-panel-animations');
+
+// Elementos DOM del Sistema Multicam
+const multicamGuestLink = document.getElementById('multicam-guest-link');
+const btnCopyGuestLink = document.getElementById('btn-copy-guest-link');
+const multicamObsLink = document.getElementById('multicam-obs-link');
+const btnCopyMulticamObs = document.getElementById('btn-copy-multicam-obs');
+const currentSceneLabel = document.getElementById('current-scene-label');
+const multicamAdminPeersList = document.getElementById('multicam-admin-peers-list');
+const multicamPeersEmpty = document.getElementById('multicam-peers-empty');
+const multicamPeersBadge = document.getElementById('multicam-peers-badge');
+const multicamOnlineCount = document.getElementById('multicam-online-count');
+const btnReloadMulticamPreview = document.getElementById('btn-reload-multicam-preview');
+const multicamPreviewIframe = document.getElementById('multicam-preview-iframe');
 
 // Banco de Animaciones: VS Boxeo (La Velada del Caos) DOM
 const cardSceneVelada = document.getElementById('card-scene-velada');
@@ -1529,27 +1545,40 @@ btnCopyUrlInside.addEventListener('click', () => {
 // NAVEGACIÓN NAVBAR (PESTAÑAS)
 // ============================================================
 function switchMainTab(tab) {
+  const inactiveBtnClass = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
+  const activeBtnClass = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
+
   if (tab === 'animations') {
     if (tabPanelMain) tabPanelMain.classList.add('hidden');
+    if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
     if (tabPanelAnimations) tabPanelAnimations.classList.remove('hidden');
 
-    if (navTabMain) {
-      navTabMain.className = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
-    }
-    if (navTabAnimations) {
-      navTabAnimations.className = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
-    }
+    if (navTabMain) navTabMain.className = inactiveBtnClass;
+    if (navTabMulticam) navTabMulticam.className = inactiveBtnClass;
+    if (navTabAnimations) navTabAnimations.className = activeBtnClass;
     localStorage.setItem('birraverde_active_tab', 'animations');
+  } else if (tab === 'multicam') {
+    if (tabPanelMain) tabPanelMain.classList.add('hidden');
+    if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
+    if (tabPanelMulticam) tabPanelMulticam.classList.remove('hidden');
+
+    if (navTabMain) navTabMain.className = inactiveBtnClass;
+    if (navTabAnimations) navTabAnimations.className = inactiveBtnClass;
+    if (navTabMulticam) navTabMulticam.className = activeBtnClass;
+
+    // Actualizar URLs de Multicam con el host actual
+    if (multicamGuestLink) multicamGuestLink.value = window.location.origin + '/guest';
+    if (multicamObsLink) multicamObsLink.value = window.location.origin + '/multicam';
+
+    localStorage.setItem('birraverde_active_tab', 'multicam');
   } else {
     if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
+    if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
     if (tabPanelMain) tabPanelMain.classList.remove('hidden');
 
-    if (navTabMain) {
-      navTabMain.className = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
-    }
-    if (navTabAnimations) {
-      navTabAnimations.className = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
-    }
+    if (navTabMain) navTabMain.className = activeBtnClass;
+    if (navTabMulticam) navTabMulticam.className = inactiveBtnClass;
+    if (navTabAnimations) navTabAnimations.className = inactiveBtnClass;
     localStorage.setItem('birraverde_active_tab', 'main');
     setTimeout(adjustPreviewScale, 50);
   }
@@ -1558,6 +1587,9 @@ function switchMainTab(tab) {
 
 if (navTabMain) {
   navTabMain.addEventListener('click', () => switchMainTab('main'));
+}
+if (navTabMulticam) {
+  navTabMulticam.addEventListener('click', () => switchMainTab('multicam'));
 }
 if (navTabAnimations) {
   navTabAnimations.addEventListener('click', () => switchMainTab('animations'));
@@ -1744,6 +1776,219 @@ if (btnHideAnnouncement) {
   btnHideAnnouncement.addEventListener('click', () => {
     socket.emit('hide-chat-announcement');
     showToast('✕ Anuncio retirado de pantalla');
+  });
+}
+
+// ============================================================
+// LÓGICA DEL SISTEMA MULTICAM (HOST ADMIN)
+// ============================================================
+const SCENE_NAMES = {
+  'pip-corner-tr': 'Esquina Sup. Derecha (Stream Transparente)',
+  'pip-corner-br': 'Esquina Inf. Derecha',
+  'pip-corner-tl': 'Esquina Sup. Izquierda',
+  'pip-sidebar-right': 'Columna Lateral Derecha',
+  'pip-bottom-bar': 'Barra Horizontal Inferior',
+  'grid': 'Mosaico Completo (Grid)'
+};
+
+// 1. Copiar Enlaces
+if (btnCopyGuestLink) {
+  btnCopyGuestLink.addEventListener('click', () => {
+    const url = window.location.origin + '/guest';
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('🔗 Enlace para invitados copiado al portapapeles');
+      btnCopyGuestLink.textContent = '¡Copiado!';
+      setTimeout(() => btnCopyGuestLink.textContent = 'Copiar', 2000);
+    });
+  });
+}
+
+if (btnCopyMulticamObs) {
+  btnCopyMulticamObs.addEventListener('click', () => {
+    const url = window.location.origin + '/multicam';
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('🎥 Fuente OBS Multicam copiada');
+      btnCopyMulticamObs.textContent = '¡Copiado!';
+      setTimeout(() => btnCopyMulticamObs.textContent = 'Copiar', 2000);
+    });
+  });
+}
+
+// 2. Selección de Escenas Multicam
+document.querySelectorAll('.btn-scene-select').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const scene = btn.getAttribute('data-scene');
+    if (scene) {
+      socket.emit('multicam-change-scene', { scene });
+      updateActiveSceneUI(scene);
+      showToast(`🎬 Escena cambiada: ${SCENE_NAMES[scene] || scene}`);
+    }
+  });
+});
+
+function updateActiveSceneUI(activeScene) {
+  document.querySelectorAll('.btn-scene-select').forEach(btn => {
+    const s = btn.getAttribute('data-scene');
+    if (s === activeScene) {
+      btn.className = 'btn-scene-select p-3 rounded-xl border-2 text-left transition-all flex flex-col justify-between gap-2 border-cyber-green bg-cyber-green/10 text-white shadow-[0_0_12px_rgba(0,255,102,0.2)]';
+    } else {
+      btn.className = 'btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300';
+    }
+  });
+
+  if (currentSceneLabel) {
+    currentSceneLabel.textContent = `Escena: ${SCENE_NAMES[activeScene] || activeScene}`;
+  }
+}
+
+// 3. Recargar Monitor Preview
+if (btnReloadMulticamPreview && multicamPreviewIframe) {
+  btnReloadMulticamPreview.addEventListener('click', () => {
+    multicamPreviewIframe.src = '/multicam?t=' + Date.now();
+    showToast('🔄 Monitor OBS Multicam recargado');
+  });
+}
+
+// 4. Sincronización de Configuración desde el Servidor
+socket.on('multicam-settings-updated', (settings) => {
+  if (settings && settings.activeScene) {
+    updateActiveSceneUI(settings.activeScene);
+  }
+});
+
+// 5. Lista de Participantes en Vivo
+socket.on('multicam-admin-peers-updated', ({ peers }) => {
+  renderAdminPeersList(peers);
+});
+
+socket.on('multicam-peers-updated', ({ peers }) => {
+  renderAdminPeersList(peers);
+});
+
+function renderAdminPeersList(peers) {
+  if (!multicamAdminPeersList) return;
+
+  const validPeers = Array.isArray(peers) ? peers.filter(p => p.role !== 'overlay') : [];
+  const count = validPeers.length;
+
+  // Actualizar badges
+  if (multicamPeersBadge) multicamPeersBadge.textContent = `${count} ${count === 1 ? 'conectado' : 'conectados'}`;
+  if (multicamOnlineCount) multicamOnlineCount.textContent = `${count} PARTICIPANTES`;
+  if (navBadgeMulticamCount) {
+    if (count > 0) {
+      navBadgeMulticamCount.textContent = count;
+      navBadgeMulticamCount.classList.remove('hidden');
+    } else {
+      navBadgeMulticamCount.classList.add('hidden');
+    }
+  }
+
+  if (count === 0) {
+    multicamAdminPeersList.innerHTML = `
+      <div id="multicam-peers-empty" class="p-8 text-center bg-cyber-card/40 border border-dashed border-cyber-border rounded-xl space-y-3">
+        <div class="w-12 h-12 rounded-full bg-cyber-green/10 border border-cyber-green/40 flex items-center justify-center text-cyber-green mx-auto">
+          <i data-lucide="video-off" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-sm font-chakra font-bold text-gray-300">Aún no hay participantes en la sala</p>
+          <p class="text-xs text-gray-500 mt-0.5">Envía el enlace de invitados o abre una pestaña para probar.</p>
+        </div>
+        <a href="/guest" target="_blank" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-cyber-green/20 border border-cyber-green/60 text-cyber-green text-xs font-chakra font-bold hover:bg-cyber-green hover:text-black transition-all">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Entrar como Invitado de Prueba
+        </a>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
+
+  // Generador de gradiente para iniciales
+  function getInitialsGradient(name) {
+    const list = [
+      'linear-gradient(135deg, #10b981, #047857)',
+      'linear-gradient(135deg, #06b6d4, #0e7490)',
+      'linear-gradient(135deg, #8b5cf6, #5b21b6)',
+      'linear-gradient(135deg, #f59e0b, #b45309)',
+      'linear-gradient(135deg, #ec4899, #be185d)'
+    ];
+    let hash = 0;
+    for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return list[Math.abs(hash) % list.length];
+  }
+
+  let html = '';
+  validPeers.forEach(peer => {
+    const initials = peer.initials || 'IN';
+    const isHidden = !!peer.isHidden;
+    const gradient = getInitialsGradient(peer.name);
+
+    html += `
+      <div class="bg-cyber-card border ${isHidden ? 'border-cyber-border/40 opacity-60' : 'border-cyber-border'} rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-md transition-all hover:border-cyber-green/50">
+        <!-- Avatar y Datos -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-11 h-11 rounded-full border-2 border-cyber-border flex items-center justify-center font-chakra font-bold text-sm text-white shrink-0 overflow-hidden shadow-inner" style="background: ${peer.photo ? 'none' : gradient}">
+            ${peer.photo ? `<img src="${peer.photo}" class="w-full h-full object-cover" alt="${peer.name}">` : `<span>${initials}</span>`}
+          </div>
+
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h4 class="text-sm font-chakra font-bold text-white truncate max-w-[160px] sm:max-w-[200px]">${peer.name || 'Invitado'}</h4>
+              ${isHidden ? `<span class="px-1.5 py-0.2 rounded bg-cyber-red/20 text-cyber-red text-[9px] font-mono font-bold">OCULTO EN OBS</span>` : ''}
+            </div>
+            <div class="flex items-center gap-2 text-[11px] font-mono text-gray-400 mt-0.5">
+              <span class="flex items-center gap-1 ${peer.hasVideo ? 'text-cyber-green' : 'text-yellow-500'}">
+                <i data-lucide="${peer.hasVideo ? 'video' : 'video-off'}" class="w-3 h-3"></i> ${peer.hasVideo ? 'Cámara' : 'Sin Video'}
+              </span>
+              <span>&bull;</span>
+              <span class="flex items-center gap-1 ${peer.hasAudio ? 'text-cyber-green' : 'text-cyber-red'}">
+                <i data-lucide="${peer.hasAudio ? 'mic' : 'mic-off'}" class="w-3 h-3"></i> ${peer.hasAudio ? 'Mic ON' : 'Muteado'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones en OBS -->
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- Toggle Visibilidad en OBS -->
+          <button type="button" onclick="togglePeerVisibility('${peer.id}', ${!isHidden})" title="${isHidden ? 'Mostrar en OBS' : 'Ocultar de OBS'}" class="p-2 rounded-lg border ${isHidden ? 'bg-cyber-card border-cyber-border text-gray-400 hover:text-white' : 'bg-cyber-green/10 border-cyber-green text-cyber-green hover:bg-cyber-green hover:text-black'} text-xs font-chakra font-bold transition-all">
+            <i data-lucide="${isHidden ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Expulsar de la Sala -->
+          <button type="button" onclick="kickMulticamPeer('${peer.id}', '${escapeHtml(peer.name)}')" title="Expulsar de la Sala" class="p-2 rounded-lg bg-cyber-red/10 border border-cyber-red/40 text-cyber-red hover:bg-cyber-red hover:text-white text-xs font-chakra font-bold transition-all">
+            <i data-lucide="user-x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  multicamAdminPeersList.innerHTML = html;
+  refreshIcons();
+}
+
+window.togglePeerVisibility = function(peerId, isHidden) {
+  socket.emit('multicam-toggle-peer-visibility', {
+    roomId: 'main',
+    peerId: peerId,
+    isHidden: isHidden
+  });
+  showToast(isHidden ? '👁️ Cámara ocultada en OBS' : '👁️ Cámara visible en OBS');
+};
+
+window.kickMulticamPeer = function(peerId, name) {
+  if (confirm(`¿Expulsar a "${name}" de la sala de videollamada?`)) {
+    socket.emit('multicam-kick-peer', {
+      roomId: 'main',
+      peerId: peerId
+    });
+    showToast(`🚫 Participante expulsado: ${name}`);
+  }
+};
+
+function escapeHtml(str) {
+  return (str || '').replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
   });
 }
 

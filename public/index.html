@@ -92,6 +92,12 @@
           <span>CONTROL PRINCIPAL</span>
         </button>
 
+        <button id="nav-tab-multicam" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
+          <i data-lucide="video" class="w-4 h-4 text-cyber-green"></i>
+          <span>MULTICAM EN VIVO</span>
+          <span id="nav-badge-multicam-count" class="hidden px-1.5 py-0.5 rounded-full bg-cyber-green text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(0,255,102,0.5)]">0</span>
+        </button>
+
         <button id="nav-tab-animations" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
           <i data-lucide="clapperboard" class="w-4 h-4 text-cyber-green"></i>
           <span>BANCO DE ANIMACIONES</span>
@@ -575,6 +581,228 @@
     </section>
 
     </div> <!-- Fin tab-panel-main -->
+
+    <!-- ============================================================
+         PESTAÑA: MULTICAM EN VIVO (SALA DE VIDEOLLAMADAS Y OVERLAY)
+         ============================================================ -->
+    <div id="tab-panel-multicam" class="space-y-6 hidden">
+
+      <!-- Header y Enlaces Rápidos de Multicam -->
+      <section class="bg-gradient-to-r from-cyber-dark to-[#08150f] border border-cyber-green/50 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5 relative overflow-hidden">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-cyber-border/70">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-cyber-green/10 border-2 border-cyber-green flex items-center justify-center text-cyber-green shadow-[0_0_20px_rgba(0,255,102,0.3)] shrink-0">
+              <i data-lucide="video" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h2 class="text-base sm:text-lg font-bold font-chakra text-white tracking-wide uppercase">
+                  SISTEMA MULTICAM & VIDEOLLAMADAS
+                </h2>
+                <span id="multicam-active-badge" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/40 uppercase">
+                  EN LÍNEA
+                </span>
+                <span id="multicam-online-count" class="px-2 py-0.5 rounded bg-cyber-black text-gray-300 text-[10px] font-mono border border-cyber-border">
+                  0 PARTICIPANTES
+                </span>
+              </div>
+              <p class="text-xs text-gray-400 mt-0.5">Invita participantes a una sala de videollamada con acomodo dinámico e iniciales automáticas.</p>
+            </div>
+          </div>
+
+          <!-- Botón de Abrir Invitado en nueva pestaña para testing -->
+          <a href="/guest" target="_blank" class="w-full lg:w-auto px-4 py-2 rounded-xl bg-cyber-card border border-cyber-green text-cyber-green hover:bg-cyber-green hover:text-black font-chakra font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-[0_0_12px_rgba(0,255,102,0.2)]">
+            <i data-lucide="external-link" class="w-4 h-4"></i>
+            <span>ABRIR SALA DE INVITADO</span>
+          </a>
+        </div>
+
+        <!-- Cajas de Enlaces: Invitación y Fuente OBS -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Enlace de Invitado -->
+          <div class="bg-cyber-black/80 border border-cyber-border p-3.5 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-1.5 uppercase">
+                <i data-lucide="user-plus" class="w-4 h-4 text-cyber-green"></i> Enlace para Invitados
+              </span>
+              <span class="text-[10px] text-gray-400 font-mono">Pásalo por Discord o WhatsApp</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="multicam-guest-link" readonly class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3 py-1.5 text-xs text-cyber-green font-mono select-all">
+              <button id="btn-copy-guest-link" type="button" class="px-3 py-1.5 rounded-lg bg-cyber-green text-black font-chakra font-bold text-xs hover:brightness-110 shrink-0 transition-all">
+                Copiar
+              </button>
+            </div>
+          </div>
+
+          <!-- Enlace OBS Overlay Multicam -->
+          <div class="bg-cyber-black/80 border border-cyber-border p-3.5 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-1.5 uppercase">
+                <i data-lucide="monitor" class="w-4 h-4 text-cyan-400"></i> Fuente OBS Multicam (1920x1080)
+              </span>
+              <span class="text-[10px] text-cyan-400 font-mono">Browser Source Transparente</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="multicam-obs-link" readonly class="w-full bg-cyber-card border border-cyber-border rounded-lg px-3 py-1.5 text-xs text-cyan-400 font-mono select-all">
+              <button id="btn-copy-multicam-obs" type="button" class="px-3 py-1.5 rounded-lg bg-cyan-400 text-black font-chakra font-bold text-xs hover:brightness-110 shrink-0 transition-all">
+                Copiar
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Selector de Escenas y Disposición de Cámaras -->
+      <section class="bg-cyber-dark border border-cyber-border rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-cyber-border">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold font-chakra text-white uppercase flex items-center gap-2">
+              <i data-lucide="layout" class="w-4 h-4 text-cyber-green"></i>
+              ESCENAS Y DISPOSICIÓN EN STREAM
+            </h3>
+            <p class="text-xs text-gray-400">Elige cómo se sobreexponen las cámaras en vivo sobre tu transmisión.</p>
+          </div>
+          <span id="current-scene-label" class="px-3 py-1 rounded-lg bg-cyber-card border border-cyber-green text-cyber-green font-mono text-xs font-bold uppercase">
+            Escena: Esquina Sup. Derecha
+          </span>
+        </div>
+
+        <!-- Botones de Escenas -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <!-- Escena 1: Esquina Superior Derecha (Stream Fondo Transparente) -->
+          <button type="button" data-scene="pip-corner-tr" class="btn-scene-select p-3 rounded-xl border-2 text-left transition-all flex flex-col justify-between gap-2 border-cyber-green bg-cyber-green/10 text-white shadow-[0_0_12px_rgba(0,255,102,0.2)]">
+            <div class="flex items-center justify-between">
+              <i data-lucide="layout-grid" class="w-5 h-5 text-cyber-green"></i>
+              <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyber-green text-black font-bold">STREAM</span>
+            </div>
+            <div>
+              <p class="text-xs font-chakra font-bold">Esquina Sup. Der.</p>
+              <p class="text-[10px] text-gray-400">Fondo transparente</p>
+            </div>
+          </button>
+
+          <!-- Escena 2: Esquina Inferior Derecha -->
+          <button type="button" data-scene="pip-corner-br" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+            <div class="flex items-center justify-between">
+              <i data-lucide="corner-down-right" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div>
+              <p class="text-xs font-chakra font-bold">Esquina Inf. Der.</p>
+              <p class="text-[10px] text-gray-400">Miniaturas abajo</p>
+            </div>
+          </button>
+
+          <!-- Escena 3: Esquina Superior Izquierda -->
+          <button type="button" data-scene="pip-corner-tl" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+            <div class="flex items-center justify-between">
+              <i data-lucide="corner-up-left" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div>
+              <p class="text-xs font-chakra font-bold">Esquina Sup. Izq.</p>
+              <p class="text-[10px] text-gray-400">Arriba a la izquierda</p>
+            </div>
+          </button>
+
+          <!-- Escena 4: Barra Lateral Derecha -->
+          <button type="button" data-scene="pip-sidebar-right" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+            <div class="flex items-center justify-between">
+              <i data-lucide="panel-right" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div>
+              <p class="text-xs font-chakra font-bold">Columna Lateral</p>
+              <p class="text-[10px] text-gray-400">Borde lateral derecho</p>
+            </div>
+          </button>
+
+          <!-- Escena 5: Barra Inferior -->
+          <button type="button" data-scene="pip-bottom-bar" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+            <div class="flex items-center justify-between">
+              <i data-lucide="panel-bottom" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div>
+              <p class="text-xs font-chakra font-bold">Barra Inferior</p>
+              <p class="text-[10px] text-gray-400">Podcast / Tira baja</p>
+            </div>
+          </button>
+
+          <!-- Escena 6: Mosaico Completo (Grid) -->
+          <button type="button" data-scene="grid" class="btn-scene-select p-3 rounded-xl border border-cyber-border bg-cyber-card hover:border-gray-500 text-left transition-all flex flex-col justify-between gap-2 text-gray-300">
+            <div class="flex items-center justify-between">
+              <i data-lucide="grid" class="w-5 h-5 text-gray-400"></i>
+              <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">CHARLA</span>
+            </div>
+            <div>
+              <p class="text-xs font-chakra font-bold">Mosaico Completo</p>
+              <p class="text-[10px] text-gray-400">Grid autoajustable</p>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Fila: Lista de Participantes Conectados + Monitor OBS en Vivo -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Columna Izquierda: Participantes Conectados (7 cols) -->
+        <section class="lg:col-span-7 bg-cyber-dark border border-cyber-border rounded-2xl p-5 shadow-xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-cyber-border">
+            <h3 class="text-sm font-bold font-chakra text-white uppercase flex items-center gap-2">
+              <i data-lucide="users" class="w-4 h-4 text-cyber-green"></i>
+              PARTICIPANTES EN LA SALA
+            </h3>
+            <span id="multicam-peers-badge" class="text-xs font-mono text-gray-400">0 conectados</span>
+          </div>
+
+          <!-- Contenedor dinámico de participantes -->
+          <div id="multicam-admin-peers-list" class="space-y-3">
+            <!-- Estado vacío cuando no hay nadie conectado -->
+            <div id="multicam-peers-empty" class="p-8 text-center bg-cyber-card/40 border border-dashed border-cyber-border rounded-xl space-y-3">
+              <div class="w-12 h-12 rounded-full bg-cyber-green/10 border border-cyber-green/40 flex items-center justify-center text-cyber-green mx-auto">
+                <i data-lucide="video-off" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <p class="text-sm font-chakra font-bold text-gray-300">Aún no hay participantes en la sala</p>
+                <p class="text-xs text-gray-500 mt-0.5">Envía el enlace de invitados o abre una pestaña para probar.</p>
+              </div>
+              <a href="/guest" target="_blank" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-cyber-green/20 border border-cyber-green/60 text-cyber-green text-xs font-chakra font-bold hover:bg-cyber-green hover:text-black transition-all">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Entrar como Invitado de Prueba
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- Columna Derecha: Monitor OBS Multicam en Vivo (5 cols) -->
+        <section class="lg:col-span-5 bg-cyber-dark border border-cyber-border rounded-2xl p-5 shadow-xl space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between pb-3 border-b border-cyber-border">
+              <h3 class="text-sm font-bold font-chakra text-white uppercase flex items-center gap-2">
+                <i data-lucide="tv" class="w-4 h-4 text-cyan-400"></i>
+                MONITOR OBS EN VIVO
+              </h3>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-400 border border-cyan-400/40">1920x1080</span>
+            </div>
+
+            <!-- Mini Preview con fondo transparente en cuadrícula tipo Photoshop -->
+            <div class="relative w-full aspect-video rounded-xl border border-cyber-border overflow-hidden bg-[radial-gradient(#1a2634_1px,transparent_1px)] [background-size:12px_12px] bg-cyber-black">
+              <iframe id="multicam-preview-iframe" src="/multicam" class="w-full h-full border-0 pointer-events-none scale-100"></iframe>
+            </div>
+
+            <p class="text-[11px] text-gray-400">
+              💡 <span class="text-gray-300 font-semibold">Consejo para OBS:</span> En las escenas con "Fondo Transparente", coloca esta fuente de navegador por encima de tu captura de pantalla o cámara web en OBS.
+            </p>
+          </div>
+
+          <div class="pt-3 border-t border-cyber-border/70 flex items-center justify-between">
+            <button id="btn-reload-multicam-preview" type="button" class="text-xs text-gray-400 hover:text-cyber-green flex items-center gap-1.5 transition-colors font-chakra font-bold">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recargar Monitor
+            </button>
+            <a href="/multicam" target="_blank" class="text-xs text-cyan-400 hover:underline flex items-center gap-1.5 font-chakra font-bold">
+              <span>Abrir Overlay Directo</span> <i data-lucide="external-link" class="w-3 h-3"></i>
+            </a>
+          </div>
+        </section>
+      </div>
+
+    </div> <!-- Fin tab-panel-multicam -->
 
     <!-- ============================================================
          PESTAÑA 2: BANCO DE ANIMACIONES (ESCENAS TEMÁTICAS)

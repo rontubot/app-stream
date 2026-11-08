@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overlay OBS Multicam - BirraVerde</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/css/multicam.css">
+</head>
+<body>
+  <!-- Escenario transparente de OBS (1920x1080) -->
+  <div id="multicam-stage" class="scene-pip-corner-tr">
+    <!-- Contenedor dinámico donde se inyectan las cámaras -->
+    <div id="cams-container"></div>
+  </div>
+
+  <!-- Contenedor oculto de elementos de audio para que OBS reproduzca el sonido de la llamada -->
+  <div id="audio-container" style="display:none;"></div>
+
+  <script src="/js/multicam.js"></script>
+</body>
+</html>

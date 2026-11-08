@@ -14,6 +14,16 @@ Sistema completo y profesional de **Overlay de Stream (Lower Thirds)** con **Pan
   - Modifica **Nombre**, **Apodo / Nick**, **Plataforma / Red Social**, **Usuario (@handle)** y **Rol / Cargo** al instante.
   - Soporte para plataformas con badges oficiales: **Kick**, **Twitch**, **YouTube**, **X (Twitter)**, **Instagram**, **TikTok**.
   - Posicionamiento en pantalla configurable: **Inferior Izquierda**, **Inferior Centro**, **Inferior Derecha**.
+- **📹 Sistema Multicam & Sala de Videollamadas en Vivo (NUEVO)**:
+  - Enlaces de invitación directos (`/guest` o `/call`) para que colaboradores e invitados se unan desde su PC o móvil.
+  - Detección automática de cámara, micrófono y vúmetro de audio en tiempo real.
+  - Generación automática de **iniciales dinámicas estilo Microsoft Teams** con degradados cyber cuando la persona no tiene o apaga su cámara.
+  - Soporte de foto de perfil personalizada opcional.
+  - Detección reactiva de habla con halo verde neón pulsante (*speaking glow*).
+  - Escenas dinámicas en el overlay de OBS (`/multicam`):
+    - **Fondo Transparente en Esquinas / Picture-in-Picture** (Esquina Sup. Der., Inf. Der., Sup. Izq., Barra Lateral, Barra Inferior) para transmitir de fondo gameplay o cámara principal.
+    - **Mosaico Completo (Grid)** autoajustable según el número de participantes (1 a 6 personas).
+  - Control de producción desde el Panel de Host: ocultar/mostrar cualquier cámara individualmente, expulsar usuarios y monitorear la llamada en vivo.
 - **Panel de Control del Host (WebSockets en Tiempo Real)**:
   - Disparo de overlay con latencia cero con **Socket.io**.
   - **Monitor OBS en vivo**: Previsualiza cómo se ve el overlay en pantalla en tiempo real desde el panel.
@@ -101,13 +111,15 @@ Para subir este proyecto a tu cuenta de GitHub:
 
 ## 🎥 Configuración en OBS Studio / Streamlabs
 
-1. Abre **OBS Studio**.
-2. En la escena donde quieras mostrar a los presentadores, haz clic en el botón `+` de **Fuentes** (Sources) y selecciona **Navegador** (Browser).
-3. Configura los siguientes parámetros:
-   - **URL**: `https://tu-dominio.com/overlay` *(o `http://localhost:3000/overlay` si pruebas localmente)*
-   - **Ancho (Width)**: `1920`
-   - **Alto (Height)**: `1080`
-   - **FPS**: `60`
-   - Marca la casilla: **"Actualizar el navegador cuando la escena se active"** *(opcional)*.
-4. Haz clic en **Aceptar**.
-5. ¡Listo! Abre el panel de host desde tu segundo monitor, laptop o celular, presiona **"MOSTRAR EN VIVO"** y verás aparecer la animación en tu stream al instante.
+### 1. Overlay Principal de Presentadores
+- **URL**: `http://localhost:3000/overlay` (o tu dominio en producción)
+- **Ancho**: `1920` | **Alto**: `1080` | **FPS**: `60`
+
+### 2. Overlay Multicam & Videollamadas (Cámaras de Invitados)
+- **URL**: `http://localhost:3000/multicam`
+- **Ancho**: `1920` | **Alto**: `1080` | **FPS**: `60`
+- **Consejo para modo de esquina transparente**: Coloca esta fuente de navegador por encima de tu captura de juego, ventana o cámara de streamer. Las cámaras de los invitados se sobreexpondrán en la esquina configurada sin tapar el fondo.
+
+### 3. Enlace para Invitados y Colaboradores
+- **URL**: `http://localhost:3000/guest` (o `https://tu-dominio.com/guest`)
+- Los invitados acceden desde su navegador (PC o celular), configuran su nombre, cámara, micrófono o foto/iniciales automáticas estilo Teams y se unen al stream con latencia ultrabaja.
