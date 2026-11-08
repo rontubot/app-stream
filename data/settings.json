@@ -8,5 +8,9 @@
   "topHud": {
     "isVisible": true,
     "customText": ""
+  },
+  "chatOverlay": {
+    "ttsEnabled": true,
+    "commandPrefix": "!anuncio"
   }
 }

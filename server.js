@@ -74,6 +74,12 @@ let liveState = {
   topHud: {
     isVisible: true,
     customText: ''
+  },
+  chatOverlay: {
+    isVisible: false,
+    ttsEnabled: true,
+    commandPrefix: '!anuncio',
+    lastMessage: null
   }
 };
 
@@ -120,6 +126,14 @@ function loadSettings() {
       if (data.topHud && typeof data.topHud.customText === 'string') {
         liveState.topHud.customText = data.topHud.customText;
       }
+      if (data.chatOverlay) {
+        if (typeof data.chatOverlay.ttsEnabled === 'boolean') {
+          liveState.chatOverlay.ttsEnabled = data.chatOverlay.ttsEnabled;
+        }
+        if (typeof data.chatOverlay.commandPrefix === 'string' && data.chatOverlay.commandPrefix.trim()) {
+          liveState.chatOverlay.commandPrefix = data.chatOverlay.commandPrefix.trim();
+        }
+      }
       return data;
     }
   } catch (err) {
@@ -141,6 +155,10 @@ function saveSettings() {
       topHud: {
         isVisible: liveState.topHud.isVisible,
         customText: liveState.topHud.customText
+      },
+      chatOverlay: {
+        ttsEnabled: liveState.chatOverlay.ttsEnabled,
+        commandPrefix: liveState.chatOverlay.commandPrefix
       }
     };
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(payload, null, 2), 'utf-8');
@@ -657,6 +675,54 @@ io.on('connection', (socket) => {
   socket.on('trigger-hud-alert', (alertData) => {
     // alertData: { type: 'follow'|'donation'|'comment', user, detail, amount }
     io.emit('hud-alert', alertData);
+  });
+
+  // 5.d. Overlay Inferior de Chat Destacado y TTS
+  socket.on('trigger-chat-announcement', (data) => {
+    // data: { user: '@...', text: '...', tts: boolean }
+    if (!data || !data.text) return;
+
+    let cleanText = data.text.trim();
+    const prefix = liveState.chatOverlay.commandPrefix || '!anuncio';
+    if (cleanText.toLowerCase().startsWith(prefix.toLowerCase())) {
+      cleanText = cleanText.slice(prefix.length).trim();
+    }
+
+    const payload = {
+      user: data.user || '@espectador',
+      text: cleanText,
+      prefix: prefix,
+      tts: typeof data.tts === 'boolean' ? data.tts : liveState.chatOverlay.ttsEnabled,
+      timestamp: Date.now()
+    };
+
+    liveState.chatOverlay.isVisible = true;
+    liveState.chatOverlay.lastMessage = payload;
+    io.emit('state-update', liveState);
+    io.emit('chat-announcement', payload);
+  });
+
+  socket.on('hide-chat-announcement', () => {
+    liveState.chatOverlay.isVisible = false;
+    io.emit('state-update', liveState);
+  });
+
+  socket.on('toggle-chat-tts', (payload) => {
+    if (payload && typeof payload.enabled === 'boolean') {
+      liveState.chatOverlay.ttsEnabled = payload.enabled;
+    } else {
+      liveState.chatOverlay.ttsEnabled = !liveState.chatOverlay.ttsEnabled;
+    }
+    saveSettings();
+    io.emit('state-update', liveState);
+  });
+
+  socket.on('update-chat-prefix', (data) => {
+    if (data && typeof data.prefix === 'string' && data.prefix.trim()) {
+      liveState.chatOverlay.commandPrefix = data.prefix.trim();
+      saveSettings();
+      io.emit('state-update', liveState);
+    }
   });
 
   socket.on('save-fight', (fightData, callback) => {

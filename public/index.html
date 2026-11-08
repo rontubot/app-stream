@@ -130,6 +130,7 @@
            BLOQUE: OVERLAY SUPERIOR DINÁMICO (HUD BIRRAVERDE Y BARRA DE EVENTOS)
            ============================================================ -->
       <section class="bg-gradient-to-r from-cyber-dark to-[#09120c] border border-cyber-green/40 rounded-xl p-4 sm:p-5 shadow-xl space-y-4 relative overflow-hidden">
+        <!-- Cabecera HUD Superior -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-cyber-border/70">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-cyber-green/10 border border-cyber-green flex items-center justify-center p-1.5 shadow-[0_0_15px_rgba(0,255,102,0.3)] shrink-0">
@@ -138,14 +139,14 @@
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-sm sm:text-base font-bold font-chakra uppercase tracking-wide text-white">
-                  OVERLAY SUPERIOR DINÁMICO (HUD BIRRAVERDE)
+                  OVERLAYS DINÁMICOS: HUD SUPERIOR Y CHAT TTS
                 </h2>
                 <span id="top-hud-status-badge" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/40 uppercase">
-                  ACTIVO EN STREAM
+                  HUD SUPERIOR ACTIVO
                 </span>
               </div>
               <p class="text-[11px] text-gray-400">
-                Overlay permanente arriba en pantalla con logo y marquesina. Se mantiene visible siempre (incluso al cambiar escenas en OBS) y listo para donaciones, follows y chat.
+                Overlay superior centrado permanente con logo BirraVerde y marquesina, más recuadro inferior de chat destacado para comandos (!anuncio) con voz TTS.
               </p>
             </div>
           </div>
@@ -154,18 +155,16 @@
           <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             <button id="btn-toggle-top-hud" class="px-3.5 py-1.5 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.3)]">
               <i data-lucide="eye" id="icon-top-hud-toggle" class="w-3.5 h-3.5"></i>
-              <span id="text-top-hud-toggle">OVERLAY ACTIVO</span>
+              <span id="text-top-hud-toggle">HUD SUPERIOR ACTIVO</span>
             </button>
           </div>
         </div>
 
-        <!-- Controles de Marquesina y Simulador de Eventos (Follows, Donaciones, Comentarios) -->
+        <!-- 1. Controles Marquesina Superior y Alertas -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-center">
-          
-          <!-- Mensaje Personalizado de la Marquesina -->
           <div class="lg:col-span-7 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-cyber-card/70 p-2.5 rounded-xl border border-cyber-border">
             <span class="text-xs font-chakra font-bold text-gray-300 flex items-center gap-1.5 shrink-0 px-1">
-              <i data-lucide="message-square" class="w-3.5 h-3.5 text-cyber-green"></i> Texto Marquesina:
+              <i data-lucide="message-square" class="w-3.5 h-3.5 text-cyber-green"></i> Marquesina Superior:
             </span>
             <input type="text" id="input-top-hud-text" placeholder="Ej: ¡Bienvenidos al stream! • Kick: @birraverde" class="flex-1 bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-1.5 text-xs text-white font-rajdhani font-semibold focus:outline-none focus:border-cyber-green">
             <button id="btn-save-top-hud-text" class="px-3.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all shrink-0">
@@ -173,24 +172,65 @@
             </button>
           </div>
 
-          <!-- Simulador / Test de Eventos para Donaciones, Follows y Comentarios -->
           <div class="lg:col-span-5 flex items-center gap-2 justify-end flex-wrap sm:flex-nowrap">
-            <span class="text-[11px] font-mono text-gray-400 shrink-0 hidden xl:inline">Probar Eventos:</span>
-            
+            <span class="text-[11px] font-mono text-gray-400 shrink-0 hidden xl:inline">Alertas Eventos:</span>
             <button id="btn-test-follow" class="flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500 hover:text-black text-emerald-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-1" title="Simular nuevo seguidor">
               <span>⭐</span> <span>Follow</span>
             </button>
-
             <button id="btn-test-donation" class="flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg bg-yellow-500/20 border border-yellow-500/40 hover:bg-yellow-500 hover:text-black text-yellow-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-1" title="Simular donación">
               <span>💎</span> <span>Donación</span>
             </button>
+          </div>
+        </div>
 
-            <button id="btn-test-comment" class="flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 hover:bg-purple-500 hover:text-white text-purple-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-1" title="Simular comentario destacado">
-              <span>💬</span> <span>Chat</span>
-            </button>
+        <!-- 2. Controles de Recuadro de Chat Inferior y Lectura por Voz (TTS) -->
+        <div class="pt-3 border-t border-cyber-border/70 space-y-3">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 text-xs">
+                📢
+              </span>
+              <h3 class="text-xs font-bold font-chakra uppercase tracking-wide text-white flex items-center gap-2">
+                RECUADRO INFERIOR DE CHAT Y LECTURA TTS
+              </h3>
+              <span class="text-[10px] text-gray-400 font-mono">Filtro de mensajes especiales</span>
+            </div>
+
+            <!-- Controles Rápidos: TTS ON/OFF y Prefijo -->
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+              <div class="flex items-center gap-1.5 bg-cyber-card px-2.5 py-1 rounded-lg border border-cyber-border text-xs font-mono">
+                <span class="text-gray-400">Prefijo:</span>
+                <input type="text" id="input-chat-prefix" value="!anuncio" class="w-20 bg-cyber-dark border border-cyber-border rounded px-1.5 py-0.5 text-cyber-green font-bold text-center text-xs focus:outline-none focus:border-cyber-green">
+              </div>
+
+              <!-- Botón Toggle TTS -->
+              <button id="btn-toggle-tts" class="px-3 py-1 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,255,102,0.3)]">
+                <i data-lucide="volume-2" id="icon-tts-toggle" class="w-3.5 h-3.5"></i>
+                <span id="text-tts-toggle">TTS ACTIVO</span>
+              </button>
+            </div>
           </div>
 
+          <!-- Formulario / Emisor de Anuncio de Chat -->
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 bg-cyber-card/60 p-2.5 rounded-xl border border-cyber-border items-center">
+            <div class="sm:col-span-3">
+              <input type="text" id="input-announcement-user" placeholder="Usuario (@luismishit)" value="@luismishit" class="w-full bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-1.5 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-cyber-green">
+            </div>
+            <div class="sm:col-span-6">
+              <input type="text" id="input-announcement-text" placeholder="Escribe el mensaje (ej: !anuncio ¡Bienvenidos al stream!)" value="!anuncio ¡Hola a todos! Bienvenidos a la transmisión" class="w-full bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-1.5 text-xs text-white font-rajdhani font-semibold focus:outline-none focus:border-cyber-green">
+            </div>
+            <div class="sm:col-span-3 flex items-center gap-1.5">
+              <button id="btn-send-announcement" class="flex-1 px-3 py-1.5 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-1 shadow-[0_0_10px_rgba(0,255,102,0.25)]">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>LANZAR</span>
+              </button>
+              <button id="btn-hide-announcement" class="px-2.5 py-1.5 rounded-lg bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 text-xs font-chakra font-bold uppercase transition-all flex items-center justify-center" title="Quitar anuncio de pantalla">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
         </div>
+
       </section>
 
       <!-- ============================================================

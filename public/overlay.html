@@ -10,71 +10,75 @@
   <div id="overlay-stage">
 
     <!-- ============================================================
-         OVERLAY SUPERIOR DINÁMICO: LOGO BIRRAVERDE Y BARRA DE EVENTOS (HUD)
+         OVERLAY SUPERIOR DINÁMICO CENTRADO: LOGO BIRRAVERDE Y BARRA DE EVENTOS
          ============================================================ -->
     <div id="stream-top-hud" class="stream-top-hud is-visible">
       <div class="hud-ambient-glow"></div>
       
-      <!-- Contenedor Principal del HUD -->
-      <div class="hud-container">
-        <!-- Bloque del Logo y Marca BirraVerde -->
-        <div class="hud-brand-block">
+      <!-- Contenedor Principal Simétrico Centrado -->
+      <div class="hud-container hud-container-centered">
+        
+        <!-- ALA IZQUIERDA: Estado en Vivo y Canal Kick -->
+        <div class="hud-wing hud-wing-left">
+          <div class="hud-badge-live">
+            <span class="hud-live-dot"></span>
+            <span>LIVE</span>
+          </div>
+          <div class="hud-platform-tag">
+            <img src="/assets/logo-kick.png" class="hud-kick-icon" alt="Kick">
+            <span class="hud-kick-name">BIRRAVERDE</span>
+          </div>
+        </div>
+
+        <!-- CENTRO: LOGO OFICIAL BIRRAVERDE DESTACADO -->
+        <div class="hud-center-brand">
+          <div class="hud-center-bracket hud-bracket-left"></div>
           <div class="hud-logo-frame">
             <div class="hud-logo-scanner"></div>
             <img src="/assets/logo-birraverde.png" class="hud-logo-img" alt="BirraVerde">
           </div>
-          <div class="hud-brand-text">
+          <div class="hud-center-label">
             <span class="hud-brand-title">BIRRAVERDE</span>
-            <span class="hud-brand-tag">STREAM</span>
           </div>
+          <div class="hud-center-bracket hud-bracket-right"></div>
         </div>
 
-        <!-- Divisor Angular Cyber -->
-        <div class="hud-divider">
-          <span class="hud-divider-slash"></span>
-        </div>
-
-        <!-- Área de Contenido Dinámico (Ticker / Alertas de Eventos) -->
-        <div class="hud-content-area">
-          <!-- Ticker Rotativo Normal -->
-          <div class="hud-ticker-track" id="hud-ticker-track">
-            <!-- Item 1: Live Status & Kick -->
-            <div class="hud-ticker-item is-active" id="hud-ticker-item-live">
-              <span class="hud-badge-live">
-                <span class="hud-live-dot"></span>
-                <span>LIVE</span>
-              </span>
-              <span class="hud-ticker-text" id="hud-ticker-main-text">KICK.COM/BIRRAVERDE</span>
+        <!-- ALA DERECHA: Ticker Dinámico y Alertas de Eventos -->
+        <div class="hud-wing hud-wing-right">
+          <div class="hud-content-area">
+            <!-- Ticker Rotativo -->
+            <div class="hud-ticker-track" id="hud-ticker-track">
+              <div class="hud-ticker-item is-active" id="hud-ticker-item-feed">
+                <span class="hud-feed-badge">⚡</span>
+                <span class="hud-feed-text" id="hud-feed-text">¡Bienvenidos a la transmisión!</span>
+              </div>
+              <div class="hud-ticker-item" id="hud-ticker-item-live">
+                <span class="hud-feed-badge">🔥</span>
+                <span class="hud-ticker-text" id="hud-ticker-main-text">KICK.COM/BIRRAVERDE</span>
+              </div>
             </div>
 
-            <!-- Item 2: Feed Dinámico / Mensaje Personalizado -->
-            <div class="hud-ticker-item" id="hud-ticker-item-feed">
-              <span class="hud-feed-badge">⚡</span>
-              <span class="hud-feed-text" id="hud-feed-text">¡Bienvenidos a la transmisión!</span>
-            </div>
-          </div>
-
-          <!-- Capa de Notificación / Alerta Emergente (Follows / Donaciones / Comentarios) -->
-          <div class="hud-alert-layer" id="hud-alert-layer">
-            <div class="hud-alert-badge" id="hud-alert-badge">
-              <span id="hud-alert-icon">⭐</span>
-              <span id="hud-alert-type">NUEVO FOLLOWER</span>
-            </div>
-            <div class="hud-alert-body">
-              <span class="hud-alert-user" id="hud-alert-user">@usuario</span>
-              <span class="hud-alert-detail" id="hud-alert-detail">se acaba de sumar al stream</span>
+            <!-- Alertas Emergentes (Follows / Donaciones) -->
+            <div class="hud-alert-layer" id="hud-alert-layer">
+              <div class="hud-alert-badge" id="hud-alert-badge">
+                <span id="hud-alert-icon">⭐</span>
+                <span id="hud-alert-type">FOLLOWER</span>
+              </div>
+              <div class="hud-alert-body">
+                <span class="hud-alert-user" id="hud-alert-user">@usuario</span>
+                <span class="hud-alert-detail" id="hud-alert-detail">se sumó al stream</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Esquina Cyber Derecha / Terminal Status -->
-        <div class="hud-corner-fin">
+          <!-- Medidor de Señal -->
           <div class="hud-signal-bars">
             <span class="bar bar-1"></span>
             <span class="bar bar-2"></span>
             <span class="bar bar-3"></span>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -319,6 +323,52 @@
         </div>
       </div>
     </div>
+
+    <!-- ============================================================
+         OVERLAY INFERIOR DINÁMICO: RECUADRO DE CHAT CON FILTRO Y TTS
+         ============================================================ -->
+    <div id="stream-bottom-chat" class="stream-bottom-chat">
+      <div class="chat-hud-glow"></div>
+      <div class="chat-hud-container">
+        
+        <!-- Cabecera del Anuncio -->
+        <div class="chat-hud-header">
+          <div class="chat-hud-tag">
+            <span class="chat-hud-icon">📢</span>
+            <span class="chat-hud-title">ANUNCIO DESTACADO</span>
+            <span class="chat-hud-prefix" id="chat-hud-prefix-badge">!anuncio</span>
+          </div>
+
+          <!-- Indicador de Lectura TTS -->
+          <div class="chat-hud-tts-indicator" id="chat-hud-tts-indicator">
+            <div class="chat-tts-soundwaves">
+              <span class="wave wave-1"></span>
+              <span class="wave wave-2"></span>
+              <span class="wave wave-3"></span>
+            </div>
+            <span class="chat-tts-label" id="chat-tts-status-label">TTS VOZ</span>
+          </div>
+        </div>
+
+        <!-- Cuerpo del Mensaje -->
+        <div class="chat-hud-body">
+          <div class="chat-hud-user-row">
+            <div class="chat-user-avatar">
+              <i class="chat-avatar-icon">💬</i>
+            </div>
+            <span class="chat-hud-username" id="chat-hud-username">@espectador</span>
+            <span class="chat-hud-time" id="chat-hud-time">hace un momento</span>
+          </div>
+          <div class="chat-hud-message" id="chat-hud-message">
+            Mensaje del chat destacado en pantalla
+          </div>
+        </div>
+
+        <!-- Línea Láser Inferior -->
+        <div class="chat-hud-laser"></div>
+      </div>
+    </div>
+
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

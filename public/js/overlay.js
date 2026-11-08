@@ -465,6 +465,11 @@ socket.on('state-update', (state) => {
   if (state.topHud) {
     updateTopHud(state.topHud);
   }
+
+  // Overlay Inferior Dinámico (Recuadro de Chat y TTS)
+  if (state.chatOverlay) {
+    updateChatOverlayState(state.chatOverlay);
+  }
 });
 
 // ============================================================
@@ -554,4 +559,107 @@ socket.on('hud-alert', (data) => {
       isHudAlertActive = false;
     }, 400);
   }, 7000);
+});
+
+// ============================================================
+// OVERLAY INFERIOR DINÁMICO (RECUADRO DE CHAT Y ANUNCIOS CON TTS)
+// ============================================================
+const streamBottomChat = document.getElementById('stream-bottom-chat');
+const chatHudPrefixBadge = document.getElementById('chat-hud-prefix-badge');
+const chatHudTtsIndicator = document.getElementById('chat-hud-tts-indicator');
+const chatTtsStatusLabel = document.getElementById('chat-tts-status-label');
+const chatHudUsername = document.getElementById('chat-hud-username');
+const chatHudMessage = document.getElementById('chat-hud-message');
+const chatHudTime = document.getElementById('chat-hud-time');
+
+let chatDismissTimeout = null;
+let currentChatOverlayState = { ttsEnabled: true, commandPrefix: '!anuncio' };
+
+function updateChatOverlayState(chatState) {
+  currentChatOverlayState = chatState;
+  if (chatHudPrefixBadge && chatState.commandPrefix) {
+    chatHudPrefixBadge.textContent = chatState.commandPrefix;
+  }
+
+  if (chatTtsStatusLabel) {
+    chatTtsStatusLabel.textContent = chatState.ttsEnabled ? 'TTS VOZ' : 'TTS MUTE';
+  }
+
+  if (streamBottomChat) {
+    if (!chatState.isVisible) {
+      streamBottomChat.classList.remove('is-active');
+    }
+  }
+}
+
+// Reproductor TTS (Text-To-Speech) con Web Speech API
+function playTTS(text, user) {
+  if (!('speechSynthesis' in window)) {
+    console.warn('SpeechSynthesis no está disponible en este entorno.');
+    return;
+  }
+
+  try {
+    window.speechSynthesis.cancel(); // Cancelar cualquier audio anterior
+
+    const cleanUser = (user || 'Alguien').replace(/^@/, '');
+    const phrase = `${cleanUser} dice: ${text}`;
+    const utterance = new SpeechSynthesisUtterance(phrase);
+
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+
+    // Buscar voces en español disponibles
+    const voices = window.speechSynthesis.getVoices();
+    const esVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('es'));
+    if (esVoice) {
+      utterance.voice = esVoice;
+    }
+
+    utterance.onstart = () => {
+      if (chatHudTtsIndicator) chatHudTtsIndicator.classList.add('is-speaking');
+    };
+
+    utterance.onend = () => {
+      if (chatHudTtsIndicator) chatHudTtsIndicator.classList.remove('is-speaking');
+    };
+
+    utterance.onerror = (e) => {
+      console.warn('TTS error:', e);
+      if (chatHudTtsIndicator) chatHudTtsIndicator.classList.remove('is-speaking');
+    };
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.error('Error al reproducir TTS:', err);
+  }
+}
+
+// Recibir nuevo anuncio o comando de chat
+socket.on('chat-announcement', (payload) => {
+  if (!streamBottomChat || !payload) return;
+
+  if (chatDismissTimeout) clearTimeout(chatDismissTimeout);
+
+  if (chatHudUsername) chatHudUsername.textContent = payload.user || '@espectador';
+  if (chatHudMessage) chatHudMessage.textContent = payload.text || '';
+  if (chatHudPrefixBadge) chatHudPrefixBadge.textContent = payload.prefix || '!anuncio';
+  if (chatHudTime) {
+    const now = new Date();
+    chatHudTime.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  }
+
+  // Mostrar recuadro inferior
+  streamBottomChat.classList.add('is-active');
+
+  // Si TTS está habilitado, pronunciar
+  if (payload.tts !== false && currentChatOverlayState.ttsEnabled !== false) {
+    playTTS(payload.text, payload.user);
+  }
+
+  // Auto-ocultar tras 12 segundos
+  chatDismissTimeout = setTimeout(() => {
+    streamBottomChat.classList.remove('is-active');
+  }, 12000);
 });

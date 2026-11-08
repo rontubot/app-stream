@@ -32,6 +32,16 @@ const btnTestFollow = document.getElementById('btn-test-follow');
 const btnTestDonation = document.getElementById('btn-test-donation');
 const btnTestComment = document.getElementById('btn-test-comment');
 
+// Overlay Inferior de Chat Destacado y TTS DOM
+const inputChatPrefix = document.getElementById('input-chat-prefix');
+const btnToggleTts = document.getElementById('btn-toggle-tts');
+const iconTtsToggle = document.getElementById('icon-tts-toggle');
+const textTtsToggle = document.getElementById('text-tts-toggle');
+const inputAnnouncementUser = document.getElementById('input-announcement-user');
+const inputAnnouncementText = document.getElementById('input-announcement-text');
+const btnSendAnnouncement = document.getElementById('btn-send-announcement');
+const btnHideAnnouncement = document.getElementById('btn-hide-announcement');
+
 // Navbar y Navegación de Pestañas
 const navTabMain = document.getElementById('nav-tab-main');
 const navTabAnimations = document.getElementById('nav-tab-animations');
@@ -541,8 +551,28 @@ socket.on('state-update', (state) => {
     if (inputTopHudText && document.activeElement !== inputTopHudText) {
       inputTopHudText.value = state.topHud.customText || '';
     }
-    refreshIcons();
   }
+
+  // Estado del Overlay Inferior de Chat Destacado y TTS
+  if (state.chatOverlay) {
+    if (inputChatPrefix && document.activeElement !== inputChatPrefix) {
+      inputChatPrefix.value = state.chatOverlay.commandPrefix || '!anuncio';
+    }
+
+    if (btnToggleTts) {
+      const isTtsOn = state.chatOverlay.ttsEnabled !== false;
+      if (isTtsOn) {
+        btnToggleTts.className = 'px-3 py-1 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,255,102,0.3)]';
+        if (textTtsToggle) textTtsToggle.textContent = 'TTS ACTIVO';
+        if (iconTtsToggle) iconTtsToggle.setAttribute('data-lucide', 'volume-2');
+      } else {
+        btnToggleTts.className = 'px-3 py-1 rounded-lg bg-cyber-card border border-cyber-border hover:border-gray-500 text-gray-300 font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5';
+        if (textTtsToggle) textTtsToggle.textContent = 'TTS MUTED';
+        if (iconTtsToggle) iconTtsToggle.setAttribute('data-lucide', 'volume-x');
+      }
+    }
+  }
+  refreshIcons();
 
   saveToLocalStorage();
   renderPresentersGrid();
@@ -1660,6 +1690,60 @@ if (btnTestComment) {
       detail: item.msg
     });
     showToast(`💬 Simulación enviada: Comentario de ${item.user}`);
+  });
+}
+
+// ============================================================
+// RECUADRO INFERIOR DE CHAT Y LECTURA TTS
+// ============================================================
+if (btnToggleTts) {
+  btnToggleTts.addEventListener('click', () => {
+    const isCurrentlyOn = currentLiveState.chatOverlay ? currentLiveState.chatOverlay.ttsEnabled !== false : true;
+    socket.emit('toggle-chat-tts', { enabled: !isCurrentlyOn });
+    showToast(!isCurrentlyOn ? '🔊 Voz TTS Activada' : '🔇 Voz TTS Silenciada');
+  });
+}
+
+if (inputChatPrefix) {
+  inputChatPrefix.addEventListener('change', () => {
+    const prefix = inputChatPrefix.value.trim() || '!anuncio';
+    inputChatPrefix.value = prefix;
+    socket.emit('update-chat-prefix', { prefix });
+    showToast(`⚙️ Prefijo de chat actualizado: ${prefix}`);
+  });
+}
+
+if (btnSendAnnouncement) {
+  btnSendAnnouncement.addEventListener('click', () => {
+    const user = (inputAnnouncementUser ? inputAnnouncementUser.value.trim() : '') || '@espectador';
+    const text = (inputAnnouncementText ? inputAnnouncementText.value.trim() : '');
+    if (!text) {
+      showToast('⚠️ Ingresa un mensaje para el anuncio', 'error');
+      return;
+    }
+
+    socket.emit('trigger-chat-announcement', {
+      user: user,
+      text: text,
+      tts: currentLiveState.chatOverlay ? currentLiveState.chatOverlay.ttsEnabled !== false : true
+    });
+    showToast(`📢 Anuncio enviado a pantalla: ${user}`);
+  });
+
+  if (inputAnnouncementText) {
+    inputAnnouncementText.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        btnSendAnnouncement.click();
+      }
+    });
+  }
+}
+
+if (btnHideAnnouncement) {
+  btnHideAnnouncement.addEventListener('click', () => {
+    socket.emit('hide-chat-announcement');
+    showToast('✕ Anuncio retirado de pantalla');
   });
 }
 
