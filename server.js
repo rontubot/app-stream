@@ -1508,99 +1508,90 @@ app.get('/api/kick/status', (req, res) => {
 });
 
 async function initKickChatListener() {
-  const clientId = 'kick-bot-' + Math.random().toString(36).substring(2, 9);
-  console.log(`[Kick Chat] Iniciando conexión para canal "${KICK_CHANNEL_SLUG}"...`);
+  const WebSocket = require('ws');
+  console.log(`[Kick Chat] Iniciando conexión Pusher para canal "${KICK_CHANNEL_SLUG}"...`);
 
   try {
-    // 1. Obtener URL de WebSocket de Centrifugo asignada por Kick
-    const connRes = await fetch(`https://web.kick.com/api/v1/realtime/channels/${KICK_CHANNEL_ID}/chat/connection`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      body: JSON.stringify({
-        client: { id: clientId, type: 'web' },
-        capabilities: { accepted_providers: [{ provider: 'centrifugo' }] }
-      })
-    });
-    const connData = await connRes.json();
-    const wsUrl = connData?.data?.connections?.[0]?.credentials?.url;
+    let appKey = '34bf7a0ff419a2a775b9';
+    let cluster = 'us2';
 
-    if (!wsUrl) {
-      throw new Error('No se recibió la URL del WebSocket de Kick');
+    // 1. Obtener credenciales activas de Pusher desde la API de Kick
+    try {
+      const connRes = await fetch(`https://web.kick.com/api/v1/realtime/channels/${KICK_CHANNEL_ID}/chat/connection`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        body: JSON.stringify({
+          client: { id: 'bot-client', type: 'web' },
+          capabilities: { accepted_providers: [{ provider: 'pusher' }] }
+        })
+      });
+      const connData = await connRes.json();
+      const conn = connData?.data?.connections?.find(c => c.provider === 'pusher');
+      if (conn?.credentials?.app_key) {
+        appKey = conn.credentials.app_key;
+        cluster = conn.credentials.cluster || 'us2';
+      }
+    } catch (e) {
+      console.warn('[Kick Chat] Advertencia al obtener config dinámica, usando defaults:', e.message);
     }
 
-    // 2. Obtener Token de Autenticación de Conexión
-    const authRes = await fetch('https://web.kick.com/api/v1/realtime/auth/connection', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      body: JSON.stringify({ client_id: clientId })
-    });
-    const authData = await authRes.json();
-    const token = authData?.data?.token;
-
-    const WebSocketClient = globalThis.WebSocket || require('ws');
-    console.log(`[Kick Chat] Conectando WebSocket a ${wsUrl}...`);
-    const ws = new WebSocketClient(wsUrl);
+    const wsUrl = `wss://ws-${cluster}.pusher.com/app/${appKey}?protocol=7&client=js&version=8.4.0&flash=false`;
+    console.log(`[Kick Chat] Conectando WebSocket Pusher a ${wsUrl}...`);
+    const ws = new WebSocket(wsUrl);
     kickWsInstance = ws;
 
-    let pingInterval = null;
+    ws.on('open', () => {
+      console.log('[Kick Chat] Socket Pusher abierto, esperando establecimiento...');
+    });
 
-    ws.onopen = () => {
-      console.log('[Kick Chat] WebSocket abierto. Autenticando con Centrifugo...');
-      ws.send(JSON.stringify({
-        connect: token ? { token } : {},
-        id: 1
-      }));
-
-      // Mantener heartbeat vivo con pings cada 25s
-      pingInterval = setInterval(() => {
-        if (ws.readyState === 1) { // 1 = OPEN
-          ws.send('{}');
-        }
-      }, 25000);
-    };
-
-    ws.onmessage = (event) => {
+    ws.on('message', (raw) => {
       try {
-        const raw = event.data ? event.data.toString() : '';
-        if (!raw || raw === '{}') return; // Pong / heartbeat
+        const rawStr = raw ? raw.toString() : '';
+        if (!rawStr) return;
 
-        const msg = JSON.parse(raw);
+        const msg = JSON.parse(rawStr);
 
-        // Conexión exitosa -> Suscribir al canal de chatroom de birraverde
-        if (msg.id === 1 && msg.connect) {
-          console.log(`[Kick Chat] Autenticado. Suscribiéndose al chatroom ${KICK_CHATROOM_ID}...`);
+        // Handshake establecido -> Suscribirse al canal de chatroom de birraverde
+        if (msg.event === 'pusher:connection_established') {
+          console.log(`[Kick Chat] Handshake completado. Suscribiéndose al chatroom ${KICK_CHATROOM_ID}...`);
           ws.send(JSON.stringify({
-            subscribe: { channel: `chatrooms.${KICK_CHATROOM_ID}.v2` },
-            id: 2
+            event: 'pusher:subscribe',
+            data: {
+              auth: '',
+              channel: `chatrooms.${KICK_CHATROOM_ID}.v2`
+            }
           }));
           return;
         }
 
-        if (msg.id === 2 && msg.subscribe) {
+        // Suscripción confirmada por Kick Pusher
+        if (msg.event === 'pusher_internal:subscription_succeeded') {
           kickChatState.connected = true;
-          console.log(`[Kick Chat] ✅ CONECTADO AL CHAT DE KICK (@${KICK_CHANNEL_SLUG})`);
+          console.log(`[Kick Chat] ✅ CONECTADO Y ESCUCHANDO CHAT DE KICK (@${KICK_CHANNEL_SLUG})`);
           io.emit('kick-chat-status', kickChatState);
           return;
         }
 
-        // Procesar mensajes entrantes del canal
-        if (msg.pub && msg.pub.data) {
-          let chatData = msg.pub.data;
+        // Responder heartbeat ping
+        if (msg.event === 'pusher:ping') {
+          ws.send(JSON.stringify({ event: 'pusher:pong', data: {} }));
+          return;
+        }
+
+        // Evento de Mensaje de Chat en Vivo
+        if (msg.event === 'App\\Events\\ChatMessageEvent' || msg.event === 'App\\Events\\ChatMessageSentEvent') {
+          let chatData = msg.data;
           if (typeof chatData === 'string') {
             try { chatData = JSON.parse(chatData); } catch (e) {}
           }
-
           if (chatData.data && typeof chatData.data === 'string') {
             try { chatData = JSON.parse(chatData.data); } catch (e) {}
           }
 
-          const messageId = chatData.id || (chatData.sender?.id ? `${chatData.sender.id}_${Date.now()}` : null);
+          const messageId = chatData.id || `${chatData.sender?.id || 'anon'}_${Date.now()}`;
           if (messageId && seenKickMsgIds.has(messageId)) return;
           if (messageId) {
             seenKickMsgIds.add(messageId);
@@ -1610,17 +1601,17 @@ async function initKickChatListener() {
             }
           }
 
-          const content = (chatData.content || chatData.message || chatData.text || '').trim();
-          const sender = chatData.sender?.username || chatData.sender?.slug || chatData.author || 'Espectador Kick';
+          const content = (chatData.content || chatData.message || '').trim();
+          const sender = chatData.sender?.username || chatData.sender?.slug || 'Espectador Kick';
 
           console.log(`[Kick Chat] @${sender}: ${content}`);
 
-          // Comprobar si el mensaje es un comando !anuncio <texto>
+          // Comprobar si es un comando de anuncio: !anuncio <texto>
           const match = content.match(/^!anuncio(?:\s+([\s\S]+))?$/i);
           if (match) {
             const announcementText = (match[1] || '').trim();
             if (announcementText) {
-              console.log(`[Kick Chat] 📢 ¡COMANDO !anuncio DETECTADO de @${sender}: "${announcementText}"`);
+              console.log(`[Kick Chat] 📢 ¡COMANDO !anuncio RECIBIDO de @${sender}: "${announcementText}"`);
               const payload = {
                 user: `@${sender}`,
                 text: announcementText,
@@ -1643,27 +1634,26 @@ async function initKickChatListener() {
           }
         }
       } catch (err) {
-        console.warn('[Kick Chat] Error al procesar mensaje de WebSocket:', err);
+        console.warn('[Kick Chat] Error al procesar mensaje Pusher:', err);
       }
-    };
+    });
 
-    ws.onerror = (err) => {
-      console.warn('[Kick Chat] Error en WebSocket:', err.message || err);
-    };
+    ws.on('error', (err) => {
+      console.warn('[Kick Chat] Error en WebSocket Pusher:', err.message || err);
+    });
 
-    ws.onclose = () => {
+    ws.on('close', () => {
       kickChatState.connected = false;
       io.emit('kick-chat-status', kickChatState);
-      if (pingInterval) clearInterval(pingInterval);
-      console.warn('[Kick Chat] WebSocket cerrado. Reintentando reconexión en 5s...');
-      setTimeout(initKickChatListener, 5000);
-    };
+      console.warn('[Kick Chat] Conexión cerrada. Reconectando en 4s...');
+      setTimeout(initKickChatListener, 4000);
+    });
 
   } catch (err) {
     kickChatState.connected = false;
     io.emit('kick-chat-status', kickChatState);
-    console.warn('[Kick Chat] Falló inicialización:', err.message, 'Reintentando en 8s...');
-    setTimeout(initKickChatListener, 8000);
+    console.warn('[Kick Chat] Falló inicialización:', err.message, 'Reintentando en 6s...');
+    setTimeout(initKickChatListener, 6000);
   }
 }
 
