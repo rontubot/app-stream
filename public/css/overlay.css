@@ -312,7 +312,7 @@ html, body {
   inset: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 9999;
+  z-index: 99999; /* Máxima prioridad: Siempre por encima de todos los overlays */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -811,7 +811,7 @@ html, body {
   inset: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 9998;
+  z-index: 90000; /* Escena cinematográfica de combate por encima de overlays de stream */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1418,7 +1418,7 @@ html, body {
   top: 20px;
   left: 50%;
   transform: translateX(-50%) translateY(-22px) scale(0.97);
-  z-index: 10005; /* Por encima de escenas cinematográficas y VS, dinámico y persistente */
+  z-index: 500; /* Overlay dinámico de stream (por debajo de escenas de pantalla completa) */
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1757,7 +1757,7 @@ html, body {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%) translateY(35px) scale(0.96);
-  z-index: 10004; /* Centrado abajo, sin tapar Lower Thirds que están en las esquinas */
+  z-index: 450; /* Centrado abajo, dinámico de stream (por debajo de escenas de pantalla completa) */
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1954,3 +1954,34 @@ html, body {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+
+/* ============================================================
+   SUPRESIÓN TOTAL DE OVERLAYS ANTE ESCENAS DE PANTALLA COMPLETA Y VS
+   (Las escenas de pantalla completa tienen prioridad absoluta)
+   ============================================================ */
+body.scene-active #stream-top-hud,
+body.scene-active #stream-bottom-chat,
+body.scene-active .slot-wrapper,
+body.vs-active #stream-top-hud,
+body.vs-active #stream-bottom-chat,
+body.vs-active .slot-wrapper,
+#fullscreen-scene.is-active ~ #stream-bottom-chat,
+.vs-box-screen.is-active ~ #stream-bottom-chat {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity 0.35s ease, transform 0.35s ease !important;
+}
+
+body.scene-active #stream-top-hud,
+body.vs-active #stream-top-hud {
+  transform: translateX(-50%) translateY(-35px) scale(0.95) !important;
+}
+
+body.scene-active #stream-bottom-chat,
+body.vs-active #stream-bottom-chat,
+#fullscreen-scene.is-active ~ #stream-bottom-chat,
+.vs-box-screen.is-active ~ #stream-bottom-chat {
+  transform: translateX(-50%) translateY(45px) scale(0.95) !important;
+}
+

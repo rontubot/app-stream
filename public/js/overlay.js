@@ -125,6 +125,9 @@ function showVsOverlay(fight) {
   renderCornerTag(vsF2CornerTag, vsF2CornerText, f2.corner || 'blue');
 
   isVsActive = true;
+  document.body.classList.add('vs-active');
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
   vsOverlay.classList.remove('is-exiting');
   vsOverlay.classList.remove('is-active');
   void vsOverlay.offsetWidth; // Reflow para disparar el SLAM de impacto
@@ -140,6 +143,7 @@ function hideVsOverlay() {
   }
 
   isVsActive = false;
+  document.body.classList.remove('vs-active');
   vsOverlay.classList.remove('is-active');
   vsOverlay.classList.add('is-exiting');
 
@@ -371,6 +375,9 @@ function showScene(sceneData) {
 
   // CASO B: Entrada inicial desde escena inactiva / apagada
   isSceneActive = true;
+  document.body.classList.add('scene-active');
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
   currentSceneType = info.type;
   currentSceneTitle = info.title;
   currentSceneSubtitle = info.sub;
@@ -409,6 +416,7 @@ function hideScene() {
   }
 
   isSceneActive = false;
+  document.body.classList.remove('scene-active');
   currentSceneType = null;
   currentSceneTitle = '';
   currentSceneSubtitle = '';
@@ -639,6 +647,11 @@ function playTTS(text, user) {
 // Recibir nuevo anuncio o comando de chat
 socket.on('chat-announcement', (payload) => {
   if (!streamBottomChat || !payload) return;
+
+  // Si hay una escena de pantalla completa o tabla VS activa, no mostrar ni reproducir voz sobre ella
+  if (isSceneActive || isVsActive) {
+    return;
+  }
 
   if (chatDismissTimeout) clearTimeout(chatDismissTimeout);
 
