@@ -3,6 +3,12 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+let Pool;
+try {
+  Pool = require('pg').Pool;
+} catch (e) {
+  Pool = null;
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -20,6 +26,122 @@ const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const FIGHTS_FILE = path.join(DATA_DIR, 'fights.json');
 const MULTICAM_FILE = path.join(DATA_DIR, 'multicam.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+
+// ============================================================
+// CONEXIÓN SQL (POSTGRESQL) PARA PERSISTENCIA DEFINITIVA
+// ============================================================
+let dbPool = null;
+let isDbReady = false;
+
+if (Pool && process.env.DATABASE_URL) {
+  try {
+    const isInternalOrLocal = process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1');
+    dbPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: isInternalOrLocal ? false : { rejectUnauthorized: false }
+    });
+
+    dbPool.query(`
+      CREATE TABLE IF NOT EXISTS app_storage (
+        key VARCHAR(100) PRIMARY KEY,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `).then(async () => {
+      console.log('🐘 PostgreSQL conectado exitosamente y tabla app_storage lista');
+      isDbReady = true;
+      await syncDataFromDatabase();
+    }).catch(err => {
+      console.warn('⚠️ No se pudo inicializar tabla en PostgreSQL, usando almacenamiento local:', err.message);
+    });
+  } catch (err) {
+    console.warn('⚠️ Error al configurar cliente PostgreSQL:', err.message);
+  }
+} else {
+  console.log('💾 Usando almacenamiento persistente en archivos JSON (data/)');
+}
+
+async function saveToDb(key, data) {
+  if (dbPool && isDbReady) {
+    try {
+      await dbPool.query(
+        `INSERT INTO app_storage (key, data, updated_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE
+         SET data = EXCLUDED.data, updated_at = CURRENT_TIMESTAMP`,
+        [key, JSON.stringify(data)]
+      );
+    } catch (err) {
+      console.error(`Error guardando ${key} en PostgreSQL:`, err.message);
+    }
+  }
+}
+
+async function syncDataFromDatabase() {
+  if (!dbPool || !isDbReady) return;
+  try {
+    const res = await dbPool.query('SELECT key, data FROM app_storage');
+    const dbData = {};
+    res.rows.forEach(r => dbData[r.key] = r.data);
+
+    let changed = false;
+
+    // Sincronizar Presentadores
+    if (dbData.presenters && Array.isArray(dbData.presenters) && dbData.presenters.length > 0) {
+      presenters = dbData.presenters;
+      savePresenters(presenters, false);
+      io.emit('presenters-updated', presenters);
+      changed = true;
+    } else if (presenters.length > 0) {
+      await saveToDb('presenters', presenters);
+    }
+
+    // Sincronizar Fights
+    if (dbData.fights && Array.isArray(dbData.fights) && dbData.fights.length > 0) {
+      fights = dbData.fights;
+      saveFights(fights, false);
+      io.emit('fights-updated', fights);
+      changed = true;
+    } else if (fights.length > 0) {
+      await saveToDb('fights', fights);
+    }
+
+    // Sincronizar Settings
+    if (dbData.settings && typeof dbData.settings === 'object') {
+      const s = dbData.settings;
+      if (typeof s.scale === 'number') liveState.scale = s.scale;
+      if (typeof s.defaultAutoHide === 'number') liveState.defaultAutoHide = s.defaultAutoHide;
+      if (s.topHud) liveState.topHud = { ...liveState.topHud, ...s.topHud };
+      if (s.chatOverlay) liveState.chatOverlay = { ...liveState.chatOverlay, ...s.chatOverlay };
+      saveSettings(false);
+      io.emit('state-update', liveState);
+      changed = true;
+    } else {
+      await saveToDb('settings', {
+        scale: liveState.scale,
+        defaultAutoHide: liveState.defaultAutoHide,
+        topHud: liveState.topHud,
+        chatOverlay: liveState.chatOverlay
+      });
+    }
+
+    // Sincronizar Multicam
+    if (dbData.multicam && typeof dbData.multicam === 'object') {
+      multicamSettings = { ...multicamSettings, ...dbData.multicam };
+      saveMulticamSettings(false);
+      io.emit('multicam-settings-updated', multicamSettings);
+      changed = true;
+    } else {
+      await saveToDb('multicam', multicamSettings);
+    }
+
+    if (changed) {
+      console.log('🔄 Estado sincronizado con éxito desde PostgreSQL');
+    }
+  } catch (err) {
+    console.error('Error sincronizando datos con PostgreSQL:', err.message);
+  }
+}
 
 // Middleware con límite ampliado para fotos de peleadores
 app.use(express.json({ limit: '30mb' }));
@@ -100,10 +222,13 @@ function loadPresenters() {
   return [];
 }
 
-function savePresenters(presentersList) {
+function savePresenters(presentersList, persistDb = true) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(DATA_FILE, JSON.stringify(presentersList, null, 2), 'utf-8');
+    if (persistDb) {
+      saveToDb('presenters', presentersList);
+    }
     return true;
   } catch (err) {
     console.error('Error al guardar presentadores:', err);
@@ -143,7 +268,7 @@ function loadSettings() {
   return {};
 }
 
-function saveSettings() {
+function saveSettings(persistDb = true) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const payload = {
@@ -163,6 +288,9 @@ function saveSettings() {
       }
     };
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+    if (persistDb) {
+      saveToDb('settings', payload);
+    }
     return true;
   } catch (err) {
     console.error('Error al guardar settings:', err);
@@ -186,10 +314,13 @@ function loadFights() {
   return [];
 }
 
-function saveFights(fightsList) {
+function saveFights(fightsList, persistDb = true) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(FIGHTS_FILE, JSON.stringify(fightsList, null, 2), 'utf-8');
+    if (persistDb) {
+      saveToDb('fights', fightsList);
+    }
     return true;
   } catch (err) {
     console.error('Error al guardar combates:', err);
@@ -222,10 +353,13 @@ function loadMulticamSettings() {
   return multicamSettings;
 }
 
-function saveMulticamSettings() {
+function saveMulticamSettings(persistDb = true) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(MULTICAM_FILE, JSON.stringify(multicamSettings, null, 2), 'utf-8');
+    if (persistDb) {
+      saveToDb('multicam', multicamSettings);
+    }
     return true;
   } catch (err) {
     console.error('Error al guardar multicam settings:', err);
