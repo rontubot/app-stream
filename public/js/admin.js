@@ -1588,7 +1588,7 @@ function switchMainTab(tab) {
   const inactiveBtnClass = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
   const activeBtnClass = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
 
-  if (tab === 'animations') {
+  if (tab === 'animations' || tab === 'scenes' || tab === 'multicam') {
     if (tabPanelMain) tabPanelMain.classList.add('hidden');
     if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
     if (tabPanelAnimations) tabPanelAnimations.classList.remove('hidden');
@@ -1596,21 +1596,15 @@ function switchMainTab(tab) {
     if (navTabMain) navTabMain.className = inactiveBtnClass;
     if (navTabMulticam) navTabMulticam.className = inactiveBtnClass;
     if (navTabAnimations) navTabAnimations.className = activeBtnClass;
-    localStorage.setItem('birraverde_active_tab', 'animations');
-  } else if (tab === 'multicam') {
-    if (tabPanelMain) tabPanelMain.classList.add('hidden');
-    if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
-    if (tabPanelMulticam) tabPanelMulticam.classList.remove('hidden');
-
-    if (navTabMain) navTabMain.className = inactiveBtnClass;
-    if (navTabAnimations) navTabAnimations.className = inactiveBtnClass;
-    if (navTabMulticam) navTabMulticam.className = activeBtnClass;
 
     // Actualizar URLs de Multicam con el host actual
     if (multicamGuestLink) multicamGuestLink.value = window.location.origin + '/guest';
-    if (multicamObsLink) multicamObsLink.value = window.location.origin + '/multicam';
+    if (multicamObsLink) multicamObsLink.value = window.location.origin + '/overlay';
 
-    localStorage.setItem('birraverde_active_tab', 'multicam');
+    if (tab === 'multicam') {
+      setTimeout(() => toggleMulticamModule(true), 50);
+    }
+    localStorage.setItem('birraverde_active_tab', 'scenes');
   } else {
     if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
     if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
@@ -2113,6 +2107,8 @@ function escapeHtml(str) {
 }
 
 // Inicialización
+if (multicamGuestLink) multicamGuestLink.value = window.location.origin + '/guest';
+if (multicamObsLink) multicamObsLink.value = window.location.origin + '/overlay';
 loadFromLocalStorage();
 updateSelectOptions();
 renderPresentersGrid();
