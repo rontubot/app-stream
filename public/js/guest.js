@@ -169,7 +169,7 @@
     checkIsHost.addEventListener('change', () => {
       state.isHost = checkIsHost.checked;
       localStorage.setItem('birra_multicam_is_host', state.isHost ? 'true' : 'false');
-      if (state.isJoined) notifyProfileUpdate();
+      if (state.isJoined) notifyProfileUpdate(true);
     });
   }
 
@@ -490,17 +490,21 @@
     });
   }
 
-  function notifyProfileUpdate() {
+  function notifyProfileUpdate(explicitHostChange = false) {
+    const userInfo = {
+      name: state.name,
+      photo: state.photo,
+      initials: state.initials,
+      hasVideo: state.hasVideo,
+      hasAudio: state.hasAudio
+    };
+    if (explicitHostChange) {
+      userInfo.isHost = state.isHost;
+      userInfo.explicitHostChange = true;
+    }
     socket.emit('multicam-update-profile', {
       roomId: state.roomId,
-      userInfo: {
-        name: state.name,
-        photo: state.photo,
-        initials: state.initials,
-        hasVideo: state.hasVideo,
-        hasAudio: state.hasAudio,
-        isHost: state.isHost
-      }
+      userInfo
     });
     renderLocalParticipant();
   }
@@ -531,6 +535,7 @@
         pc.addTrack(track, state.localStream);
       });
     }
+    syncGuestMasterMuteState();
 
     // ICE Candidates locales
     pc.onicecandidate = (event) => {
@@ -649,12 +654,33 @@
     pendingIceCandidates.delete(fromPeerId);
   }
 
+  // Sincronización directa cuando el Panel de Host asigna o retira el rol de Host a este participante
+  socket.on('multicam-host-status-changed', ({ isHost }) => {
+    if (typeof isHost === 'boolean') {
+      state.isHost = isHost;
+      if (checkIsHost) checkIsHost.checked = isHost;
+      localStorage.setItem('birra_multicam_is_host', isHost ? 'true' : 'false');
+      syncGuestMasterMuteState();
+      renderLocalParticipant();
+    }
+  });
+
   // Lista de peers actualizada desde el servidor
   socket.on('multicam-peers-updated', ({ peers }) => {
     if (!Array.isArray(peers)) return;
 
     peers.forEach(peer => {
-      if (peer.id !== state.peerId) {
+      if (peer.id === state.peerId) {
+        // Sincronizar nuestro propio rol de Host si fue modificado desde el Panel de Administración
+        const serverIsHost = !!(peer.isHost || peer.role === 'host');
+        if (state.isHost !== serverIsHost) {
+          state.isHost = serverIsHost;
+          if (checkIsHost) checkIsHost.checked = serverIsHost;
+          localStorage.setItem('birra_multicam_is_host', serverIsHost ? 'true' : 'false');
+          syncGuestMasterMuteState();
+          renderLocalParticipant();
+        }
+      } else {
         const isNew = !knownPeers.has(peer.id);
         knownPeers.set(peer.id, peer);
 
@@ -807,23 +833,24 @@
   let isMasterMuted = false;
 
   function syncGuestMasterMuteState() {
-    // 1. Si el Mute Maestro está activo, cortar también el envío de audio hacia los overlays de OBS (obs-*)
+    // 1. Si el Mute Maestro está activo O este participante es el Host (Anfitrión), cortar el envío de su micrófono hacia los overlays de OBS (obs-*) para evitar eco al 100%
     const audioTrack = state.localStream ? state.localStream.getAudioTracks()[0] : null;
+    const shouldSilenceToObs = !!(isMasterMuted || state.isHost);
     peerConnections.forEach((pc, remotePeerId) => {
       const peer = knownPeers.get(remotePeerId);
       const isOverlayPeer = (peer && peer.role === 'overlay') || String(remotePeerId).startsWith('obs-');
       if (isOverlayPeer) {
         try {
-          pc.getSenders().forEach(sender => {
-            if (!sender.track || sender.track.kind === 'audio') {
-              if (isMasterMuted) {
-                sender.replaceTrack(null).catch(() => {});
-              } else if (audioTrack) {
-                audioTrack.enabled = !!state.hasAudio;
-                sender.replaceTrack(audioTrack).catch(() => {});
-              }
+          const audioTransceiver = pc.getTransceivers ? pc.getTransceivers().find(t => t.receiver && t.receiver.track && t.receiver.track.kind === 'audio') : null;
+          const sender = audioTransceiver ? audioTransceiver.sender : pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+          if (sender) {
+            if (shouldSilenceToObs) {
+              sender.replaceTrack(null).catch(() => {});
+            } else if (audioTrack) {
+              audioTrack.enabled = !!state.hasAudio;
+              sender.replaceTrack(audioTrack).catch(() => {});
             }
-          });
+          }
         } catch (e) {}
       }
     });
@@ -941,6 +968,7 @@
         <div class="flex items-center gap-2 px-3 py-1 rounded-xl bg-black/80 backdrop-blur border border-cyber-border text-xs font-chakra font-bold">
           <span class="w-2 h-2 rounded-full ${hasVideo ? 'bg-cyber-green' : 'bg-yellow-500'}"></span>
           <span class="truncate max-w-[140px] text-gray-200">${state.name} (Tú)</span>
+          ${state.isHost ? '<span class="px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/50 text-[10px] font-mono">👑 HOST</span>' : ''}
         </div>
         <div class="flex items-center gap-1.5">
           <span class="w-7 h-7 rounded-lg bg-black/80 backdrop-blur border border-cyber-border flex items-center justify-center text-xs">

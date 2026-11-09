@@ -1437,23 +1437,24 @@ io.on('connection', async (socket) => {
       return;
     }
 
-    const isHost = !!(userInfo.isHost || role === 'host');
+    const existingPeer = multicamRooms[roomId].peers[peerId];
+    const isHost = existingPeer ? !!existingPeer.isHost : !!(userInfo.isHost || role === 'host');
     const peerData = {
       id: peerId,
       socketId: socket.id,
       roomId,
       role: isHost ? 'host' : role, // 'guest' | 'host' | 'overlay'
       isHost: isHost,
-      name: userInfo.name || 'Invitado',
-      photo: userInfo.photo || '',
+      name: userInfo.name || (existingPeer && existingPeer.name) || 'Invitado',
+      photo: userInfo.photo || (existingPeer && existingPeer.photo) || '',
       initials,
       hasVideo: userInfo.hasVideo !== false,
       hasAudio: userInfo.hasAudio !== false,
-      isStreamMuted: false, // Silenciado en stream pero audible en sala
-      isHidden: false,
-      slot: null,
+      isStreamMuted: existingPeer ? !!existingPeer.isStreamMuted : false, // Silenciado en stream pero audible en sala
+      isHidden: existingPeer ? !!existingPeer.isHidden : false,
+      slot: existingPeer ? existingPeer.slot : null,
       clientIp,
-      joinedAt: Date.now()
+      joinedAt: existingPeer ? existingPeer.joinedAt : Date.now()
     };
 
     multicamRooms[roomId].peers[peerId] = peerData;
@@ -1501,7 +1502,8 @@ io.on('connection', async (socket) => {
       if (typeof userInfo.photo === 'string') peer.photo = userInfo.photo;
       if (typeof userInfo.hasVideo === 'boolean') peer.hasVideo = userInfo.hasVideo;
       if (typeof userInfo.hasAudio === 'boolean') peer.hasAudio = userInfo.hasAudio;
-      if (typeof userInfo.isHost === 'boolean') {
+      // Solo cambiar isHost desde el cliente si fue un cambio explícito del checkbox de Host, NUNCA al encender/apagar cámara o mic
+      if (userInfo.explicitHostChange === true && typeof userInfo.isHost === 'boolean') {
         peer.isHost = userInfo.isHost;
         peer.role = userInfo.isHost ? 'host' : 'guest';
       }
@@ -1516,8 +1518,12 @@ io.on('connection', async (socket) => {
   // Designar / Desmarcar Anfitrión (Host) desde panel o cliente
   socket.on('multicam-set-host', ({ roomId = 'main', peerId, isHost }) => {
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
-      multicamRooms[roomId].peers[peerId].isHost = !!isHost;
-      multicamRooms[roomId].peers[peerId].role = isHost ? 'host' : 'guest';
+      const peer = multicamRooms[roomId].peers[peerId];
+      peer.isHost = !!isHost;
+      peer.role = isHost ? 'host' : 'guest';
+      if (peer.socketId) {
+        io.to(peer.socketId).emit('multicam-host-status-changed', { isHost: !!isHost });
+      }
       const currentPeers = getRoomPeers(roomId);
       io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
       io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
