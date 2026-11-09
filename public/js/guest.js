@@ -802,8 +802,90 @@
   }
 
   // ============================================================
-  // AUDIO REMOTO INDEPENDIENTE
+  // AUDIO REMOTO INDEPENDIENTE Y SINCRONIZACIÓN DE MUTE MAESTRO
   // ============================================================
+  let isMasterMuted = false;
+
+  function syncGuestMasterMuteState() {
+    // 1. Si el Mute Maestro está activo, cortar también el envío de audio hacia los overlays de OBS (obs-*)
+    const audioTrack = state.localStream ? state.localStream.getAudioTracks()[0] : null;
+    peerConnections.forEach((pc, remotePeerId) => {
+      const peer = knownPeers.get(remotePeerId);
+      const isOverlayPeer = (peer && peer.role === 'overlay') || String(remotePeerId).startsWith('obs-');
+      if (isOverlayPeer) {
+        try {
+          pc.getSenders().forEach(sender => {
+            if (!sender.track || sender.track.kind === 'audio') {
+              if (isMasterMuted) {
+                sender.replaceTrack(null).catch(() => {});
+              } else if (audioTrack) {
+                audioTrack.enabled = !!state.hasAudio;
+                sender.replaceTrack(audioTrack).catch(() => {});
+              }
+            }
+          });
+        } catch (e) {}
+      }
+    });
+
+    // 2. Silenciar o reactivar la reproducción de audio en la pestaña /guest (por si OBS captura Audio del Escritorio)
+    remoteStreams.forEach((stream, peerId) => {
+      try {
+        stream.getAudioTracks().forEach(track => {
+          track.enabled = !isMasterMuted;
+        });
+      } catch (e) {}
+
+      const audioElem = document.getElementById('remote-audio-' + peerId);
+      if (audioElem) {
+        audioElem.muted = isMasterMuted;
+        audioElem.volume = isMasterMuted ? 0 : 1;
+        if (isMasterMuted) {
+          try { audioElem.pause(); } catch (e) {}
+        } else {
+          const audioTracks = stream.getAudioTracks();
+          if (!audioElem.srcObject && audioTracks.length > 0) {
+            audioElem.srcObject = new MediaStream(audioTracks);
+          }
+          audioElem.play().catch(() => {});
+        }
+      }
+    });
+
+    if (remoteAudiosContainer) {
+      Array.from(remoteAudiosContainer.querySelectorAll('audio')).forEach(audioElem => {
+        audioElem.muted = isMasterMuted;
+        audioElem.volume = isMasterMuted ? 0 : 1;
+        if (isMasterMuted) {
+          try { audioElem.pause(); } catch (e) {}
+        } else {
+          audioElem.play().catch(() => {});
+        }
+      });
+    }
+  }
+
+  socket.on('master-mute-changed', (data) => {
+    if (data && typeof data.muted === 'boolean') {
+      isMasterMuted = data.muted;
+      syncGuestMasterMuteState();
+    }
+  });
+
+  socket.on('state-update', (liveState) => {
+    if (liveState && typeof liveState.masterMuted === 'boolean') {
+      isMasterMuted = liveState.masterMuted;
+      syncGuestMasterMuteState();
+    }
+  });
+
+  socket.on('multicam-settings-updated', (settings) => {
+    if (settings && typeof settings.audioMutedOverall === 'boolean') {
+      isMasterMuted = settings.audioMutedOverall;
+      syncGuestMasterMuteState();
+    }
+  });
+
   function attachRemoteAudio(peerId, stream) {
     if (!remoteAudiosContainer) return;
     if (stream.getAudioTracks().length === 0) return;
@@ -817,7 +899,14 @@
       remoteAudiosContainer.appendChild(audioElem);
     }
     const audioTracks = stream.getAudioTracks();
+    audioTracks.forEach(t => { t.enabled = !isMasterMuted; });
     audioElem.srcObject = audioTracks.length > 0 ? new MediaStream(audioTracks) : stream;
+    audioElem.muted = isMasterMuted;
+    audioElem.volume = isMasterMuted ? 0 : 1;
+    if (isMasterMuted) {
+      try { audioElem.pause(); } catch (e) {}
+      return;
+    }
     audioElem.play().catch(err => {
       console.warn('Autoplay bloqueado para audio remoto, mostrando banner:', err);
       if (audioUnlockBanner) audioUnlockBanner.classList.remove('hidden');
@@ -1033,6 +1122,9 @@
   socket.on('connect', () => {
     connDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green';
     connText.textContent = state.isJoined ? 'En Sala: ' + state.roomId : 'Listo para entrar';
+    if (state.isJoined) {
+      joinMulticamRoom();
+    }
   });
 
   socket.on('disconnect', () => {

@@ -2614,6 +2614,22 @@ function updateMasterMuteUI(isMuted) {
     try { window.speechSynthesis.cancel(); } catch (e) {}
   }
 
+  // Asegurar que los iframes de vista previa del panel nunca emitan audio
+  [previewIframe, multicamPreviewIframe].forEach(iframe => {
+    try {
+      if (iframe && iframe.contentDocument) {
+        iframe.contentDocument.querySelectorAll('audio, video').forEach(el => {
+          el.muted = true;
+          el.volume = 0;
+          if (el.tagName === 'AUDIO') {
+            el.pause();
+            el.srcObject = null;
+          }
+        });
+      }
+    } catch (e) {}
+  });
+
   // Botón superior en Header
   if (btnMasterMute) {
     if (currentMasterMuted) {

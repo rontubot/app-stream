@@ -119,19 +119,77 @@
     syncAllMulticamAudioState();
   }
 
+  const isMulticamEmbeddedPreview = (window.self !== window.top) || new URLSearchParams(window.location.search).get('preview') === '1';
+
   function syncAllMulticamAudioState() {
-    const globalMuted = !!(isMasterMuted || currentSettings.audioMutedOverall);
-    knownPeers.forEach((peer, peerId) => {
+    const globalMuted = !!(isMasterMuted || currentSettings.audioMutedOverall || isMulticamEmbeddedPreview);
+
+    // 1. Nivel WebRTC Receiver
+    peerConnections.forEach((pc, peerId) => {
+      const peer = knownPeers.get(peerId);
+      const isHost = !!(peer && (peer.isHost || peer.role === 'host'));
+      const shouldMute = globalMuted || isHost || !!(peer && peer.isStreamMuted);
+      try {
+        pc.getReceivers().forEach(receiver => {
+          if (receiver.track && receiver.track.kind === 'audio') {
+            receiver.track.enabled = !shouldMute;
+          }
+        });
+      } catch (e) {}
+    });
+
+    // 2. Nivel MediaStream
+    remoteStreams.forEach((stream, peerId) => {
+      const peer = knownPeers.get(peerId);
+      const isHost = !!(peer && (peer.isHost || peer.role === 'host'));
+      const shouldMute = globalMuted || isHost || !!(peer && peer.isStreamMuted);
+      try {
+        stream.getAudioTracks().forEach(track => {
+          track.enabled = !shouldMute;
+        });
+      } catch (e) {}
+
       const audioElem = document.getElementById('audio-' + peerId);
-      if (!audioElem) return;
-      const isHost = !!(peer.isHost || peer.role === 'host');
-      const shouldMute = globalMuted || isHost || !!peer.isStreamMuted;
+      if (audioElem) {
+        audioElem.muted = shouldMute;
+        audioElem.volume = shouldMute ? 0 : 1;
+        if (shouldMute) {
+          try { audioElem.pause(); } catch (e) {}
+          audioElem.srcObject = null;
+        } else {
+          const audioTracks = stream.getAudioTracks();
+          if (!audioElem.srcObject && audioTracks.length > 0) {
+            audioElem.srcObject = new MediaStream(audioTracks);
+          }
+          audioElem.play().catch(e => console.warn('[OBS Multicam] Reanudando audio:', e));
+        }
+      } else if (!shouldMute && stream.getAudioTracks().length > 0) {
+        attachAudioTrack(peerId, stream);
+      }
+    });
+
+    // 3. Nivel DOM global
+    document.querySelectorAll('audio').forEach(audioElem => {
+      const peerId = (audioElem.id || '').replace(/^audio-/, '');
+      const peer = knownPeers.get(peerId);
+      const isHost = !!(peer && (peer.isHost || peer.role === 'host'));
+      const shouldMute = globalMuted || isHost || !!(peer && peer.isStreamMuted);
       audioElem.muted = shouldMute;
       audioElem.volume = shouldMute ? 0 : 1;
       if (shouldMute) {
         try { audioElem.pause(); } catch (e) {}
+        audioElem.srcObject = null;
       } else {
-        audioElem.play().catch(e => console.warn('[OBS Multicam] Reanudando audio:', e));
+        const stream = remoteStreams.get(peerId);
+        if (stream && !audioElem.srcObject) {
+          const audioTracks = stream.getAudioTracks();
+          if (audioTracks.length > 0) {
+            audioElem.srcObject = new MediaStream(audioTracks);
+          }
+        }
+        if (audioElem.srcObject) {
+          audioElem.play().catch(() => {});
+        }
       }
     });
   }
@@ -187,6 +245,7 @@
       }
     });
 
+    syncAllMulticamAudioState();
     renderAllCams();
   });
 
@@ -316,7 +375,8 @@
   // ============================================================
   function attachAudioTrack(peerId, stream) {
     if (!audioContainer) return;
-    if (stream.getAudioTracks().length === 0) return;
+    const audioTracks = stream.getAudioTracks();
+    if (audioTracks.length === 0) return;
 
     let audioElem = document.getElementById('audio-' + peerId);
     if (!audioElem) {
@@ -326,17 +386,22 @@
       audioElem.playsInline = true;
       audioContainer.appendChild(audioElem);
     }
-    const audioTracks = stream.getAudioTracks();
-    audioElem.srcObject = audioTracks.length > 0 ? new MediaStream(audioTracks) : stream;
     const peerData = knownPeers.get(peerId);
     const isHost = !!(peerData && (peerData.isHost || peerData.role === 'host'));
-    const isMuted = isHost || isMasterMuted || !!currentSettings.audioMutedOverall || (peerData && peerData.isStreamMuted);
-    audioElem.muted = !!isMuted;
+    const isMuted = !!(isHost || isMasterMuted || currentSettings.audioMutedOverall || isMulticamEmbeddedPreview || (peerData && peerData.isStreamMuted));
+
+    audioTracks.forEach(track => {
+      track.enabled = !isMuted;
+    });
+
+    audioElem.muted = isMuted;
     audioElem.volume = isMuted ? 0 : 1;
     if (!isMuted) {
+      audioElem.srcObject = new MediaStream(audioTracks);
       audioElem.play().catch(e => console.warn('[OBS Multicam] Audio play error:', e));
     } else {
       audioElem.pause();
+      audioElem.srcObject = null;
     }
   }
 

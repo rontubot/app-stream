@@ -712,7 +712,7 @@ function formatButlerSpeech(text, user, style = 'equipo') {
 
 // Reproductor TTS (Text-To-Speech) con Web Speech API optimizado para tono de mayordomo servicial
 function playTTS(text, user, options = {}) {
-  if (isMasterMuted || (typeof multicamSettingsCurrent !== 'undefined' && multicamSettingsCurrent.audioMutedOverall)) {
+  if (isMasterMuted || (typeof multicamSettingsCurrent !== 'undefined' && multicamSettingsCurrent.audioMutedOverall) || (window.self !== window.top)) {
     return;
   }
   if (!('speechSynthesis' in window)) {
@@ -944,40 +944,85 @@ function applyMulticamSettings(settings) {
   syncAllOverlayAudioState();
 }
 
+const isOverlayEmbeddedPreview = (window.self !== window.top) || new URLSearchParams(window.location.search).get('preview') === '1';
+
 function syncAllOverlayAudioState() {
-  const globalMuted = !!(isMasterMuted || multicamSettingsCurrent.audioMutedOverall);
-  if (globalMuted) {
+  const globalMuted = !!(isMasterMuted || multicamSettingsCurrent.audioMutedOverall || isOverlayEmbeddedPreview);
+  if (isMasterMuted || multicamSettingsCurrent.audioMutedOverall || isOverlayEmbeddedPreview) {
     if ('speechSynthesis' in window) {
       try { window.speechSynthesis.cancel(); } catch (e) {}
     }
     if (chatHudTtsIndicator) chatHudTtsIndicator.classList.remove('is-speaking');
   }
 
-  // Sincronizar todos los elementos <audio> de los invitados WebRTC
-  multicamKnownPeers.forEach((peer, peerId) => {
+  // 1. Nivel WebRTC Receiver: silenciar o reactivar pistas de audio entrantes directamente en cada RTCPeerConnection
+  multicamPeerConnections.forEach((pc, peerId) => {
+    const peer = multicamKnownPeers.get(peerId);
+    const isHost = !!(peer && (peer.isHost || peer.role === 'host'));
+    const shouldMute = globalMuted || isHost || !!(peer && peer.isStreamMuted);
+    try {
+      pc.getReceivers().forEach(receiver => {
+        if (receiver.track && receiver.track.kind === 'audio') {
+          receiver.track.enabled = !shouldMute;
+        }
+      });
+    } catch (e) {}
+  });
+
+  // 2. Nivel MediaStream: silenciar o reactivar los AudioTracks de cada stream remoto y su elemento <audio>
+  multicamRemoteStreams.forEach((stream, peerId) => {
+    const peer = multicamKnownPeers.get(peerId);
+    const isHost = !!(peer && (peer.isHost || peer.role === 'host'));
+    const shouldMute = globalMuted || isHost || !!(peer && peer.isStreamMuted);
+    try {
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = !shouldMute;
+      });
+    } catch (e) {}
+
     const audioElem = document.getElementById('audio-' + peerId);
-    if (!audioElem) return;
-    const isHost = !!(peer.isHost || peer.role === 'host');
-    const shouldMute = globalMuted || isHost || !!peer.isStreamMuted;
+    if (audioElem) {
+      audioElem.muted = shouldMute;
+      audioElem.volume = shouldMute ? 0 : 1;
+      if (shouldMute) {
+        try { audioElem.pause(); } catch (e) {}
+        audioElem.srcObject = null;
+      } else {
+        const audioTracks = stream.getAudioTracks();
+        if (!audioElem.srcObject && audioTracks.length > 0) {
+          audioElem.srcObject = new MediaStream(audioTracks);
+        }
+        audioElem.play().catch(e => console.warn('[Overlay Multicam] Reanudando audio:', e));
+      }
+    } else if (!shouldMute && stream.getAudioTracks().length > 0) {
+      attachMulticamAudio(peerId, stream);
+    }
+  });
+
+  // 3. Nivel DOM global: asegurar que todo elemento <audio> en el documento respete el estado
+  document.querySelectorAll('audio').forEach(audioElem => {
+    const peerId = (audioElem.id || '').replace(/^audio-/, '');
+    const peer = multicamKnownPeers.get(peerId);
+    const isHost = !!(peer && (peer.isHost || peer.role === 'host'));
+    const shouldMute = globalMuted || isHost || !!(peer && peer.isStreamMuted);
     audioElem.muted = shouldMute;
     audioElem.volume = shouldMute ? 0 : 1;
     if (shouldMute) {
       try { audioElem.pause(); } catch (e) {}
+      audioElem.srcObject = null;
     } else {
-      audioElem.play().catch(e => console.warn('[Overlay Multicam] Reanudando audio:', e));
+      const stream = multicamRemoteStreams.get(peerId);
+      if (stream && !audioElem.srcObject) {
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          audioElem.srcObject = new MediaStream(audioTracks);
+        }
+      }
+      if (audioElem.srcObject) {
+        audioElem.play().catch(() => {});
+      }
     }
   });
-
-  // Asegurar que cualquier etiqueta <audio> huérfana en audioContainer también respete el estado
-  if (audioContainer) {
-    audioContainer.querySelectorAll('audio').forEach(audioElem => {
-      if (globalMuted) {
-        audioElem.muted = true;
-        audioElem.volume = 0;
-        try { audioElem.pause(); } catch (e) {}
-      }
-    });
-  }
 }
 
 socket.on('master-mute-changed', (data) => {
@@ -1024,6 +1069,7 @@ socket.on('multicam-peers-updated', ({ peers }) => {
     }
   });
 
+  syncAllOverlayAudioState();
   renderAllMulticamCams();
 });
 
@@ -1153,7 +1199,8 @@ function cleanupMulticamPeer(peerId) {
 
 function attachMulticamAudio(peerId, stream) {
   if (!audioContainer) return;
-  if (stream.getAudioTracks().length === 0) return;
+  const audioTracks = stream.getAudioTracks();
+  if (audioTracks.length === 0) return;
 
   let audioElem = document.getElementById('audio-' + peerId);
   if (!audioElem) {
@@ -1163,16 +1210,22 @@ function attachMulticamAudio(peerId, stream) {
     audioElem.playsInline = true;
     audioContainer.appendChild(audioElem);
   }
-  audioElem.srcObject = stream;
   const peerData = multicamKnownPeers.get(peerId);
   const isHost = !!(peerData && (peerData.isHost || peerData.role === 'host'));
-  const isMuted = isHost || isMasterMuted || !!multicamSettingsCurrent.audioMutedOverall || (peerData && peerData.isStreamMuted);
-  audioElem.muted = !!isMuted;
+  const isMuted = !!(isHost || isMasterMuted || multicamSettingsCurrent.audioMutedOverall || isOverlayEmbeddedPreview || (peerData && peerData.isStreamMuted));
+
+  audioTracks.forEach(track => {
+    track.enabled = !isMuted;
+  });
+
+  audioElem.muted = isMuted;
   audioElem.volume = isMuted ? 0 : 1;
   if (!isMuted) {
+    audioElem.srcObject = new MediaStream(audioTracks);
     audioElem.play().catch(e => console.warn('[Overlay Multicam] Audio play error:', e));
   } else {
     audioElem.pause();
+    audioElem.srcObject = null;
   }
 }
 

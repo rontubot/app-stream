@@ -309,7 +309,10 @@ function getRoomPeers(roomId) {
   if (!multicamRooms[roomId]) {
     multicamRooms[roomId] = { peers: {} };
   }
-  return Object.values(multicamRooms[roomId].peers);
+  return Object.values(multicamRooms[roomId].peers).map(peer => ({
+    ...peer,
+    isStreamMuted: !!(peer.isStreamMuted || liveState.masterMuted)
+  }));
 }
 
 // Búsqueda de IP real del cliente (con soporte para proxies de Railway/Cloudflare)
@@ -964,9 +967,12 @@ app.post('/api/master-mute', (req, res) => {
   multicamSettings.audioMutedOverall = nextMuted;
   saveSettings();
   saveMulticamSettings();
+  const currentPeers = getRoomPeers('main');
   io.emit('state-update', liveState);
   io.emit('multicam-settings-updated', multicamSettings);
   io.emit('master-mute-changed', { muted: nextMuted });
+  io.emit('multicam-peers-updated', { roomId: 'main', peers: currentPeers });
+  io.emit('multicam-admin-peers-updated', { roomId: 'main', peers: currentPeers });
   res.json({ success: true, muted: nextMuted });
 });
 
@@ -996,9 +1002,12 @@ io.on('connection', async (socket) => {
     multicamSettings.audioMutedOverall = nextMuted;
     saveSettings();
     saveMulticamSettings();
+    const currentPeers = getRoomPeers('main');
     io.emit('state-update', liveState);
     io.emit('multicam-settings-updated', multicamSettings);
     io.emit('master-mute-changed', { muted: nextMuted });
+    io.emit('multicam-peers-updated', { roomId: 'main', peers: currentPeers });
+    io.emit('multicam-admin-peers-updated', { roomId: 'main', peers: currentPeers });
     if (typeof callback === 'function') {
       callback({ success: true, muted: nextMuted });
     }

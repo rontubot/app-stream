@@ -375,7 +375,7 @@
               <span class="text-2xl font-extrabold font-chakra tracking-widest text-white">STREAM SCENE</span>
             </div>
             <div id="preview-container" class="preview-inner">
-              <iframe id="preview-iframe" src="/overlay" class="w-full h-full border-0 bg-transparent"></iframe>
+              <iframe id="preview-iframe" src="/overlay?preview=1" class="w-full h-full border-0 bg-transparent"></iframe>
             </div>
           </div>
 
@@ -965,7 +965,7 @@
 
                 <!-- Mini Preview con fondo en cuadrícula transparente -->
                 <div class="relative w-full aspect-video rounded-xl border border-cyber-border overflow-hidden bg-[radial-gradient(#1a2634_1px,transparent_1px)] [background-size:12px_12px] bg-cyber-black">
-                  <iframe id="multicam-preview-iframe" src="/multicam" class="w-full h-full border-0 pointer-events-none scale-100"></iframe>
+                  <iframe id="multicam-preview-iframe" src="/multicam?preview=1" class="w-full h-full border-0 pointer-events-none scale-100"></iframe>
                 </div>
 
                 <p class="text-[11px] text-gray-400">
@@ -1765,6 +1765,6 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/admin.js"></script>
+  <script src="/js/admin.js?v=20261109b"></script>
 </body>
 </html>
