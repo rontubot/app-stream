@@ -689,7 +689,6 @@ socket.on('presenters-updated', (list) => {
     }
   }
 });
-});
 
 function updateSelectOptions() {
   selectQueueLeft.innerHTML = '<option value="">-- Cambiar preparado izquierdo --</option>';
