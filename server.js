@@ -33,125 +33,7 @@ const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 // ============================================================
 let dbPool = null;
 let isDbReady = false;
-
-if (Pool && process.env.DATABASE_URL) {
-  try {
-    const isInternalOrLocal = process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1');
-    dbPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: isInternalOrLocal ? false : { rejectUnauthorized: false }
-    });
-
-    dbPool.query(`
-      CREATE TABLE IF NOT EXISTS app_storage (
-        key VARCHAR(100) PRIMARY KEY,
-        data JSONB NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `).then(async () => {
-      console.log('🐘 PostgreSQL conectado exitosamente y tabla app_storage lista');
-      isDbReady = true;
-      await syncDataFromDatabase();
-    }).catch(err => {
-      console.warn('⚠️ No se pudo inicializar tabla en PostgreSQL, usando almacenamiento local:', err.message);
-    });
-  } catch (err) {
-    console.warn('⚠️ Error al configurar cliente PostgreSQL:', err.message);
-  }
-} else {
-  console.log('💾 Usando almacenamiento persistente en archivos JSON (data/)');
-}
-
-async function saveToDb(key, data) {
-  if (dbPool && isDbReady) {
-    try {
-      await dbPool.query(
-        `INSERT INTO app_storage (key, data, updated_at)
-         VALUES ($1, $2, CURRENT_TIMESTAMP)
-         ON CONFLICT (key) DO UPDATE
-         SET data = EXCLUDED.data, updated_at = CURRENT_TIMESTAMP`,
-        [key, JSON.stringify(data)]
-      );
-    } catch (err) {
-      console.error(`Error guardando ${key} en PostgreSQL:`, err.message);
-    }
-  }
-}
-
-async function syncDataFromDatabase() {
-  if (!dbPool || !isDbReady) return;
-  try {
-    const res = await dbPool.query('SELECT key, data FROM app_storage');
-    const dbData = {};
-    res.rows.forEach(r => dbData[r.key] = r.data);
-
-    let changed = false;
-
-    // Sincronizar Presentadores
-    if (dbData.presenters && Array.isArray(dbData.presenters) && dbData.presenters.length > 0) {
-      presenters = dbData.presenters;
-      savePresenters(presenters, false);
-      io.emit('presenters-updated', presenters);
-      changed = true;
-    } else if (presenters.length > 0) {
-      await saveToDb('presenters', presenters);
-    }
-
-    // Sincronizar Fights
-    if (dbData.fights && Array.isArray(dbData.fights) && dbData.fights.length > 0) {
-      fights = dbData.fights;
-      saveFights(fights, false);
-      io.emit('fights-updated', fights);
-      changed = true;
-    } else if (fights.length > 0) {
-      await saveToDb('fights', fights);
-    }
-
-    // Sincronizar Settings
-    if (dbData.settings && typeof dbData.settings === 'object') {
-      const s = dbData.settings;
-      if (typeof s.scale === 'number') liveState.scale = s.scale;
-      if (typeof s.defaultAutoHide === 'number') liveState.defaultAutoHide = s.defaultAutoHide;
-      if (s.topHud) liveState.topHud = { ...liveState.topHud, ...s.topHud };
-      if (s.chatOverlay) liveState.chatOverlay = { ...liveState.chatOverlay, ...s.chatOverlay };
-      saveSettings(false);
-      io.emit('state-update', liveState);
-      changed = true;
-    } else {
-      await saveToDb('settings', {
-        scale: liveState.scale,
-        defaultAutoHide: liveState.defaultAutoHide,
-        topHud: liveState.topHud,
-        chatOverlay: liveState.chatOverlay
-      });
-    }
-
-    // Sincronizar Multicam
-    if (dbData.multicam && typeof dbData.multicam === 'object') {
-      multicamSettings = { ...multicamSettings, ...dbData.multicam };
-      saveMulticamSettings(false);
-      io.emit('multicam-settings-updated', multicamSettings);
-      changed = true;
-    } else {
-      await saveToDb('multicam', multicamSettings);
-    }
-
-    // Sincronizar IPs Baneadas
-    if (dbData.banned_ips && Array.isArray(dbData.banned_ips)) {
-      bannedIps = new Set(dbData.banned_ips);
-      saveBannedIps(false);
-      changed = true;
-    } else {
-      await saveToDb('banned_ips', Array.from(bannedIps));
-    }
-
-    if (changed) {
-      console.log('🔄 Estado sincronizado con éxito desde PostgreSQL');
-    }
-  } catch (err) {
-    console.error('Error sincronizando datos con PostgreSQL:', err.message);
-  }
-}
+let dbInitPromise = null;
 
 // Middleware con límite ampliado para fotos de peleadores
 app.use(express.json({ limit: '30mb' }));
@@ -282,25 +164,29 @@ function loadSettings() {
   return {};
 }
 
+function getSettingsPayload() {
+  return {
+    scale: liveState.scale,
+    defaultAutoHide: liveState.defaultAutoHide,
+    queue: {
+      leftId: liveState.queue.left ? liveState.queue.left.id : null,
+      rightId: liveState.queue.right ? liveState.queue.right.id : null
+    },
+    topHud: {
+      isVisible: liveState.topHud.isVisible,
+      customText: liveState.topHud.customText
+    },
+    chatOverlay: {
+      ttsEnabled: liveState.chatOverlay.ttsEnabled,
+      commandPrefix: liveState.chatOverlay.commandPrefix
+    }
+  };
+}
+
 function saveSettings(persistDb = true) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
-    const payload = {
-      scale: liveState.scale,
-      defaultAutoHide: liveState.defaultAutoHide,
-      queue: {
-        leftId: liveState.queue.left ? liveState.queue.left.id : null,
-        rightId: liveState.queue.right ? liveState.queue.right.id : null
-      },
-      topHud: {
-        isVisible: liveState.topHud.isVisible,
-        customText: liveState.topHud.customText
-      },
-      chatOverlay: {
-        ttsEnabled: liveState.chatOverlay.ttsEnabled,
-        commandPrefix: liveState.chatOverlay.commandPrefix
-      }
-    };
+    const payload = getSettingsPayload();
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(payload, null, 2), 'utf-8');
     if (persistDb) {
       saveToDb('settings', payload);
@@ -511,7 +397,7 @@ if (fights.length === 0) {
       }
     }
   ];
-  saveFights(fights);
+  saveFights(fights, false);
 }
 
 // Si no hay presentadores por primera vez, creamos los por defecto
@@ -540,7 +426,7 @@ if (presenters.length === 0) {
       defaultSide: "right"
     }
   ];
-  savePresenters(presenters);
+  savePresenters(presenters, false);
 }
 
 // Rehidratar Cola (Queue) desde settings guardados o defaults
@@ -560,7 +446,164 @@ if (!liveState.queue.right && presenters.length > 0) {
   liveState.queue.right = presenters[1] || presenters[0];
 }
 
-saveSettings();
+saveSettings(false);
+
+// ============================================================
+// CONEXIÓN Y SINCRONIZACIÓN SQL (POSTGRESQL) - PERSISTENCIA DEFINITIVA
+// ============================================================
+async function saveToDb(key, data) {
+  if (dbPool && isDbReady) {
+    try {
+      await dbPool.query(
+        `INSERT INTO app_storage (key, data, updated_at)
+         VALUES ($1, $2::jsonb, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE
+         SET data = EXCLUDED.data, updated_at = CURRENT_TIMESTAMP`,
+        [key, JSON.stringify(data)]
+      );
+    } catch (err) {
+      console.error(`Error guardando ${key} en PostgreSQL:`, err.message);
+    }
+  }
+}
+
+async function syncDataFromDatabase() {
+  if (!dbPool || !isDbReady) return;
+  try {
+    const res = await dbPool.query('SELECT key, data FROM app_storage');
+    const dbData = {};
+    res.rows.forEach(r => {
+      let val = r.data;
+      while (typeof val === 'string') {
+        try {
+          val = JSON.parse(val);
+        } catch (e) {
+          break;
+        }
+      }
+      dbData[r.key] = val;
+    });
+
+    let changed = false;
+
+    // 1. Sincronizar Presentadores
+    if (dbData.presenters && Array.isArray(dbData.presenters) && dbData.presenters.length > 0) {
+      presenters = dbData.presenters;
+      savePresenters(presenters, false);
+      io.emit('presenters-updated', presenters);
+      changed = true;
+    } else if (presenters.length > 0) {
+      await saveToDb('presenters', presenters);
+    }
+
+    // 2. Sincronizar Combates (La Velada del Caos)
+    if (dbData.fights && Array.isArray(dbData.fights) && dbData.fights.length > 0) {
+      fights = dbData.fights;
+      saveFights(fights, false);
+      io.emit('fights-updated', fights);
+      changed = true;
+    } else if (fights.length > 0) {
+      await saveToDb('fights', fights);
+    }
+
+    // 3. Sincronizar Settings (Escala, auto-hide, HUD superior, chat TTS, cola)
+    if (dbData.settings && typeof dbData.settings === 'object') {
+      const s = dbData.settings;
+      if (typeof s.scale === 'number') liveState.scale = s.scale;
+      if (typeof s.defaultAutoHide === 'number') liveState.defaultAutoHide = s.defaultAutoHide;
+      if (s.topHud) liveState.topHud = { ...liveState.topHud, ...s.topHud };
+      if (s.chatOverlay) liveState.chatOverlay = { ...liveState.chatOverlay, ...s.chatOverlay };
+      if (s.queue) {
+        if (s.queue.leftId) {
+          liveState.queue.left = presenters.find(p => p.id === s.queue.leftId) || presenters[0] || null;
+        }
+        if (s.queue.rightId) {
+          liveState.queue.right = presenters.find(p => p.id === s.queue.rightId) || presenters[1] || presenters[0] || null;
+        }
+      }
+      saveSettings(false);
+      io.emit('state-update', liveState);
+      changed = true;
+    } else {
+      await saveToDb('settings', getSettingsPayload());
+    }
+
+    // 4. Sincronizar Multicam
+    if (dbData.multicam && typeof dbData.multicam === 'object') {
+      multicamSettings = { ...multicamSettings, ...dbData.multicam };
+      saveMulticamSettings(false);
+      io.emit('multicam-settings-updated', multicamSettings);
+      changed = true;
+    } else {
+      await saveToDb('multicam', multicamSettings);
+    }
+
+    // 5. Sincronizar IPs Baneadas
+    if (dbData.banned_ips && Array.isArray(dbData.banned_ips)) {
+      bannedIps = new Set(dbData.banned_ips);
+      saveBannedIps(false);
+      changed = true;
+    } else {
+      await saveToDb('banned_ips', Array.from(bannedIps));
+    }
+
+    if (changed) {
+      console.log('🔄 Estado sincronizado con éxito desde PostgreSQL');
+    }
+  } catch (err) {
+    console.error('Error sincronizando datos con PostgreSQL:', err.message);
+  }
+}
+
+async function initDatabase() {
+  const connectionString = process.env.DATABASE_URL || 
+                           process.env.POSTGRES_URL || 
+                           process.env.DATABASE_PUBLIC_URL || 
+                           process.env.DATABASE_PRIVATE_URL || 
+                           process.env.PGURL;
+  const hasPgEnv = !!connectionString || !!process.env.PGHOST;
+
+  if (Pool && hasPgEnv) {
+    try {
+      const isLocal = connectionString && (connectionString.includes('localhost') || connectionString.includes('127.0.0.1'));
+      if (connectionString) {
+        dbPool = new Pool({
+          connectionString,
+          ssl: isLocal ? false : { rejectUnauthorized: false }
+        });
+      } else {
+        dbPool = new Pool({
+          host: process.env.PGHOST,
+          user: process.env.PGUSER,
+          password: process.env.PGPASSWORD,
+          database: process.env.PGDATABASE,
+          port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
+          ssl: { rejectUnauthorized: false }
+        });
+      }
+
+      await dbPool.query('SELECT 1');
+
+      await dbPool.query(`
+        CREATE TABLE IF NOT EXISTS app_storage (
+          key VARCHAR(100) PRIMARY KEY,
+          data JSONB NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      console.log('🐘 PostgreSQL conectado exitosamente y tabla app_storage lista');
+      isDbReady = true;
+      await syncDataFromDatabase();
+    } catch (err) {
+      console.warn('⚠️ No se pudo inicializar tabla en PostgreSQL, usando almacenamiento local:', err.message);
+    }
+  } else {
+    console.log('💾 Usando almacenamiento persistente en archivos JSON (data/)');
+  }
+}
+
+dbInitPromise = initDatabase();
 
 // Timers independientes para auto-ocultar
 let timerLeft = null;
@@ -627,13 +670,22 @@ function triggerHideSlot(slot) {
 }
 
 // Rutas API REST
-app.get('/api/state', (req, res) => res.json(liveState));
-app.get('/api/presenters', (req, res) => res.json(presenters));
-app.get('/api/settings', (req, res) => res.json({
-  scale: liveState.scale,
-  defaultAutoHide: liveState.defaultAutoHide,
-  queue: liveState.queue
-}));
+app.get('/api/state', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  res.json(liveState);
+});
+app.get('/api/presenters', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  res.json(presenters);
+});
+app.get('/api/settings', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  res.json({
+    scale: liveState.scale,
+    defaultAutoHide: liveState.defaultAutoHide,
+    queue: liveState.queue
+  });
+});
 
 app.post('/api/settings', (req, res) => {
   const { scale, defaultAutoHide } = req.body;
@@ -655,7 +707,13 @@ app.post('/api/presenters', (req, res) => {
 app.put('/api/presenters/:id', (req, res) => {
   const { id } = req.params;
   const index = presenters.findIndex(p => p.id === id);
-  if (index === -1) return res.status(404).json({ error: 'No encontrado' });
+  if (index === -1) {
+    const newPres = { ...req.body, id };
+    presenters.push(newPres);
+    savePresenters(presenters);
+    io.emit('presenters-updated', presenters);
+    return res.status(201).json(newPres);
+  }
 
   presenters[index] = { ...presenters[index], ...req.body, id };
   savePresenters(presenters);
@@ -706,7 +764,10 @@ app.delete('/api/presenters/:id', (req, res) => {
 });
 
 // Rutas API REST para Combates de Boxeo (La Velada del Caos)
-app.get('/api/fights', (req, res) => res.json(fights));
+app.get('/api/fights', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  res.json(fights);
+});
 
 app.post('/api/fights', (req, res) => {
   const newFight = { ...req.body, id: req.body.id || `fight-${Date.now()}` };
@@ -719,7 +780,13 @@ app.post('/api/fights', (req, res) => {
 app.put('/api/fights/:id', (req, res) => {
   const { id } = req.params;
   const index = fights.findIndex(f => f.id === id);
-  if (index === -1) return res.status(404).json({ error: 'Combate no encontrado' });
+  if (index === -1) {
+    const newFight = { ...req.body, id };
+    fights.push(newFight);
+    saveFights(fights);
+    io.emit('fights-updated', fights);
+    return res.status(201).json(newFight);
+  }
 
   fights[index] = { ...fights[index], ...req.body, id };
   saveFights(fights);
@@ -801,8 +868,16 @@ app.get('/api/multicam/state', (req, res) => {
 
 // Endpoint de diagnóstico del estado de PostgreSQL / SQL
 app.get('/api/db-status', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  const hasPgEnv = !!(
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_PUBLIC_URL ||
+    process.env.DATABASE_PRIVATE_URL ||
+    process.env.PGHOST
+  );
   const dbInfo = {
-    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    hasDatabaseUrl: hasPgEnv,
     isPostgresConnected: isDbReady,
     storageType: isDbReady ? 'PostgreSQL (Cloud SQL)' : 'Local JSON Files (data/)',
     serverUptimeSeconds: Math.round(process.uptime()),
@@ -855,10 +930,16 @@ app.get(['/', '/admin', '/host'], (req, res) => {
 });
 
 // WebSockets en tiempo real
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
+  if (dbInitPromise) {
+    try {
+      await dbInitPromise;
+    } catch (e) {}
+  }
   socket.emit('state-update', liveState);
   socket.emit('presenters-updated', presenters);
   socket.emit('fights-updated', fights);
+  socket.emit('multicam-settings-updated', multicamSettings);
 
   // 1. Preparar un slot (Queue / Preview sin mostrarlo en stream)
   socket.on('prepare-slot', (data) => {

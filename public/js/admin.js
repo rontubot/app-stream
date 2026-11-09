@@ -5,6 +5,37 @@ const socket = io();
 const socketDot = document.getElementById('socket-dot');
 const socketDotMobile = document.getElementById('socket-dot-mobile');
 const socketStatus = document.getElementById('socket-status');
+const dbDot = document.getElementById('db-dot');
+const dbStatusText = document.getElementById('db-status-text');
+
+async function checkDbStatus() {
+  try {
+    const res = await fetch('/api/db-status');
+    const data = await res.json();
+    if (data && data.isPostgresConnected) {
+      if (dbDot) {
+        dbDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green shadow-[0_0_8px_#00ff66]';
+      }
+      if (dbStatusText) {
+        dbStatusText.textContent = 'PostgreSQL Conectado';
+        dbStatusText.className = 'text-cyber-green font-bold';
+      }
+    } else {
+      if (dbDot) {
+        dbDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+      }
+      if (dbStatusText) {
+        dbStatusText.textContent = (data && data.hasDatabaseUrl) ? 'SQL: Error Conexión' : 'Almacenamiento Local';
+        dbStatusText.className = 'text-amber-400 font-medium';
+      }
+    }
+  } catch (e) {
+    if (dbDot) dbDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+    if (dbStatusText) dbStatusText.textContent = 'SQL: Verificando...';
+  }
+}
+checkDbStatus();
+setInterval(checkDbStatus, 15000);
 
 // Elementos DOM de Ajustes y Acciones Maestras
 const scalePills = document.getElementById('scale-pills');
@@ -639,29 +670,25 @@ socket.on('state-update', (state) => {
 // Lista de presentadores actualizada desde el servidor
 socket.on('presenters-updated', (list) => {
   const incoming = list || [];
-
-  // Si el servidor solo tiene 2 default pero el cliente tiene más en localStorage (ej: reinicio en Railway),
-  // enviamos los de localStorage al servidor para rehidratarlo sin perder nada.
-  const cachedRaw = localStorage.getItem(LS_PRESENTERS_KEY);
-  if (cachedRaw) {
-    try {
-      const cachedList = JSON.parse(cachedRaw);
-      if (Array.isArray(cachedList) && cachedList.length > incoming.length) {
-        const incomingIds = new Set(incoming.map(p => p.id));
-        const missingInServer = cachedList.filter(p => !incomingIds.has(p.id));
-        if (missingInServer.length > 0) {
+  if (incoming.length > 0) {
+    presentersList = incoming;
+    saveToLocalStorage();
+    updateSelectOptions();
+    renderPresentersGrid();
+  } else {
+    const cachedRaw = localStorage.getItem(LS_PRESENTERS_KEY);
+    if (cachedRaw) {
+      try {
+        const cachedList = JSON.parse(cachedRaw);
+        if (Array.isArray(cachedList) && cachedList.length > 0) {
           socket.emit('sync-all-presenters', cachedList);
         }
+      } catch (e) {
+        console.warn(e);
       }
-    } catch (e) {
-      console.warn(e);
     }
   }
-
-  presentersList = incoming;
-  saveToLocalStorage();
-  updateSelectOptions();
-  renderPresentersGrid();
+});
 });
 
 function updateSelectOptions() {
@@ -1389,6 +1416,7 @@ function renderPresentersGrid() {
         socket.emit('delete-presenter', p.id, (res) => {
           showToast(`🗑️ Presentador "${p.name}" eliminado`);
         });
+        fetch(`/api/presenters/${p.id}`, { method: 'DELETE' }).catch(err => console.warn('REST delete presenter:', err));
         renderPresentersGrid();
         updateSelectOptions();
       }
@@ -1479,6 +1507,13 @@ presenterForm.addEventListener('submit', (e) => {
   socket.emit('save-presenter', presenterData, (res) => {
     // Confirmación del servidor
   });
+
+  // 3. Respaldo directo REST para persistencia garantizada en base de datos
+  fetch(`/api/presenters/${presenterData.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(presenterData)
+  }).catch(err => console.warn('REST save presenter:', err));
 
   showToast(`💾 Presentador "${presenterData.name}" guardado exitosamente`);
   closeModal();
