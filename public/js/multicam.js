@@ -54,6 +54,7 @@
   const overlayPeerId = 'obs-multicam-' + Math.random().toString(36).substring(2, 7);
   const roomId = 'main';
 
+  let isMasterMuted = false;
   let currentSettings = {
     activeScene: 'pip-corner-tr',
     showLabels: true,
@@ -115,7 +116,40 @@
     if (typeof currentSettings.camScale !== 'undefined') {
       stage.style.setProperty('--cam-scale', currentSettings.camScale);
     }
+    syncAllMulticamAudioState();
   }
+
+  function syncAllMulticamAudioState() {
+    const globalMuted = !!(isMasterMuted || currentSettings.audioMutedOverall);
+    knownPeers.forEach((peer, peerId) => {
+      const audioElem = document.getElementById('audio-' + peerId);
+      if (!audioElem) return;
+      const isHost = !!(peer.isHost || peer.role === 'host');
+      const shouldMute = globalMuted || isHost || !!peer.isStreamMuted;
+      audioElem.muted = shouldMute;
+      audioElem.volume = shouldMute ? 0 : 1;
+      if (shouldMute) {
+        try { audioElem.pause(); } catch (e) {}
+      } else {
+        audioElem.play().catch(e => console.warn('[OBS Multicam] Reanudando audio:', e));
+      }
+    });
+  }
+
+  socket.on('state-update', (state) => {
+    if (state && typeof state.masterMuted === 'boolean') {
+      isMasterMuted = state.masterMuted;
+      syncAllMulticamAudioState();
+    }
+  });
+
+  socket.on('master-mute-changed', (data) => {
+    if (data && typeof data.muted === 'boolean') {
+      isMasterMuted = data.muted;
+      currentSettings.audioMutedOverall = data.muted;
+      syncAllMulticamAudioState();
+    }
+  });
 
   socket.on('multicam-peers-updated', ({ peers }) => {
     if (!Array.isArray(peers)) return;
@@ -131,10 +165,14 @@
         const audioElem = document.getElementById('audio-' + peer.id);
         if (audioElem) {
           const isHost = !!(peer.isHost || peer.role === 'host');
-          const isMuted = isHost || !!currentSettings.audioMutedOverall || !!peer.isStreamMuted;
+          const isMuted = isHost || isMasterMuted || !!currentSettings.audioMutedOverall || !!peer.isStreamMuted;
           audioElem.muted = isMuted;
           audioElem.volume = isMuted ? 0 : 1;
-          if (isMuted) audioElem.pause();
+          if (isMuted) {
+            audioElem.pause();
+          } else {
+            audioElem.play().catch(() => {});
+          }
         }
 
         if (!existing) {
@@ -292,7 +330,7 @@
     audioElem.srcObject = audioTracks.length > 0 ? new MediaStream(audioTracks) : stream;
     const peerData = knownPeers.get(peerId);
     const isHost = !!(peerData && (peerData.isHost || peerData.role === 'host'));
-    const isMuted = isHost || !!currentSettings.audioMutedOverall || (peerData && peerData.isStreamMuted);
+    const isMuted = isHost || isMasterMuted || !!currentSettings.audioMutedOverall || (peerData && peerData.isStreamMuted);
     audioElem.muted = !!isMuted;
     audioElem.volume = isMuted ? 0 : 1;
     if (!isMuted) {

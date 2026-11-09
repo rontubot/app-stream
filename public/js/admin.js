@@ -683,6 +683,12 @@ socket.on('state-update', (state) => {
       selectTtsVoice.value = state.chatOverlay.ttsVoiceName;
     }
   }
+
+  // Estado de Mute Maestro Global en OBS
+  if (typeof state.masterMuted === 'boolean') {
+    updateMasterMuteUI(state.masterMuted);
+  }
+
   refreshIcons();
 
   saveToLocalStorage();
@@ -2587,6 +2593,88 @@ function escapeHtml(str) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
   });
 }
+
+// ============================================================
+// CONTROL DE MUTE MAESTRO GLOBAL EN OBS (ESQUINA / HEADER)
+// ============================================================
+let currentMasterMuted = false;
+const btnMasterMute = document.getElementById('btn-master-mute');
+const iconMasterMute = document.getElementById('icon-master-mute');
+const textMasterMute = document.getElementById('text-master-mute');
+
+const btnMasterMuteFloating = document.getElementById('btn-master-mute-floating');
+const dotMasterMuteFloating = document.getElementById('dot-master-mute-floating');
+const iconMasterMuteFloating = document.getElementById('icon-master-mute-floating');
+const textMasterMuteFloating = document.getElementById('text-master-mute-floating');
+
+function updateMasterMuteUI(isMuted) {
+  currentMasterMuted = !!isMuted;
+
+  if (currentMasterMuted && 'speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+
+  // Botón superior en Header
+  if (btnMasterMute) {
+    if (currentMasterMuted) {
+      btnMasterMute.className = 'flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 border border-red-400 text-white text-xs font-chakra font-extrabold uppercase tracking-wide transition-all shadow-[0_0_18px_rgba(239,68,68,0.65)] animate-pulse';
+      if (textMasterMute) textMasterMute.textContent = 'OBS MUTEADO (ACTIVAR)';
+      if (iconMasterMute) iconMasterMute.setAttribute('data-lucide', 'volume-x');
+    } else {
+      btnMasterMute.className = 'flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-green/50 hover:border-cyber-green text-cyber-green text-xs font-chakra font-bold uppercase tracking-wide transition-all shadow-[0_0_12px_rgba(0,255,102,0.15)]';
+      if (textMasterMute) textMasterMute.textContent = 'MUTEAR TODO EN OBS';
+      if (iconMasterMute) iconMasterMute.setAttribute('data-lucide', 'volume-2');
+    }
+  }
+
+  // Botón flotante en la esquina inferior izquierda
+  if (btnMasterMuteFloating) {
+    if (currentMasterMuted) {
+      btnMasterMuteFloating.className = 'flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 border-2 border-red-300 text-white font-chakra font-extrabold text-xs uppercase tracking-wider shadow-[0_0_25px_rgba(239,68,68,0.75)] transition-all transform hover:scale-105 active:scale-95';
+      if (dotMasterMuteFloating) dotMasterMuteFloating.className = 'w-2.5 h-2.5 rounded-full bg-white animate-ping';
+      if (textMasterMuteFloating) textMasterMuteFloating.textContent = '🔇 OBS MUTEADO · REACTIVAR AUDIO';
+      if (iconMasterMuteFloating) iconMasterMuteFloating.setAttribute('data-lucide', 'volume-x');
+    } else {
+      btnMasterMuteFloating.className = 'flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-cyber-dark/95 backdrop-blur-md border-2 border-cyber-green/60 hover:border-cyber-green text-cyber-green font-chakra font-extrabold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(0,255,102,0.25)] transition-all transform hover:scale-105 active:scale-95';
+      if (dotMasterMuteFloating) dotMasterMuteFloating.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse';
+      if (textMasterMuteFloating) textMasterMuteFloating.textContent = '🔊 MUTEAR TODO EN OBS';
+      if (iconMasterMuteFloating) iconMasterMuteFloating.setAttribute('data-lucide', 'volume-2');
+    }
+  }
+
+  refreshIcons();
+}
+
+function toggleMasterMute() {
+  const nextMuted = !currentMasterMuted;
+  updateMasterMuteUI(nextMuted);
+
+  socket.emit('toggle-master-mute', { muted: nextMuted });
+  fetch('/api/master-mute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ muted: nextMuted })
+  }).catch(() => {});
+
+  if (nextMuted) {
+    showToast('🔇 TODO EL AUDIO DE OBS SILENCIADO (TTS + Cámaras)', 'error');
+  } else {
+    showToast('🔊 AUDIO DE OBS REACTIVADO NORMALMENTE');
+  }
+}
+
+if (btnMasterMute) {
+  btnMasterMute.addEventListener('click', toggleMasterMute);
+}
+if (btnMasterMuteFloating) {
+  btnMasterMuteFloating.addEventListener('click', toggleMasterMute);
+}
+
+socket.on('master-mute-changed', (data) => {
+  if (data && typeof data.muted === 'boolean') {
+    updateMasterMuteUI(data.muted);
+  }
+});
 
 // Inicialización
 if (multicamGuestLink) multicamGuestLink.value = window.location.origin + '/guest';

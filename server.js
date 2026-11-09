@@ -79,6 +79,7 @@ let liveState = {
   },
   scale: 65,
   defaultAutoHide: 5,
+  masterMuted: false,
   scene: {
     isActive: false,
     type: null, // 'starting' | 'brb' | 'ended' | 'custom'
@@ -151,6 +152,9 @@ function loadSettings() {
       if (typeof data.defaultAutoHide === 'number') {
         liveState.defaultAutoHide = data.defaultAutoHide;
       }
+      if (typeof data.masterMuted === 'boolean') {
+        liveState.masterMuted = data.masterMuted;
+      }
       if (data.topHud && typeof data.topHud.isVisible === 'boolean') {
         liveState.topHud.isVisible = data.topHud.isVisible;
       }
@@ -189,6 +193,7 @@ function getSettingsPayload() {
   return {
     scale: liveState.scale,
     defaultAutoHide: liveState.defaultAutoHide,
+    masterMuted: !!liveState.masterMuted,
     queue: {
       leftId: liveState.queue.left ? liveState.queue.left.id : null,
       rightId: liveState.queue.right ? liveState.queue.right.id : null
@@ -536,6 +541,7 @@ async function syncDataFromDatabase() {
       const s = dbData.settings;
       if (typeof s.scale === 'number') liveState.scale = s.scale;
       if (typeof s.defaultAutoHide === 'number') liveState.defaultAutoHide = s.defaultAutoHide;
+      if (typeof s.masterMuted === 'boolean') liveState.masterMuted = s.masterMuted;
       if (s.topHud) liveState.topHud = { ...liveState.topHud, ...s.topHud };
       if (s.chatOverlay) liveState.chatOverlay = { ...liveState.chatOverlay, ...s.chatOverlay };
       if (s.queue) {
@@ -950,6 +956,20 @@ app.post('/api/multicam/upload-avatar', (req, res) => {
   }
 });
 
+app.post('/api/master-mute', (req, res) => {
+  const nextMuted = (req.body && typeof req.body.muted === 'boolean')
+    ? req.body.muted
+    : !liveState.masterMuted;
+  liveState.masterMuted = nextMuted;
+  multicamSettings.audioMutedOverall = nextMuted;
+  saveSettings();
+  saveMulticamSettings();
+  io.emit('state-update', liveState);
+  io.emit('multicam-settings-updated', multicamSettings);
+  io.emit('master-mute-changed', { muted: nextMuted });
+  res.json({ success: true, muted: nextMuted });
+});
+
 app.get(['/', '/admin', '/host'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -965,6 +985,24 @@ io.on('connection', async (socket) => {
   socket.emit('presenters-updated', presenters);
   socket.emit('fights-updated', fights);
   socket.emit('multicam-settings-updated', multicamSettings);
+  socket.emit('master-mute-changed', { muted: !!liveState.masterMuted });
+
+  // Mute Maestro Global (Silenciar o activar todo el audio de la app en OBS)
+  socket.on('toggle-master-mute', (payload, callback) => {
+    const nextMuted = (payload && typeof payload.muted === 'boolean')
+      ? payload.muted
+      : !liveState.masterMuted;
+    liveState.masterMuted = nextMuted;
+    multicamSettings.audioMutedOverall = nextMuted;
+    saveSettings();
+    saveMulticamSettings();
+    io.emit('state-update', liveState);
+    io.emit('multicam-settings-updated', multicamSettings);
+    io.emit('master-mute-changed', { muted: nextMuted });
+    if (typeof callback === 'function') {
+      callback({ success: true, muted: nextMuted });
+    }
+  });
 
   // 1. Preparar un slot (Queue / Preview sin mostrarlo en stream)
   socket.on('prepare-slot', (data) => {

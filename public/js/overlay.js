@@ -479,6 +479,12 @@ socket.on('state-update', (state) => {
     updateChatOverlayState(state.chatOverlay);
   }
 
+  // Mute Maestro Global de toda la plataforma
+  if (typeof state.masterMuted === 'boolean') {
+    isMasterMuted = state.masterMuted;
+    syncAllOverlayAudioState();
+  }
+
   // Banco de Animaciones: Escena Multicam / Videollamada en Vivo
   if (state.multicam && state.multicam.isActive) {
     showMulticamOverlay();
@@ -588,6 +594,7 @@ const chatHudMessage = document.getElementById('chat-hud-message');
 const chatHudTime = document.getElementById('chat-hud-time');
 
 let chatDismissTimeout = null;
+let isMasterMuted = false;
 let currentChatOverlayState = {
   ttsEnabled: true,
   commandPrefix: '!anuncio',
@@ -705,6 +712,9 @@ function formatButlerSpeech(text, user, style = 'equipo') {
 
 // Reproductor TTS (Text-To-Speech) con Web Speech API optimizado para tono de mayordomo servicial
 function playTTS(text, user, options = {}) {
+  if (isMasterMuted || (typeof multicamSettingsCurrent !== 'undefined' && multicamSettingsCurrent.audioMutedOverall)) {
+    return;
+  }
   if (!('speechSynthesis' in window)) {
     console.warn('SpeechSynthesis no está disponible en este entorno.');
     return;
@@ -931,7 +941,52 @@ function applyMulticamSettings(settings) {
       document.body.classList.remove('multicam-grid-active');
     }
   }
+  syncAllOverlayAudioState();
 }
+
+function syncAllOverlayAudioState() {
+  const globalMuted = !!(isMasterMuted || multicamSettingsCurrent.audioMutedOverall);
+  if (globalMuted) {
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+    if (chatHudTtsIndicator) chatHudTtsIndicator.classList.remove('is-speaking');
+  }
+
+  // Sincronizar todos los elementos <audio> de los invitados WebRTC
+  multicamKnownPeers.forEach((peer, peerId) => {
+    const audioElem = document.getElementById('audio-' + peerId);
+    if (!audioElem) return;
+    const isHost = !!(peer.isHost || peer.role === 'host');
+    const shouldMute = globalMuted || isHost || !!peer.isStreamMuted;
+    audioElem.muted = shouldMute;
+    audioElem.volume = shouldMute ? 0 : 1;
+    if (shouldMute) {
+      try { audioElem.pause(); } catch (e) {}
+    } else {
+      audioElem.play().catch(e => console.warn('[Overlay Multicam] Reanudando audio:', e));
+    }
+  });
+
+  // Asegurar que cualquier etiqueta <audio> huérfana en audioContainer también respete el estado
+  if (audioContainer) {
+    audioContainer.querySelectorAll('audio').forEach(audioElem => {
+      if (globalMuted) {
+        audioElem.muted = true;
+        audioElem.volume = 0;
+        try { audioElem.pause(); } catch (e) {}
+      }
+    });
+  }
+}
+
+socket.on('master-mute-changed', (data) => {
+  if (data && typeof data.muted === 'boolean') {
+    isMasterMuted = data.muted;
+    multicamSettingsCurrent.audioMutedOverall = data.muted;
+    syncAllOverlayAudioState();
+  }
+});
 
 socket.on('multicam-peers-updated', ({ peers }) => {
   if (!Array.isArray(peers)) return;
@@ -947,10 +1002,14 @@ socket.on('multicam-peers-updated', ({ peers }) => {
       const audioElem = document.getElementById('audio-' + peer.id);
       if (audioElem) {
         const isHost = !!(peer.isHost || peer.role === 'host');
-        const isMuted = isHost || !!multicamSettingsCurrent.audioMutedOverall || !!peer.isStreamMuted;
+        const isMuted = isHost || isMasterMuted || !!multicamSettingsCurrent.audioMutedOverall || !!peer.isStreamMuted;
         audioElem.muted = isMuted;
         audioElem.volume = isMuted ? 0 : 1;
-        if (isMuted) audioElem.pause();
+        if (isMuted) {
+          audioElem.pause();
+        } else {
+          audioElem.play().catch(() => {});
+        }
       }
 
       if (!existing) {
@@ -1107,7 +1166,7 @@ function attachMulticamAudio(peerId, stream) {
   audioElem.srcObject = stream;
   const peerData = multicamKnownPeers.get(peerId);
   const isHost = !!(peerData && (peerData.isHost || peerData.role === 'host'));
-  const isMuted = isHost || !!multicamSettingsCurrent.audioMutedOverall || (peerData && peerData.isStreamMuted);
+  const isMuted = isHost || isMasterMuted || !!multicamSettingsCurrent.audioMutedOverall || (peerData && peerData.isStreamMuted);
   audioElem.muted = !!isMuted;
   audioElem.volume = isMuted ? 0 : 1;
   if (!isMuted) {
