@@ -319,6 +319,9 @@ function getRoomPeers(roomId) {
   }));
 }
 
+// Timers de anuncio TTS para solicitudes de ingreso (evita objetos Timeout dentro de waitingPeer)
+const waitingTtsTimers = new Map();
+
 function getWaitingPeers(roomId) {
   if (!multicamRooms[roomId]) {
     multicamRooms[roomId] = { peers: {}, waiting: {} };
@@ -326,7 +329,24 @@ function getWaitingPeers(roomId) {
   if (!multicamRooms[roomId].waiting) {
     multicamRooms[roomId].waiting = {};
   }
-  return Object.values(multicamRooms[roomId].waiting);
+  // Solo enviar a las notificaciones de Escenas los usuarios cuyo anuncio TTS ya terminó de hablar
+  return Object.values(multicamRooms[roomId].waiting).filter(p => p.ttsAnnounced !== false);
+}
+
+function completeJoinRequestTts(roomId = 'main', peerId) {
+  if (!peerId || !multicamRooms[roomId] || !multicamRooms[roomId].waiting) return;
+  const timerKey = `${roomId}:${peerId}`;
+  if (waitingTtsTimers.has(timerKey)) {
+    clearTimeout(waitingTtsTimers.get(timerKey));
+    waitingTtsTimers.delete(timerKey);
+  }
+  const waitingPeer = multicamRooms[roomId].waiting[peerId];
+  if (!waitingPeer || waitingPeer.ttsAnnounced) return;
+
+  waitingPeer.ttsAnnounced = true;
+  io.emit('multicam-join-request-tts-ended', { roomId, peerId });
+  io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
+  io.emit('multicam-join-request-alert', waitingPeer);
 }
 
 // Búsqueda de IP real del cliente (con soporte para proxies de Railway/Cloudflare)
@@ -1463,6 +1483,7 @@ io.on('connection', async (socket) => {
     if (!initials) initials = 'BV';
 
     const isHost = !!(userInfo.isHost || role === 'host');
+    const existingWaiting = multicamRooms[roomId].waiting[peerId];
     const waitingPeer = {
       id: peerId,
       socketId: socket.id,
@@ -1475,7 +1496,8 @@ io.on('connection', async (socket) => {
       hasVideo: userInfo.hasVideo !== false,
       hasAudio: userInfo.hasAudio !== false,
       clientIp,
-      requestedAt: Date.now()
+      requestedAt: existingWaiting ? existingWaiting.requestedAt : Date.now(),
+      ttsAnnounced: false
     };
 
     multicamRooms[roomId].waiting[peerId] = waitingPeer;
@@ -1483,20 +1505,50 @@ io.on('connection', async (socket) => {
     socket.multicamPeerId = peerId;
     socket.multicamWaiting = true;
 
-    io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
-    io.emit('multicam-join-request-alert', waitingPeer);
+    const timerKey = `${roomId}:${peerId}`;
+    if (waitingTtsTimers.has(timerKey)) {
+      clearTimeout(waitingTtsTimers.get(timerKey));
+    }
+
+    // 1. Primero disparar el TTS y el vector de audio brillante en verde en la esquina inferior derecha de OBS
+    io.emit('multicam-join-request-tts-start', { roomId, peer: waitingPeer });
+
+    // 2. Respaldo automático: si el audio está muteado o ningún navegador confirma el fin del TTS en 5.2s, mostrar la notificación en Escenas
+    const fallbackMs = (liveState.masterMuted || multicamSettings.audioMutedOverall || (liveState.chatOverlay && liveState.chatOverlay.ttsEnabled === false))
+      ? 600
+      : 5200;
+    const t = setTimeout(() => {
+      completeJoinRequestTts(roomId, peerId);
+    }, fallbackMs);
+    waitingTtsTimers.set(timerKey, t);
 
     if (typeof callback === 'function') {
       callback({ success: true, status: 'waiting' });
     }
   });
 
+  // Confirmación de que OBS Overlay tomó la reproducción del TTS de ingreso (evita eco doble en Admin)
+  socket.on('join-request-tts-ack', (data) => {
+    io.emit('join-request-tts-ack', data);
+  });
+
+  // Cuando el TTS termina de anunciar al usuario que intenta entrar, mostrar la notificación en Escenas
+  socket.on('multicam-join-request-tts-complete', ({ roomId = 'main', peerId } = {}) => {
+    completeJoinRequestTts(roomId, peerId);
+  });
+
   // Cancelar solicitud de ingreso desde /guest
   socket.on('multicam-cancel-join', ({ roomId = 'main', peerId }) => {
     const targetId = peerId || socket.multicamPeerId;
+    const timerKey = `${roomId}:${targetId}`;
+    if (waitingTtsTimers.has(timerKey)) {
+      clearTimeout(waitingTtsTimers.get(timerKey));
+      waitingTtsTimers.delete(timerKey);
+    }
     if (targetId && multicamRooms[roomId] && multicamRooms[roomId].waiting && multicamRooms[roomId].waiting[targetId]) {
       delete multicamRooms[roomId].waiting[targetId];
       socket.multicamWaiting = false;
+      io.emit('multicam-join-request-tts-ended', { roomId, peerId: targetId });
       io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
     }
   });
@@ -1821,8 +1873,14 @@ io.on('connection', async (socket) => {
     const roomId = socket.multicamRoomId;
     const peerId = socket.multicamPeerId;
     if (roomId && peerId && multicamRooms[roomId]) {
+      const timerKey = `${roomId}:${peerId}`;
+      if (waitingTtsTimers.has(timerKey)) {
+        clearTimeout(waitingTtsTimers.get(timerKey));
+        waitingTtsTimers.delete(timerKey);
+      }
       if (multicamRooms[roomId].waiting && multicamRooms[roomId].waiting[peerId]) {
         delete multicamRooms[roomId].waiting[peerId];
+        io.emit('multicam-join-request-tts-ended', { roomId, peerId });
         io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
       }
       if (multicamRooms[roomId].peers && multicamRooms[roomId].peers[peerId]) {

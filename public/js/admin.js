@@ -2693,17 +2693,102 @@ socket.on('master-mute-changed', (data) => {
 });
 
 // ============================================================
-// SALA DE ESPERA Y VERIFICACIÓN DE INGRESO A /GUEST
+// SALA DE ESPERA Y VERIFICACIÓN DE INGRESO A /GUEST (TTS + NOTIFICACIÓN EN ESCENAS)
 // ============================================================
 const multicamWaitingSection = document.getElementById('multicam-waiting-section');
 const multicamWaitingBadge = document.getElementById('multicam-waiting-badge');
 const multicamWaitingList = document.getElementById('multicam-waiting-list');
 const btnApproveAllWaiting = document.getElementById('btn-approve-all-waiting');
+const navBadgeWaiting = document.getElementById('nav-badge-waiting');
 
 const floatingWaitingPanel = document.getElementById('floating-waiting-panel');
 const floatingWaitingCount = document.getElementById('floating-waiting-count');
 const floatingWaitingList = document.getElementById('floating-waiting-list');
 const btnApproveAllFloating = document.getElementById('btn-approve-all-floating');
+const btnGotoScenesWaiting = document.getElementById('btn-goto-scenes-waiting');
+
+if (btnGotoScenesWaiting) {
+  btnGotoScenesWaiting.addEventListener('click', () => {
+    switchMainTab('multicam');
+    setTimeout(() => {
+      if (multicamWaitingSection) {
+        multicamWaitingSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 120);
+  });
+}
+
+// Coordinación de TTS de ingreso entre OBS Overlay y Panel de Host (evita eco doble y asegura voz si OBS no está abierto)
+const joinRequestAckedPeers = new Set();
+
+socket.on('join-request-tts-ack', (data) => {
+  if (data && data.peerId) {
+    joinRequestAckedPeers.add(data.peerId);
+  }
+});
+
+socket.on('multicam-join-request-tts-start', (payload) => {
+  if (!payload || !payload.peer) return;
+  const peer = payload.peer;
+  const roomId = payload.roomId || 'main';
+  joinRequestAckedPeers.delete(peer.id);
+
+  // Esperar 350ms para ver si una ventana real de OBS (/overlay) tomó la locución;
+  // si no hay OBS abierto, el Panel de Host pronuncia el aviso y al terminar muestra la notificación en Escenas
+  setTimeout(() => {
+    if (joinRequestAckedPeers.has(peer.id)) return;
+
+    if (currentMasterMuted || !('speechSynthesis' in window)) {
+      socket.emit('multicam-join-request-tts-complete', { roomId, peerId: peer.id });
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+      if (typeof window.speechSynthesis.resume === 'function') {
+        window.speechSynthesis.resume();
+      }
+
+      const cleanName = (peer.name || 'un invitado').replace(/[_@#]/g, ' ').trim();
+      const phrase = `Equipo, el usuario ${cleanName} está intentando entrar en la sala.`;
+      const utterance = new SpeechSynthesisUtterance(phrase);
+      utterance.lang = 'es-ES';
+      utterance.rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
+      utterance.pitch = selectTtsPitch ? parseFloat(selectTtsPitch.value) : 0.82;
+      utterance.volume = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const chosenName = selectTtsVoice ? selectTtsVoice.value : '';
+      let selectedVoice = voices.find(v => v.name === chosenName || v.voiceURI === chosenName);
+      if (!selectedVoice) {
+        const esVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('es') || v.lang.toLowerCase().includes('spanish')));
+        selectedVoice = esVoices[0] || voices[0];
+      }
+      if (selectedVoice) utterance.voice = selectedVoice;
+
+      let completed = false;
+      const done = () => {
+        if (completed) return;
+        completed = true;
+        socket.emit('multicam-join-request-tts-complete', { roomId, peerId: peer.id });
+      };
+
+      const safety = setTimeout(done, 5200);
+      utterance.onend = () => {
+        clearTimeout(safety);
+        done();
+      };
+      utterance.onerror = () => {
+        clearTimeout(safety);
+        done();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      socket.emit('multicam-join-request-tts-complete', { roomId, peerId: peer.id });
+    }
+  }, 350);
+});
 
 function renderWaitingPeersList(waitingPeers) {
   const list = Array.isArray(waitingPeers) ? waitingPeers : [];
@@ -2711,6 +2796,14 @@ function renderWaitingPeersList(waitingPeers) {
 
   if (multicamWaitingBadge) multicamWaitingBadge.textContent = count;
   if (floatingWaitingCount) floatingWaitingCount.textContent = count;
+  if (navBadgeWaiting) {
+    if (count > 0) {
+      navBadgeWaiting.textContent = `🔔 ${count} ${count === 1 ? 'SOLICITUD' : 'SOLICITUDES'}`;
+      navBadgeWaiting.classList.remove('hidden');
+    } else {
+      navBadgeWaiting.classList.add('hidden');
+    }
+  }
 
   if (count === 0) {
     if (multicamWaitingSection) multicamWaitingSection.classList.add('hidden');
@@ -2720,6 +2813,10 @@ function renderWaitingPeersList(waitingPeers) {
     return;
   }
 
+  // Asegurar que la sección de Escenas -> Multicam esté desplegada para ver la notificación en Escenas
+  if (typeof toggleMulticamModule === 'function') {
+    toggleMulticamModule(true);
+  }
   if (multicamWaitingSection) multicamWaitingSection.classList.remove('hidden');
   if (floatingWaitingPanel) floatingWaitingPanel.classList.remove('hidden');
 
@@ -2821,7 +2918,10 @@ socket.on('multicam-waiting-updated', ({ waiting }) => {
 
 socket.on('multicam-join-request-alert', (peer) => {
   if (peer && peer.name) {
-    showToast(`🔔 "${peer.name}" solicita ingresar a la sala de videollamada`);
+    if (typeof toggleMulticamModule === 'function') {
+      toggleMulticamModule(true);
+    }
+    showToast(`🔔 "${peer.name}" solicita ingresar a la sala (Verificación en Escenas)`);
   }
 });
 

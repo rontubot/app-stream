@@ -710,9 +710,100 @@ function formatButlerSpeech(text, user, style = 'equipo') {
   }
 }
 
+// ============================================================
+// VECTOR DE AUDIO REACTIVO EN ESQUINA INFERIOR DERECHA (OBS TTS)
+// ============================================================
+const obsCornerAudioVector = document.getElementById('obs-corner-audio-vector');
+let cornerAudioAnimFrame = null;
+let cornerAudioActive = false;
+let cornerAudioBoost = 0;
+let cornerAudioFallbackTimeout = null;
+
+function boostCornerAudioVector(amount = 0.65) {
+  cornerAudioBoost = Math.min(1.2, cornerAudioBoost + amount);
+}
+
+function startCornerAudioVectorAnimation(maxDurationMs = 9000) {
+  if (!obsCornerAudioVector) return;
+  if (cornerAudioFallbackTimeout) {
+    clearTimeout(cornerAudioFallbackTimeout);
+    cornerAudioFallbackTimeout = null;
+  }
+
+  cornerAudioActive = true;
+  cornerAudioBoost = 0.8;
+  obsCornerAudioVector.classList.add('is-active');
+
+  const eqBars = obsCornerAudioVector.querySelectorAll('.eq-bar');
+
+  if (cornerAudioAnimFrame) {
+    cancelAnimationFrame(cornerAudioAnimFrame);
+  }
+
+  const startTime = performance.now();
+  function animateVector(now) {
+    if (!cornerAudioActive) return;
+    const t = (now - startTime) / 1000;
+
+    // Envolvente reactiva orgánica simulando modulación de sílabas + impulsos de onboundary
+    const syllableWave =
+      Math.abs(Math.sin(t * 9.5)) * 0.45 +
+      Math.abs(Math.sin(t * 15.2 + 1.1)) * 0.35 +
+      Math.abs(Math.cos(t * 5.8)) * 0.2;
+
+    cornerAudioBoost *= 0.91;
+    const intensity = Math.min(1.45, Math.max(0.45, 0.5 + syllableWave * 0.75 + cornerAudioBoost * 0.5));
+    obsCornerAudioVector.style.setProperty('--voice-pulse', intensity.toFixed(3));
+
+    if (eqBars && eqBars.length > 0) {
+      eqBars.forEach((bar, idx) => {
+        const barWave = Math.abs(Math.sin(t * (10 + idx * 2.7) + idx * 0.9));
+        const heightPx = Math.round(6 + (barWave * 0.65 + (intensity - 0.45) * 0.55) * 20);
+        bar.style.height = `${Math.min(28, Math.max(5, heightPx))}px`;
+      });
+    }
+
+    cornerAudioAnimFrame = requestAnimationFrame(animateVector);
+  }
+
+  cornerAudioAnimFrame = requestAnimationFrame(animateVector);
+
+  if (maxDurationMs > 0) {
+    cornerAudioFallbackTimeout = setTimeout(() => {
+      stopCornerAudioVectorAnimation();
+    }, maxDurationMs);
+  }
+}
+
+function stopCornerAudioVectorAnimation() {
+  cornerAudioActive = false;
+  cornerAudioBoost = 0;
+  if (cornerAudioAnimFrame) {
+    cancelAnimationFrame(cornerAudioAnimFrame);
+    cornerAudioAnimFrame = null;
+  }
+  if (cornerAudioFallbackTimeout) {
+    clearTimeout(cornerAudioFallbackTimeout);
+    cornerAudioFallbackTimeout = null;
+  }
+  if (obsCornerAudioVector) {
+    obsCornerAudioVector.classList.remove('is-active');
+    obsCornerAudioVector.style.setProperty('--voice-pulse', '0.4');
+    const eqBars = obsCornerAudioVector.querySelectorAll('.eq-bar');
+    eqBars.forEach(bar => {
+      bar.style.height = '6px';
+    });
+  }
+}
+
 // Reproductor TTS (Text-To-Speech) con Web Speech API optimizado para tono de mayordomo servicial
 function playTTS(text, user, options = {}) {
-  if (isMasterMuted || (typeof multicamSettingsCurrent !== 'undefined' && multicamSettingsCurrent.audioMutedOverall) || (window.self !== window.top)) {
+  if (isMasterMuted || (typeof multicamSettingsCurrent !== 'undefined' && multicamSettingsCurrent.audioMutedOverall)) {
+    return;
+  }
+  // Si es el iframe de vista previa del panel, mostrar la animación visual pero no duplicar la voz
+  if (window.self !== window.top || new URLSearchParams(window.location.search).get('preview') === '1') {
+    startCornerAudioVectorAnimation(4200);
     return;
   }
   if (!('speechSynthesis' in window)) {
@@ -727,7 +818,7 @@ function playTTS(text, user, options = {}) {
     }
 
     const style = options.ttsStyle || currentChatOverlayState.ttsStyle || 'equipo';
-    const phrase = formatButlerSpeech(text, user, style);
+    const phrase = options.rawPhrase || formatButlerSpeech(text, user, style);
     const utterance = new SpeechSynthesisUtterance(phrase);
 
     utterance.lang = 'es-ES';
@@ -744,22 +835,86 @@ function playTTS(text, user, options = {}) {
 
     utterance.onstart = () => {
       if (chatHudTtsIndicator) chatHudTtsIndicator.classList.add('is-speaking');
+      startCornerAudioVectorAnimation(12000);
+    };
+
+    utterance.onboundary = () => {
+      boostCornerAudioVector(0.75);
     };
 
     utterance.onend = () => {
       if (chatHudTtsIndicator) chatHudTtsIndicator.classList.remove('is-speaking');
+      stopCornerAudioVectorAnimation();
+      if (typeof options.onComplete === 'function') options.onComplete();
     };
 
     utterance.onerror = (e) => {
       console.warn('TTS error:', e);
       if (chatHudTtsIndicator) chatHudTtsIndicator.classList.remove('is-speaking');
+      stopCornerAudioVectorAnimation();
+      if (typeof options.onComplete === 'function') options.onComplete();
     };
 
+    startCornerAudioVectorAnimation(12000);
     window.speechSynthesis.speak(utterance);
   } catch (err) {
     console.error('Error al reproducir TTS:', err);
+    stopCornerAudioVectorAnimation();
+    if (typeof options.onComplete === 'function') options.onComplete();
   }
 }
+
+// Aviso TTS y Vector de Audio en esquina inferior derecha cuando un usuario solicita entrar en la sala
+socket.on('multicam-join-request-tts-start', (payload) => {
+  if (!payload || !payload.peer) return;
+  const peer = payload.peer;
+  const roomId = payload.roomId || 'main';
+  const cleanName = (peer.name || 'un invitado').replace(/[_@#]/g, ' ').trim();
+  const phrase = `Equipo, el usuario ${cleanName} está intentando entrar en la sala.`;
+
+  // Si todo el audio de OBS está muteado, no emitir sonido ni vector de audio y liberar notificación rápido
+  if (isMasterMuted || (typeof multicamSettingsCurrent !== 'undefined' && multicamSettingsCurrent.audioMutedOverall)) {
+    if (!isOverlayEmbeddedPreview) {
+      socket.emit('multicam-join-request-tts-complete', { roomId, peerId: peer.id });
+    }
+    return;
+  }
+
+  // Activar siempre el vector de audio brillante en verde en la esquina inferior derecha (tanto en OBS como en el monitor)
+  startCornerAudioVectorAnimation(8000);
+
+  // Solo el overlay real de OBS (no el iframe preview incrustado en el panel) pronuncia la voz aquí
+  // y avisa al servidor cuando termina de hablar para mostrar la notificación en Escenas
+  if (!isOverlayEmbeddedPreview) {
+    socket.emit('join-request-tts-ack', { peerId: peer.id });
+
+    let completed = false;
+    const finishJoinTts = () => {
+      if (completed) return;
+      completed = true;
+      stopCornerAudioVectorAnimation();
+      socket.emit('multicam-join-request-tts-complete', { roomId, peerId: peer.id });
+    };
+
+    // Respaldo de seguridad por si el navegador bloquea el evento onend de speechSynthesis
+    const safetyTimer = setTimeout(finishJoinTts, 5500);
+
+    playTTS('', '', {
+      rawPhrase: phrase,
+      ttsRate: currentChatOverlayState.ttsRate || 0.93,
+      ttsPitch: currentChatOverlayState.ttsPitch || 0.82,
+      ttsVoiceName: currentChatOverlayState.ttsVoiceName || '',
+      onComplete: () => {
+        clearTimeout(safetyTimer);
+        finishJoinTts();
+      }
+    });
+  }
+});
+
+socket.on('multicam-join-request-tts-ended', () => {
+  stopCornerAudioVectorAnimation();
+});
 
 // Recibir nuevo anuncio o comando de chat
 socket.on('chat-announcement', (payload) => {
@@ -953,6 +1108,9 @@ function syncAllOverlayAudioState() {
       try { window.speechSynthesis.cancel(); } catch (e) {}
     }
     if (chatHudTtsIndicator) chatHudTtsIndicator.classList.remove('is-speaking');
+    if (isMasterMuted || multicamSettingsCurrent.audioMutedOverall) {
+      stopCornerAudioVectorAnimation();
+    }
   }
 
   // 1. Nivel WebRTC Receiver: silenciar o reactivar pistas de audio entrantes directamente en cada RTCPeerConnection
