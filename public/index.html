@@ -1159,14 +1159,14 @@
         <div class="bg-cyber-card/70 p-4 sm:p-5 rounded-xl border border-cyber-border space-y-4">
           <div class="flex items-center justify-between pb-2 border-b border-cyber-border/60">
             <div class="flex items-center gap-2">
-              <span class="text-base">🎩</span>
+              <span class="text-base">🎙️</span>
               <h3 class="text-xs sm:text-sm font-bold font-chakra uppercase tracking-wider text-white">
-                CONFIGURACIÓN DE VOZ Y PERSONALIDAD DEL MAYORDOMO
+                CONFIGURACIÓN DE VOZ Y LOCUCIÓN ("EQUIPO...")
               </h3>
             </div>
             <button id="btn-preview-voice-sample" type="button" class="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500 hover:text-black text-purple-300 font-chakra font-bold text-xs flex items-center gap-1.5 transition-all border border-purple-500/40 cursor-pointer">
               <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
-              <span>Escuchar Muestra ("Señor...")</span>
+              <span>Escuchar Muestra ("Equipo...")</span>
             </button>
           </div>
 
@@ -1194,13 +1194,13 @@
               </label>
               <select id="select-tts-pitch" class="w-full bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-cyber-green transition-colors">
                 <option value="0.75">Barítono Muy Grave (0.75)</option>
-                <option value="0.82" selected>Mayordomo Distinguido Grave (0.82)</option>
+                <option value="0.82" selected>Grave Distinguido (0.82)</option>
                 <option value="0.92">Formal Moderado (0.92)</option>
                 <option value="1.0">Tono Natural Original (1.0)</option>
                 <option value="1.15">Agudo (1.15)</option>
               </select>
               <p class="text-[11px] text-gray-400">
-                Un tono grave (0.82) le da un cuerpo señorial a cualquier voz.
+                Un tono grave (0.82) le da un cuerpo profesional a cualquier voz.
               </p>
             </div>
 
@@ -1230,13 +1230,13 @@
                 <span>Introducción de Mensajes:</span>
               </label>
               <select id="select-tts-style" class="w-full bg-cyber-dark border border-cyber-border hover:border-purple-400 rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-purple-400 transition-colors">
-                <option value="senor" selected>🎩 Mayordomo Leal ("Señor, [Usuario] nos comunica...")</option>
-                <option value="senor_breve">🎩 Mayordomo Breve ("Señor, mensaje de [Usuario]:...")</option>
+                <option value="equipo" selected>🎙️ Modo Equipo ("Equipo, [Usuario] nos comunica...")</option>
+                <option value="equipo_breve">🎙️ Modo Equipo Breve ("Equipo, mensaje de [Usuario]:...")</option>
                 <option value="classic">💬 Clásico Directo ("[Usuario] dice...")</option>
               </select>
             </div>
             <div class="md:col-span-4 text-[11px] text-gray-400">
-              Siempre se dirigirá a ti como <strong class="text-cyber-green">"Señor"</strong> al presentar cualquier mensaje del chat.
+              Siempre presentará los mensajes dirigiéndose al stream con <strong class="text-cyber-green">"Equipo"</strong> al inicio de cada frase.
             </div>
           </div>
 

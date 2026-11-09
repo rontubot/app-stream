@@ -672,7 +672,7 @@ function findBestButlerVoice(preferredVoiceName = '') {
   return esVoices[0];
 }
 
-function formatButlerSpeech(text, user, style = 'senor') {
+function formatButlerSpeech(text, user, style = 'equipo') {
   const cleanUser = (user || 'alguien')
     .replace(/^@/, '')
     .replace(/_/g, ' ')
@@ -686,18 +686,18 @@ function formatButlerSpeech(text, user, style = 'senor') {
     .replace(/\b(jaj+a*|jeje+|kjj+|jaskjsa+|xd+)\b/gi, 'risas en el chat')
     .trim();
 
-  if (style === 'senor' || style === 'butler') {
-    const senorPhrases = [
-      `Señor, ${cleanUser} nos comunica: ${cleanText}`,
-      `Señor, mensaje de ${cleanUser}: ${cleanText}`,
-      `Señor, ${cleanUser} comparte lo siguiente: ${cleanText}`,
-      `Señor, anuncio de ${cleanUser}: ${cleanText}`,
-      `Señor, ${cleanUser} dice: ${cleanText}`
+  if (style === 'equipo' || style === 'senor' || style === 'butler') {
+    const equipoPhrases = [
+      `Equipo, ${cleanUser} nos comunica: ${cleanText}`,
+      `Equipo, mensaje de ${cleanUser}: ${cleanText}`,
+      `Equipo, ${cleanUser} comparte lo siguiente: ${cleanText}`,
+      `Equipo, anuncio de ${cleanUser}: ${cleanText}`,
+      `Equipo, ${cleanUser} dice: ${cleanText}`
     ];
-    const index = Math.abs(cleanUser.length + cleanText.length) % senorPhrases.length;
-    return senorPhrases[index];
-  } else if (style === 'senor_breve') {
-    return `Señor, mensaje de ${cleanUser}: ${cleanText}`;
+    const index = Math.abs(cleanUser.length + cleanText.length) % equipoPhrases.length;
+    return equipoPhrases[index];
+  } else if (style === 'equipo_breve' || style === 'senor_breve') {
+    return `Equipo, mensaje de ${cleanUser}: ${cleanText}`;
   } else {
     return `${cleanUser} dice: ${cleanText}`;
   }
@@ -716,7 +716,7 @@ function playTTS(text, user, options = {}) {
       window.speechSynthesis.resume();
     }
 
-    const style = options.ttsStyle || currentChatOverlayState.ttsStyle || 'senor';
+    const style = options.ttsStyle || currentChatOverlayState.ttsStyle || 'equipo';
     const phrase = formatButlerSpeech(text, user, style);
     const utterance = new SpeechSynthesisUtterance(phrase);
 

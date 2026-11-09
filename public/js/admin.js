@@ -1990,7 +1990,7 @@ if ('speechSynthesis' in window) {
 }
 
 function emitChatTtsConfig() {
-  const style = selectTtsStyle ? selectTtsStyle.value : 'senor';
+  const style = selectTtsStyle ? selectTtsStyle.value : 'equipo';
   const rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
   const pitch = selectTtsPitch ? parseFloat(selectTtsPitch.value) : 0.82;
   const voiceName = selectTtsVoice ? selectTtsVoice.value : '';
@@ -2001,7 +2001,7 @@ function emitChatTtsConfig() {
 if (selectTtsVoice) {
   selectTtsVoice.addEventListener('change', () => {
     emitChatTtsConfig();
-    playAdminButlerPreview('Voz configurada a su servicio', 'Señor');
+    playAdminButlerPreview('Voz configurada y lista para el stream', 'Equipo');
     showToast(`🎙️ Voz seleccionada: ${selectTtsVoice.value}`);
   });
 }
@@ -2009,7 +2009,7 @@ if (selectTtsVoice) {
 if (selectTtsPitch) {
   selectTtsPitch.addEventListener('change', () => {
     emitChatTtsConfig();
-    playAdminButlerPreview('Tono calibrado', 'Señor');
+    playAdminButlerPreview('Tono calibrado', 'Equipo');
     showToast(`🎚️ Tono de voz actualizado: ${selectTtsPitch.options[selectTtsPitch.selectedIndex].text}`);
   });
 }
@@ -2024,11 +2024,11 @@ if (selectTtsRate) {
 if (selectTtsStyle) {
   selectTtsStyle.addEventListener('change', () => {
     emitChatTtsConfig();
-    showToast(`🎩 Estilo de mayordomo: ${selectTtsStyle.options[selectTtsStyle.selectedIndex].text}`);
+    showToast(`🎙️ Estilo de locución: ${selectTtsStyle.options[selectTtsStyle.selectedIndex].text}`);
   });
 }
 
-// Reproducción local en panel para probar el mayordomo directamente ("Señor...")
+// Reproducción local en panel para probar el asistente directamente ("Equipo...")
 function playAdminButlerPreview(text, user) {
   if (!('speechSynthesis' in window)) return;
   try {
@@ -2045,19 +2045,19 @@ function playAdminButlerPreview(text, user) {
       .replace(/\b(jaj+a*|jeje+|kjj+|jaskjsa+|xd+)\b/gi, 'risas')
       .trim();
 
-    const style = selectTtsStyle ? selectTtsStyle.value : 'senor';
+    const style = selectTtsStyle ? selectTtsStyle.value : 'equipo';
     let phrase = `${cleanUser} dice: ${cleanText}`;
-    if (style === 'senor' || style === 'butler') {
-      const senorPhrases = [
-        `Señor, ${cleanUser} nos comunica: ${cleanText}`,
-        `Señor, mensaje de ${cleanUser}: ${cleanText}`,
-        `Señor, ${cleanUser} comparte lo siguiente: ${cleanText}`,
-        `Señor, anuncio de ${cleanUser}: ${cleanText}`
+    if (style === 'equipo' || style === 'senor' || style === 'butler') {
+      const equipoPhrases = [
+        `Equipo, ${cleanUser} nos comunica: ${cleanText}`,
+        `Equipo, mensaje de ${cleanUser}: ${cleanText}`,
+        `Equipo, ${cleanUser} comparte lo siguiente: ${cleanText}`,
+        `Equipo, anuncio de ${cleanUser}: ${cleanText}`
       ];
-      const index = Math.abs(cleanUser.length + cleanText.length) % senorPhrases.length;
-      phrase = senorPhrases[index];
-    } else if (style === 'senor_breve') {
-      phrase = `Señor, mensaje de ${cleanUser}: ${cleanText}`;
+      const index = Math.abs(cleanUser.length + cleanText.length) % equipoPhrases.length;
+      phrase = equipoPhrases[index];
+    } else if (style === 'equipo_breve' || style === 'senor_breve') {
+      phrase = `Equipo, mensaje de ${cleanUser}: ${cleanText}`;
     }
 
     const utterance = new SpeechSynthesisUtterance(phrase);
@@ -2098,7 +2098,7 @@ if (btnSendAnnouncement) {
       return;
     }
 
-    const style = selectTtsStyle ? selectTtsStyle.value : 'senor';
+    const style = selectTtsStyle ? selectTtsStyle.value : 'equipo';
     const rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
     const pitch = selectTtsPitch ? parseFloat(selectTtsPitch.value) : 0.82;
     const voiceName = selectTtsVoice ? selectTtsVoice.value : '';

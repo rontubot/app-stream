@@ -98,7 +98,7 @@ let liveState = {
     isVisible: false,
     ttsEnabled: true,
     commandPrefix: '!anuncio',
-    ttsStyle: 'senor', // 'senor' (Mayordomo leal "Señor,...") | 'senor_breve' | 'classic'
+    ttsStyle: 'equipo', // 'equipo' ("Equipo,...") | 'equipo_breve' | 'classic'
     ttsRate: 0.93,
     ttsPitch: 0.82,
     ttsVoiceName: '',
@@ -195,7 +195,7 @@ function getSettingsPayload() {
     chatOverlay: {
       ttsEnabled: liveState.chatOverlay.ttsEnabled,
       commandPrefix: liveState.chatOverlay.commandPrefix,
-      ttsStyle: liveState.chatOverlay.ttsStyle || 'senor',
+      ttsStyle: liveState.chatOverlay.ttsStyle || 'equipo',
       ttsRate: liveState.chatOverlay.ttsRate || 0.93,
       ttsPitch: liveState.chatOverlay.ttsPitch || 0.82,
       ttsVoiceName: liveState.chatOverlay.ttsVoiceName || ''
@@ -1127,7 +1127,7 @@ io.on('connection', async (socket) => {
       text: cleanText,
       prefix: prefix,
       tts: typeof data.tts === 'boolean' ? data.tts : liveState.chatOverlay.ttsEnabled,
-      ttsStyle: liveState.chatOverlay.ttsStyle || 'senor',
+      ttsStyle: liveState.chatOverlay.ttsStyle || 'equipo',
       ttsRate: liveState.chatOverlay.ttsRate || 0.93,
       ttsPitch: liveState.chatOverlay.ttsPitch || 0.82,
       ttsVoiceName: liveState.chatOverlay.ttsVoiceName || '',
@@ -1732,7 +1732,7 @@ async function initKickChatListener() {
                 text: announcementText,
                 prefix: '!anuncio',
                 tts: liveState.chatOverlay.ttsEnabled,
-                ttsStyle: liveState.chatOverlay.ttsStyle || 'senor',
+                ttsStyle: liveState.chatOverlay.ttsStyle || 'equipo',
                 ttsRate: liveState.chatOverlay.ttsRate || 0.93,
                 ttsPitch: liveState.chatOverlay.ttsPitch || 0.82,
                 ttsVoiceName: liveState.chatOverlay.ttsVoiceName || '',
