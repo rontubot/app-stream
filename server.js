@@ -98,6 +98,9 @@ let liveState = {
     isVisible: false,
     ttsEnabled: true,
     commandPrefix: '!anuncio',
+    ttsStyle: 'butler', // 'butler' (Mayordomo servicial y formal) | 'formal' | 'classic'
+    ttsRate: 0.93,
+    ttsPitch: 0.92,
     lastMessage: null
   }
 };
@@ -155,6 +158,15 @@ function loadSettings() {
         if (typeof data.chatOverlay.commandPrefix === 'string' && data.chatOverlay.commandPrefix.trim()) {
           liveState.chatOverlay.commandPrefix = data.chatOverlay.commandPrefix.trim();
         }
+        if (typeof data.chatOverlay.ttsStyle === 'string') {
+          liveState.chatOverlay.ttsStyle = data.chatOverlay.ttsStyle;
+        }
+        if (typeof data.chatOverlay.ttsRate === 'number') {
+          liveState.chatOverlay.ttsRate = data.chatOverlay.ttsRate;
+        }
+        if (typeof data.chatOverlay.ttsPitch === 'number') {
+          liveState.chatOverlay.ttsPitch = data.chatOverlay.ttsPitch;
+        }
       }
       return data;
     }
@@ -178,7 +190,10 @@ function getSettingsPayload() {
     },
     chatOverlay: {
       ttsEnabled: liveState.chatOverlay.ttsEnabled,
-      commandPrefix: liveState.chatOverlay.commandPrefix
+      commandPrefix: liveState.chatOverlay.commandPrefix,
+      ttsStyle: liveState.chatOverlay.ttsStyle || 'butler',
+      ttsRate: liveState.chatOverlay.ttsRate || 0.93,
+      ttsPitch: liveState.chatOverlay.ttsPitch || 0.92
     }
   };
 }
@@ -1107,6 +1122,9 @@ io.on('connection', async (socket) => {
       text: cleanText,
       prefix: prefix,
       tts: typeof data.tts === 'boolean' ? data.tts : liveState.chatOverlay.ttsEnabled,
+      ttsStyle: liveState.chatOverlay.ttsStyle || 'butler',
+      ttsRate: liveState.chatOverlay.ttsRate || 0.93,
+      ttsPitch: liveState.chatOverlay.ttsPitch || 0.92,
       timestamp: Date.now()
     };
 
@@ -1137,6 +1155,15 @@ io.on('connection', async (socket) => {
       saveSettings();
       io.emit('state-update', liveState);
     }
+  });
+
+  socket.on('update-chat-tts-config', (data) => {
+    if (!data) return;
+    if (typeof data.style === 'string') liveState.chatOverlay.ttsStyle = data.style;
+    if (typeof data.rate === 'number') liveState.chatOverlay.ttsRate = data.rate;
+    if (typeof data.pitch === 'number') liveState.chatOverlay.ttsPitch = data.pitch;
+    saveSettings();
+    io.emit('state-update', liveState);
   });
 
   socket.on('save-fight', (fightData, callback) => {
@@ -1698,6 +1725,9 @@ async function initKickChatListener() {
                 text: announcementText,
                 prefix: '!anuncio',
                 tts: liveState.chatOverlay.ttsEnabled,
+                ttsStyle: liveState.chatOverlay.ttsStyle || 'butler',
+                ttsRate: liveState.chatOverlay.ttsRate || 0.93,
+                ttsPitch: liveState.chatOverlay.ttsPitch || 0.92,
                 timestamp: Date.now(),
                 source: 'kick'
               };

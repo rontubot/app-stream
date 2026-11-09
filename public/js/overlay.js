@@ -588,10 +588,16 @@ const chatHudMessage = document.getElementById('chat-hud-message');
 const chatHudTime = document.getElementById('chat-hud-time');
 
 let chatDismissTimeout = null;
-let currentChatOverlayState = { ttsEnabled: true, commandPrefix: '!anuncio' };
+let currentChatOverlayState = {
+  ttsEnabled: true,
+  commandPrefix: '!anuncio',
+  ttsStyle: 'butler',
+  ttsRate: 0.93,
+  ttsPitch: 0.92
+};
 
 function updateChatOverlayState(chatState) {
-  currentChatOverlayState = chatState;
+  currentChatOverlayState = { ...currentChatOverlayState, ...chatState };
   if (chatHudPrefixBadge && chatState.commandPrefix) {
     chatHudPrefixBadge.textContent = chatState.commandPrefix;
   }
@@ -607,8 +613,92 @@ function updateChatOverlayState(chatState) {
   }
 }
 
-// Reproductor TTS (Text-To-Speech) con Web Speech API
-function playTTS(text, user) {
+// Voces disponibles en el navegador y selector de mayordomo servicial
+let availableVoices = [];
+function loadVoices() {
+  if ('speechSynthesis' in window) {
+    availableVoices = window.speechSynthesis.getVoices();
+  }
+}
+if ('speechSynthesis' in window) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function findBestButlerVoice() {
+  const voices = (availableVoices && availableVoices.length > 0) 
+    ? availableVoices 
+    : (('speechSynthesis' in window) ? window.speechSynthesis.getVoices() : []);
+  if (!voices || voices.length === 0) return null;
+
+  const esVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('es') || v.lang.toLowerCase().includes('spanish')));
+  if (esVoices.length === 0) return null;
+
+  const preferredNames = ['alvaro', 'álvaro', 'alonso', 'jorge', 'raul', 'raúl', 'enrique', 'pablo', 'diego', 'carlos'];
+
+  // 1. Voces masculinas naturales/neurales en español (estilo mayordomo distinguido)
+  for (const name of preferredNames) {
+    const found = esVoices.find(v => {
+      const n = v.name.toLowerCase();
+      return n.includes(name) && (n.includes('natural') || n.includes('online') || n.includes('neural'));
+    });
+    if (found) return found;
+  }
+
+  // 2. Cualquier voz masculina distinguida en español
+  for (const name of preferredNames) {
+    const found = esVoices.find(v => v.name.toLowerCase().includes(name));
+    if (found) return found;
+  }
+
+  // 3. Voces naturales/neurales en español de España (acento formal castellano de mayordomo)
+  const esESNatural = esVoices.find(v => {
+    const l = v.lang.toLowerCase();
+    const n = v.name.toLowerCase();
+    return (l === 'es-es' || l.startsWith('es_es')) && (n.includes('natural') || n.includes('online') || n.includes('neural') || n.includes('google'));
+  });
+  if (esESNatural) return esESNatural;
+
+  // 4. Cualquier voz en español de España
+  const esES = esVoices.find(v => v.lang.toLowerCase().startsWith('es-es') || v.lang.toLowerCase().startsWith('es_es'));
+  if (esES) return esES;
+
+  return esVoices[0];
+}
+
+function formatButlerSpeech(text, user, style = 'butler') {
+  const cleanUser = (user || 'Estimado espectador')
+    .replace(/^@/, '')
+    .replace(/_/g, ' ')
+    .trim();
+  
+  // Limpieza de enlaces y caracteres repetitivos para un habla humana y elegante
+  let cleanText = (text || '')
+    .replace(/https?:\/\/\S+/gi, 'un enlace web')
+    .replace(/([a-zA-ZáéíóúÁÉÍÓÚñÑ])\1{3,}/g, '$1$1')
+    .replace(/([?!.,;:]){2,}/g, '$1')
+    .replace(/\b(jaj+a*|jeje+|kjj+|jaskjsa+|xd+)\b/gi, 'risas en el chat')
+    .trim();
+
+  if (style === 'butler') {
+    const butlerPhrases = [
+      `Con su debido permiso, un mensaje de ${cleanUser} para la sala: ${cleanText}`,
+      `Si me permiten la atención, ${cleanUser} nos comunica respetuosamente: ${cleanText}`,
+      `Con el mayor de los respetos, anuncio de ${cleanUser}: ${cleanText}`,
+      `Estimada concurrencia, ${cleanUser} comparte el siguiente mensaje: ${cleanText}`,
+      `Con su venia, ${cleanUser} comunica lo siguiente: ${cleanText}`
+    ];
+    const index = Math.abs(cleanUser.length + cleanText.length) % butlerPhrases.length;
+    return butlerPhrases[index];
+  } else if (style === 'formal') {
+    return `Atención por favor. Comunicado de ${cleanUser}: ${cleanText}`;
+  } else {
+    return `${cleanUser} dice: ${cleanText}`;
+  }
+}
+
+// Reproductor TTS (Text-To-Speech) con Web Speech API optimizado para tono de mayordomo servicial
+function playTTS(text, user, options = {}) {
   if (!('speechSynthesis' in window)) {
     console.warn('SpeechSynthesis no está disponible en este entorno.');
     return;
@@ -620,19 +710,19 @@ function playTTS(text, user) {
       window.speechSynthesis.resume();
     }
 
-    const cleanUser = (user || 'Alguien').replace(/^@/, '');
-    const phrase = `${cleanUser} dice: ${text}`;
+    const style = options.ttsStyle || currentChatOverlayState.ttsStyle || 'butler';
+    const phrase = formatButlerSpeech(text, user, style);
     const utterance = new SpeechSynthesisUtterance(phrase);
 
     utterance.lang = 'es-ES';
-    utterance.rate = 1.05;
-    utterance.pitch = 1.0;
+    // Modulación servicial: ritmo pausado (0.93x) y tono más solemne y cálido (0.92x)
+    utterance.rate = typeof options.ttsRate === 'number' ? options.ttsRate : (currentChatOverlayState.ttsRate || 0.93);
+    utterance.pitch = typeof options.ttsPitch === 'number' ? options.ttsPitch : (currentChatOverlayState.ttsPitch || 0.92);
+    utterance.volume = 1.0;
 
-    // Buscar voces en español disponibles
-    const voices = window.speechSynthesis.getVoices();
-    const esVoice = voices.find(v => v.lang && (v.lang.toLowerCase().startsWith('es') || v.lang.toLowerCase().includes('spanish')));
-    if (esVoice) {
-      utterance.voice = esVoice;
+    const butlerVoice = findBestButlerVoice();
+    if (butlerVoice) {
+      utterance.voice = butlerVoice;
     }
 
     utterance.onstart = () => {
@@ -678,7 +768,11 @@ socket.on('chat-announcement', (payload) => {
 
   // Si TTS está habilitado, pronunciar
   if (payload.tts !== false && currentChatOverlayState.ttsEnabled !== false) {
-    playTTS(payload.text, payload.user);
+    playTTS(payload.text, payload.user, {
+      ttsStyle: payload.ttsStyle,
+      ttsRate: payload.ttsRate,
+      ttsPitch: payload.ttsPitch
+    });
   }
 
   // Auto-ocultar tras 12 segundos

@@ -1155,6 +1155,43 @@
 
         </div>
 
+        <!-- Personalidad y Tono de la Voz (Modo Mayordomo Formal y Servicial) -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-cyber-card/70 p-4 rounded-xl border border-cyber-border">
+          
+          <!-- Estilo de Personalidad -->
+          <div class="md:col-span-6 space-y-2">
+            <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
+              <span class="text-sm">🎩</span>
+              <span>Personalidad y Tono de la Voz:</span>
+            </label>
+            <select id="select-tts-style" class="w-full bg-cyber-dark border border-cyber-border hover:border-purple-400 rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-purple-400 transition-colors">
+              <option value="butler" selected>🎩 Mayordomo Servicial ("Con su debido permiso, un mensaje de...")</option>
+              <option value="formal">📜 Comunicado Formal ("Atención por favor. Comunicado de...")</option>
+              <option value="classic">💬 Clásico Directo ("X dice...")</option>
+            </select>
+            <p class="text-[11px] text-gray-400">
+              Adapta la locución a un trato cordial, respetuoso y servicial como el de un mayordomo formal.
+            </p>
+          </div>
+
+          <!-- Velocidad / Cadencia Humana -->
+          <div class="md:col-span-6 space-y-2">
+            <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
+              <i data-lucide="gauge" class="w-4 h-4 text-purple-400"></i>
+              <span>Cadencia y Modulación Humana:</span>
+            </label>
+            <select id="select-tts-rate" class="w-full bg-cyber-dark border border-cyber-border hover:border-purple-400 rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-purple-400 transition-colors">
+              <option value="0.90">Pausado y Distinguido (0.90x)</option>
+              <option value="0.93" selected>Formal y Servicial (0.93x - Recomendado)</option>
+              <option value="1.0">Estándar (1.0x)</option>
+            </select>
+            <p class="text-[11px] text-gray-400">
+              Una cadencia pausada elimina el tono robótico acelerado y produce una dicción natural y elegante.
+            </p>
+          </div>
+
+        </div>
+
         <!-- ============================================================
              PROBADOR DE MENSAJES Y ANUNCIOS (TTS SIMULATOR)
              ============================================================ -->

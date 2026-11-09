@@ -68,6 +68,8 @@ const inputChatPrefix = document.getElementById('input-chat-prefix');
 const btnToggleTts = document.getElementById('btn-toggle-tts');
 const iconTtsToggle = document.getElementById('icon-tts-toggle');
 const textTtsToggle = document.getElementById('text-tts-toggle');
+const selectTtsStyle = document.getElementById('select-tts-style');
+const selectTtsRate = document.getElementById('select-tts-rate');
 const inputAnnouncementUser = document.getElementById('input-announcement-user');
 const inputAnnouncementText = document.getElementById('input-announcement-text');
 const btnSendAnnouncement = document.getElementById('btn-send-announcement');
@@ -659,6 +661,16 @@ socket.on('state-update', (state) => {
         if (textTtsToggle) textTtsToggle.textContent = 'TTS MUTED';
         if (iconTtsToggle) iconTtsToggle.setAttribute('data-lucide', 'volume-x');
       }
+    }
+
+    if (inputChatPrefix && state.chatOverlay.commandPrefix) {
+      inputChatPrefix.value = state.chatOverlay.commandPrefix;
+    }
+    if (selectTtsStyle && state.chatOverlay.ttsStyle) {
+      selectTtsStyle.value = state.chatOverlay.ttsStyle;
+    }
+    if (selectTtsRate && typeof state.chatOverlay.ttsRate === 'number') {
+      selectTtsRate.value = String(state.chatOverlay.ttsRate);
     }
   }
   refreshIcons();
@@ -1910,6 +1922,82 @@ if (inputChatPrefix) {
   });
 }
 
+if (selectTtsStyle) {
+  selectTtsStyle.addEventListener('change', () => {
+    const style = selectTtsStyle.value;
+    const rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
+    socket.emit('update-chat-tts-config', { style, rate, pitch: 0.92 });
+    showToast(`🎩 Tono de voz actualizado: ${selectTtsStyle.options[selectTtsStyle.selectedIndex].text}`);
+  });
+}
+
+if (selectTtsRate) {
+  selectTtsRate.addEventListener('change', () => {
+    const style = selectTtsStyle ? selectTtsStyle.value : 'butler';
+    const rate = parseFloat(selectTtsRate.value);
+    socket.emit('update-chat-tts-config', { style, rate, pitch: 0.92 });
+    showToast(`⚡ Cadencia de voz actualizada: ${rate}x`);
+  });
+}
+
+// Reproducción local en panel para probar el mayordomo directamente
+function playAdminButlerPreview(text, user) {
+  if (!('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    if (typeof window.speechSynthesis.resume === 'function') {
+      window.speechSynthesis.resume();
+    }
+
+    const cleanUser = (user || 'Estimado espectador').replace(/^@/, '').replace(/_/g, ' ').trim();
+    let cleanText = (text || '')
+      .replace(/https?:\/\/\S+/gi, 'un enlace web')
+      .replace(/([a-zA-ZáéíóúÁÉÍÓÚñÑ])\1{3,}/g, '$1$1')
+      .replace(/([?!.,;:]){2,}/g, '$1')
+      .replace(/\b(jaj+a*|jeje+|kjj+|jaskjsa+|xd+)\b/gi, 'risas en el chat')
+      .trim();
+
+    const style = selectTtsStyle ? selectTtsStyle.value : 'butler';
+    let phrase = `${cleanUser} dice: ${cleanText}`;
+    if (style === 'butler') {
+      const butlerPhrases = [
+        `Con su debido permiso, un mensaje de ${cleanUser} para la sala: ${cleanText}`,
+        `Si me permiten la atención, ${cleanUser} nos comunica respetuosamente: ${cleanText}`,
+        `Con el mayor de los respetos, anuncio de ${cleanUser}: ${cleanText}`,
+        `Estimada concurrencia, ${cleanUser} comparte el siguiente mensaje: ${cleanText}`,
+        `Con su venia, ${cleanUser} comunica lo siguiente: ${cleanText}`
+      ];
+      const index = Math.abs(cleanUser.length + cleanText.length) % butlerPhrases.length;
+      phrase = butlerPhrases[index];
+    } else if (style === 'formal') {
+      phrase = `Atención por favor. Comunicado de ${cleanUser}: ${cleanText}`;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(phrase);
+    utterance.lang = 'es-ES';
+    utterance.rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
+    utterance.pitch = 0.92;
+    utterance.volume = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const esVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('es') || v.lang.toLowerCase().includes('spanish')));
+    const preferredNames = ['alvaro', 'álvaro', 'alonso', 'jorge', 'raul', 'raúl', 'enrique', 'pablo', 'diego', 'carlos'];
+    let selectedVoice = null;
+    for (const name of preferredNames) {
+      selectedVoice = esVoices.find(v => v.name.toLowerCase().includes(name));
+      if (selectedVoice) break;
+    }
+    if (!selectedVoice) {
+      selectedVoice = esVoices.find(v => v.lang.toLowerCase().startsWith('es-es')) || esVoices[0];
+    }
+    if (selectedVoice) utterance.voice = selectedVoice;
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn('Error en preview de voz admin:', err);
+  }
+}
+
 if (btnSendAnnouncement) {
   btnSendAnnouncement.addEventListener('click', () => {
     const user = (inputAnnouncementUser ? inputAnnouncementUser.value.trim() : '') || '@espectador';
@@ -1922,9 +2010,16 @@ if (btnSendAnnouncement) {
     socket.emit('trigger-chat-announcement', {
       user: user,
       text: text,
-      tts: currentLiveState.chatOverlay ? currentLiveState.chatOverlay.ttsEnabled !== false : true
+      tts: currentLiveState.chatOverlay ? currentLiveState.chatOverlay.ttsEnabled !== false : true,
+      ttsStyle: selectTtsStyle ? selectTtsStyle.value : 'butler',
+      ttsRate: selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93,
+      ttsPitch: 0.92
     });
-    showToast(`📢 Anuncio enviado a pantalla: ${user}`);
+
+    // Reproducir también muestra audible para el anfitrión en este navegador
+    playAdminButlerPreview(text, user);
+
+    showToast(`📢 Anuncio enviado a pantalla y voz reproducida: ${user}`);
   });
 
   if (inputAnnouncementText) {
