@@ -1680,6 +1680,13 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // Señalización en tiempo real de quién está hablando (permite iluminar en verde en OBS incluso al Host cuyo audio no pasa a OBS)
+  socket.on('multicam-speaking', ({ roomId = 'main', peerId, speaking }) => {
+    const pId = peerId || socket.multicamPeerId;
+    if (!pId) return;
+    io.emit('multicam-peer-speaking', { roomId, peerId: pId, speaking: !!speaking });
+  });
+
   // Designar / Desmarcar Anfitrión (Host) desde panel o cliente
   socket.on('multicam-set-host', ({ roomId = 'main', peerId, isHost }) => {
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {

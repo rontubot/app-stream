@@ -308,6 +308,9 @@
       const bufferLength = state.audioAnalyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
+      let lastEmittedSpeaking = false;
+      let speakingHoldFrames = 0;
+
       function renderMeter() {
         if (!state.audioAnalyser) return;
         state.audioAnalyser.getByteFrequencyData(dataArray);
@@ -328,14 +331,30 @@
           }
         }
 
+        if (percent > 16 && state.hasAudio) {
+          speakingHoldFrames = 10;
+        } else if (speakingHoldFrames > 0) {
+          speakingHoldFrames--;
+        }
+        const isSpeakingNow = speakingHoldFrames > 0 && !!state.hasAudio;
+
         if (state.isJoined) {
           const localBox = document.getElementById('card-peer-' + state.peerId);
           if (localBox) {
-            if (percent > 18 && state.hasAudio) {
+            if (isSpeakingNow) {
               localBox.classList.add('speaking-glow');
             } else {
               localBox.classList.remove('speaking-glow');
             }
+          }
+
+          if (isSpeakingNow !== lastEmittedSpeaking) {
+            lastEmittedSpeaking = isSpeakingNow;
+            socket.emit('multicam-speaking', {
+              roomId: state.roomId,
+              peerId: state.peerId,
+              speaking: isSpeakingNow
+            });
           }
         }
 
@@ -851,6 +870,27 @@
   // ============================================================
   const remoteAudioAnalysers = new Map();
 
+  const remoteSpeakingPeers = new Set();
+
+  socket.on('multicam-peer-speaking', ({ peerId, speaking }) => {
+    if (!peerId || peerId === state.peerId) return;
+    if (speaking) {
+      remoteSpeakingPeers.add(peerId);
+    } else {
+      remoteSpeakingPeers.delete(peerId);
+    }
+    const peerData = knownPeers.get(peerId);
+    const hasAudio = peerData ? peerData.hasAudio !== false : true;
+    const card = document.getElementById('card-peer-' + peerId);
+    if (card) {
+      if (speaking && hasAudio) {
+        card.classList.add('speaking-glow');
+      } else {
+        card.classList.remove('speaking-glow');
+      }
+    }
+  });
+
   function setupRemoteSpeakingDetector(peerId, stream) {
     if (remoteAudioAnalysers.has(peerId)) {
       const current = remoteAudioAnalysers.get(peerId);
@@ -887,7 +927,7 @@
 
         const peerData = knownPeers.get(peerId);
         const hasAudio = peerData ? peerData.hasAudio !== false : true;
-        const isSpeaking = avg > 14 && hasAudio;
+        const isSpeaking = (avg > 14 || remoteSpeakingPeers.has(peerId)) && hasAudio;
 
         const card = document.getElementById('card-peer-' + peerId);
         if (card) {
@@ -1132,6 +1172,13 @@
     state.hasAudio = !state.hasAudio;
     if (state.localStream) {
       state.localStream.getAudioTracks().forEach(t => t.enabled = state.hasAudio);
+    }
+    if (!state.hasAudio) {
+      socket.emit('multicam-speaking', {
+        roomId: state.roomId,
+        peerId: state.peerId,
+        speaking: false
+      });
     }
     btnCallToggleMic.className = `w-11 h-11 rounded-xl border flex items-center justify-center transition-all shadow-md ${
       state.hasAudio ? 'bg-cyber-card border-cyber-border text-cyber-green' : 'bg-cyber-red/20 border-cyber-red text-cyber-red'

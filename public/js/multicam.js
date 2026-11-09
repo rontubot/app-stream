@@ -405,6 +405,27 @@
     }
   }
 
+  const speakingPeers = new Set();
+
+  socket.on('multicam-peer-speaking', ({ peerId, speaking }) => {
+    if (!peerId) return;
+    if (speaking) {
+      speakingPeers.add(peerId);
+    } else {
+      speakingPeers.delete(peerId);
+    }
+    const peerData = knownPeers.get(peerId);
+    const canShowSpeaking = speaking && (!peerData || !peerData.isStreamMuted || peerData.isHost) && (!peerData || peerData.hasAudio !== false);
+    const card = document.getElementById('cam-card-' + peerId);
+    if (card) {
+      if (canShowSpeaking) {
+        card.classList.add('is-speaking');
+      } else {
+        card.classList.remove('is-speaking');
+      }
+    }
+  });
+
   function setupSpeakingDetector(peerId, stream) {
     if (audioAnalysers.has(peerId) || stream.getAudioTracks().length === 0) return;
 
@@ -432,7 +453,7 @@
         for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
         const avg = sum / bufferLength;
         const peerData = knownPeers.get(peerId);
-        const isSpeaking = avg > 15 && (!peerData || !peerData.isStreamMuted);
+        const isSpeaking = (avg > 15 || speakingPeers.has(peerId)) && (!peerData || !peerData.isStreamMuted || peerData.isHost) && (!peerData || peerData.hasAudio !== false);
 
         const card = document.getElementById('cam-card-' + peerId);
         if (card) {
@@ -493,6 +514,9 @@
       card.setAttribute('data-peer-id', peer.id);
       camsContainer.appendChild(card);
     }
+    if (speakingPeers.has(peer.id) && peer.hasAudio !== false && (!peer.isStreamMuted || peer.isHost)) {
+      card.classList.add('is-speaking');
+    }
 
     const gradient = getGradientForName(peer.name);
     const initials = peer.initials || 'BV';
@@ -509,6 +533,7 @@
       <div class="cam-lower-third">
         <span class="cam-status-dot ${hasActiveVideo ? '' : 'no-video'}"></span>
         <span class="cam-name-text">${peer.name || 'Invitado'}</span>
+        ${peer.isHost ? '<span style="background: rgba(6, 182, 212, 0.3); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.6); font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 4px; margin-left: 6px; font-family: monospace;">👑 HOST</span>' : ''}
         <svg class="cam-speaking-indicator" viewBox="0 0 24 24" fill="none" stroke="#00ff66" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
           <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>

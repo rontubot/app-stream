@@ -1229,6 +1229,27 @@ function attachMulticamAudio(peerId, stream) {
   }
 }
 
+const multicamSpeakingPeers = new Set();
+
+socket.on('multicam-peer-speaking', ({ peerId, speaking }) => {
+  if (!peerId) return;
+  if (speaking) {
+    multicamSpeakingPeers.add(peerId);
+  } else {
+    multicamSpeakingPeers.delete(peerId);
+  }
+  const peerData = multicamKnownPeers.get(peerId);
+  const canShowSpeaking = speaking && (!peerData || !peerData.isStreamMuted || peerData.isHost) && (!peerData || peerData.hasAudio !== false);
+  const card = document.getElementById('cam-card-' + peerId);
+  if (card) {
+    if (canShowSpeaking) {
+      card.classList.add('is-speaking');
+    } else {
+      card.classList.remove('is-speaking');
+    }
+  }
+});
+
 function setupMulticamSpeakingDetector(peerId, stream) {
   if (multicamAudioAnalysers.has(peerId) || stream.getAudioTracks().length === 0) return;
 
@@ -1255,7 +1276,7 @@ function setupMulticamSpeakingDetector(peerId, stream) {
       for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
       const avg = sum / bufferLength;
       const peerData = multicamKnownPeers.get(peerId);
-      const isSpeaking = avg > 15 && (!peerData || !peerData.isStreamMuted);
+      const isSpeaking = (avg > 15 || multicamSpeakingPeers.has(peerId)) && (!peerData || !peerData.isStreamMuted || peerData.isHost) && (!peerData || peerData.hasAudio !== false);
 
       const card = document.getElementById('cam-card-' + peerId);
       if (card) {
@@ -1310,6 +1331,9 @@ function renderMulticamCamCard(peer) {
     card.className = 'cam-card';
     card.setAttribute('data-peer-id', peer.id);
     camsContainer.appendChild(card);
+  }
+  if (multicamSpeakingPeers.has(peer.id) && peer.hasAudio !== false && (!peer.isStreamMuted || peer.isHost)) {
+    card.classList.add('is-speaking');
   }
 
   const gradient = getMulticamGradient(peer.name);
