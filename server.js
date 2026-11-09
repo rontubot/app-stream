@@ -98,9 +98,10 @@ let liveState = {
     isVisible: false,
     ttsEnabled: true,
     commandPrefix: '!anuncio',
-    ttsStyle: 'butler', // 'butler' (Mayordomo servicial y formal) | 'formal' | 'classic'
+    ttsStyle: 'senor', // 'senor' (Mayordomo leal "Señor,...") | 'senor_breve' | 'classic'
     ttsRate: 0.93,
-    ttsPitch: 0.92,
+    ttsPitch: 0.82,
+    ttsVoiceName: '',
     lastMessage: null
   }
 };
@@ -167,6 +168,9 @@ function loadSettings() {
         if (typeof data.chatOverlay.ttsPitch === 'number') {
           liveState.chatOverlay.ttsPitch = data.chatOverlay.ttsPitch;
         }
+        if (typeof data.chatOverlay.ttsVoiceName === 'string') {
+          liveState.chatOverlay.ttsVoiceName = data.chatOverlay.ttsVoiceName;
+        }
       }
       return data;
     }
@@ -191,9 +195,10 @@ function getSettingsPayload() {
     chatOverlay: {
       ttsEnabled: liveState.chatOverlay.ttsEnabled,
       commandPrefix: liveState.chatOverlay.commandPrefix,
-      ttsStyle: liveState.chatOverlay.ttsStyle || 'butler',
+      ttsStyle: liveState.chatOverlay.ttsStyle || 'senor',
       ttsRate: liveState.chatOverlay.ttsRate || 0.93,
-      ttsPitch: liveState.chatOverlay.ttsPitch || 0.92
+      ttsPitch: liveState.chatOverlay.ttsPitch || 0.82,
+      ttsVoiceName: liveState.chatOverlay.ttsVoiceName || ''
     }
   };
 }
@@ -1122,9 +1127,10 @@ io.on('connection', async (socket) => {
       text: cleanText,
       prefix: prefix,
       tts: typeof data.tts === 'boolean' ? data.tts : liveState.chatOverlay.ttsEnabled,
-      ttsStyle: liveState.chatOverlay.ttsStyle || 'butler',
+      ttsStyle: liveState.chatOverlay.ttsStyle || 'senor',
       ttsRate: liveState.chatOverlay.ttsRate || 0.93,
-      ttsPitch: liveState.chatOverlay.ttsPitch || 0.92,
+      ttsPitch: liveState.chatOverlay.ttsPitch || 0.82,
+      ttsVoiceName: liveState.chatOverlay.ttsVoiceName || '',
       timestamp: Date.now()
     };
 
@@ -1162,6 +1168,7 @@ io.on('connection', async (socket) => {
     if (typeof data.style === 'string') liveState.chatOverlay.ttsStyle = data.style;
     if (typeof data.rate === 'number') liveState.chatOverlay.ttsRate = data.rate;
     if (typeof data.pitch === 'number') liveState.chatOverlay.ttsPitch = data.pitch;
+    if (typeof data.voiceName === 'string') liveState.chatOverlay.ttsVoiceName = data.voiceName;
     saveSettings();
     io.emit('state-update', liveState);
   });
@@ -1725,9 +1732,10 @@ async function initKickChatListener() {
                 text: announcementText,
                 prefix: '!anuncio',
                 tts: liveState.chatOverlay.ttsEnabled,
-                ttsStyle: liveState.chatOverlay.ttsStyle || 'butler',
+                ttsStyle: liveState.chatOverlay.ttsStyle || 'senor',
                 ttsRate: liveState.chatOverlay.ttsRate || 0.93,
-                ttsPitch: liveState.chatOverlay.ttsPitch || 0.92,
+                ttsPitch: liveState.chatOverlay.ttsPitch || 0.82,
+                ttsVoiceName: liveState.chatOverlay.ttsVoiceName || '',
                 timestamp: Date.now(),
                 source: 'kick'
               };

@@ -68,8 +68,12 @@ const inputChatPrefix = document.getElementById('input-chat-prefix');
 const btnToggleTts = document.getElementById('btn-toggle-tts');
 const iconTtsToggle = document.getElementById('icon-tts-toggle');
 const textTtsToggle = document.getElementById('text-tts-toggle');
-const selectTtsStyle = document.getElementById('select-tts-style');
+const selectTtsVoice = document.getElementById('select-tts-voice');
+const selectTtsPitch = document.getElementById('select-tts-pitch');
 const selectTtsRate = document.getElementById('select-tts-rate');
+const selectTtsStyle = document.getElementById('select-tts-style');
+const btnPreviewVoiceSample = document.getElementById('btn-preview-voice-sample');
+const voiceDetectedCount = document.getElementById('voice-detected-count');
 const inputAnnouncementUser = document.getElementById('input-announcement-user');
 const inputAnnouncementText = document.getElementById('input-announcement-text');
 const btnSendAnnouncement = document.getElementById('btn-send-announcement');
@@ -671,6 +675,12 @@ socket.on('state-update', (state) => {
     }
     if (selectTtsRate && typeof state.chatOverlay.ttsRate === 'number') {
       selectTtsRate.value = String(state.chatOverlay.ttsRate);
+    }
+    if (selectTtsPitch && typeof state.chatOverlay.ttsPitch === 'number') {
+      selectTtsPitch.value = String(state.chatOverlay.ttsPitch);
+    }
+    if (selectTtsVoice && state.chatOverlay.ttsVoiceName) {
+      selectTtsVoice.value = state.chatOverlay.ttsVoiceName;
     }
   }
   refreshIcons();
@@ -1922,25 +1932,103 @@ if (inputChatPrefix) {
   });
 }
 
-if (selectTtsStyle) {
-  selectTtsStyle.addEventListener('change', () => {
-    const style = selectTtsStyle.value;
-    const rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
-    socket.emit('update-chat-tts-config', { style, rate, pitch: 0.92 });
-    showToast(`🎩 Tono de voz actualizado: ${selectTtsStyle.options[selectTtsStyle.selectedIndex].text}`);
+// Población dinámica de voces instaladas en el sistema / navegador
+function populateVoiceDropdown() {
+  if (!selectTtsVoice || !('speechSynthesis' in window)) return;
+
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return;
+
+  const currentSelected = selectTtsVoice.value || (currentLiveState.chatOverlay ? currentLiveState.chatOverlay.ttsVoiceName : '');
+  selectTtsVoice.innerHTML = '';
+
+  const esVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('es') || v.lang.toLowerCase().includes('spanish')));
+  const otherVoices = voices.filter(v => !esVoices.includes(v));
+
+  if (esVoices.length > 0) {
+    const optGroupEs = document.createElement('optgroup');
+    optGroupEs.label = '🇪🇸 Voces en Español (Recomendadas)';
+    esVoices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = `${v.name} (${v.lang})`;
+      optGroupEs.appendChild(opt);
+    });
+    selectTtsVoice.appendChild(optGroupEs);
+  }
+
+  if (otherVoices.length > 0) {
+    const optGroupOther = document.createElement('optgroup');
+    optGroupOther.label = '🌐 Otras Voces del Sistema';
+    otherVoices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.textContent = `${v.name} (${v.lang})`;
+      optGroupOther.appendChild(opt);
+    });
+    selectTtsVoice.appendChild(optGroupOther);
+  }
+
+  if (currentSelected) {
+    selectTtsVoice.value = currentSelected;
+  } else if (esVoices.length > 0) {
+    const best = esVoices.find(v => {
+      const n = v.name.toLowerCase();
+      return n.includes('alvaro') || n.includes('jorge') || n.includes('raul') || n.includes('alonso') || n.includes('diego');
+    }) || esVoices[0];
+    selectTtsVoice.value = best.name;
+  }
+
+  if (voiceDetectedCount) {
+    voiceDetectedCount.textContent = `${esVoices.length} voces en español detectadas (${voices.length} totales en tu sistema)`;
+  }
+}
+
+if ('speechSynthesis' in window) {
+  populateVoiceDropdown();
+  window.speechSynthesis.onvoiceschanged = populateVoiceDropdown;
+}
+
+function emitChatTtsConfig() {
+  const style = selectTtsStyle ? selectTtsStyle.value : 'senor';
+  const rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
+  const pitch = selectTtsPitch ? parseFloat(selectTtsPitch.value) : 0.82;
+  const voiceName = selectTtsVoice ? selectTtsVoice.value : '';
+
+  socket.emit('update-chat-tts-config', { style, rate, pitch, voiceName });
+}
+
+if (selectTtsVoice) {
+  selectTtsVoice.addEventListener('change', () => {
+    emitChatTtsConfig();
+    playAdminButlerPreview('Voz configurada a su servicio', 'Señor');
+    showToast(`🎙️ Voz seleccionada: ${selectTtsVoice.value}`);
+  });
+}
+
+if (selectTtsPitch) {
+  selectTtsPitch.addEventListener('change', () => {
+    emitChatTtsConfig();
+    playAdminButlerPreview('Tono calibrado', 'Señor');
+    showToast(`🎚️ Tono de voz actualizado: ${selectTtsPitch.options[selectTtsPitch.selectedIndex].text}`);
   });
 }
 
 if (selectTtsRate) {
   selectTtsRate.addEventListener('change', () => {
-    const style = selectTtsStyle ? selectTtsStyle.value : 'butler';
-    const rate = parseFloat(selectTtsRate.value);
-    socket.emit('update-chat-tts-config', { style, rate, pitch: 0.92 });
-    showToast(`⚡ Cadencia de voz actualizada: ${rate}x`);
+    emitChatTtsConfig();
+    showToast(`⚡ Cadencia de voz actualizada: ${selectTtsRate.value}x`);
   });
 }
 
-// Reproducción local en panel para probar el mayordomo directamente
+if (selectTtsStyle) {
+  selectTtsStyle.addEventListener('change', () => {
+    emitChatTtsConfig();
+    showToast(`🎩 Estilo de mayordomo: ${selectTtsStyle.options[selectTtsStyle.selectedIndex].text}`);
+  });
+}
+
+// Reproducción local en panel para probar el mayordomo directamente ("Señor...")
 function playAdminButlerPreview(text, user) {
   if (!('speechSynthesis' in window)) return;
   try {
@@ -1949,53 +2037,56 @@ function playAdminButlerPreview(text, user) {
       window.speechSynthesis.resume();
     }
 
-    const cleanUser = (user || 'Estimado espectador').replace(/^@/, '').replace(/_/g, ' ').trim();
+    const cleanUser = (user || 'alguien').replace(/^@/, '').replace(/_/g, ' ').trim();
     let cleanText = (text || '')
       .replace(/https?:\/\/\S+/gi, 'un enlace web')
       .replace(/([a-zA-ZáéíóúÁÉÍÓÚñÑ])\1{3,}/g, '$1$1')
       .replace(/([?!.,;:]){2,}/g, '$1')
-      .replace(/\b(jaj+a*|jeje+|kjj+|jaskjsa+|xd+)\b/gi, 'risas en el chat')
+      .replace(/\b(jaj+a*|jeje+|kjj+|jaskjsa+|xd+)\b/gi, 'risas')
       .trim();
 
-    const style = selectTtsStyle ? selectTtsStyle.value : 'butler';
+    const style = selectTtsStyle ? selectTtsStyle.value : 'senor';
     let phrase = `${cleanUser} dice: ${cleanText}`;
-    if (style === 'butler') {
-      const butlerPhrases = [
-        `Con su debido permiso, un mensaje de ${cleanUser} para la sala: ${cleanText}`,
-        `Si me permiten la atención, ${cleanUser} nos comunica respetuosamente: ${cleanText}`,
-        `Con el mayor de los respetos, anuncio de ${cleanUser}: ${cleanText}`,
-        `Estimada concurrencia, ${cleanUser} comparte el siguiente mensaje: ${cleanText}`,
-        `Con su venia, ${cleanUser} comunica lo siguiente: ${cleanText}`
+    if (style === 'senor' || style === 'butler') {
+      const senorPhrases = [
+        `Señor, ${cleanUser} nos comunica: ${cleanText}`,
+        `Señor, mensaje de ${cleanUser}: ${cleanText}`,
+        `Señor, ${cleanUser} comparte lo siguiente: ${cleanText}`,
+        `Señor, anuncio de ${cleanUser}: ${cleanText}`
       ];
-      const index = Math.abs(cleanUser.length + cleanText.length) % butlerPhrases.length;
-      phrase = butlerPhrases[index];
-    } else if (style === 'formal') {
-      phrase = `Atención por favor. Comunicado de ${cleanUser}: ${cleanText}`;
+      const index = Math.abs(cleanUser.length + cleanText.length) % senorPhrases.length;
+      phrase = senorPhrases[index];
+    } else if (style === 'senor_breve') {
+      phrase = `Señor, mensaje de ${cleanUser}: ${cleanText}`;
     }
 
     const utterance = new SpeechSynthesisUtterance(phrase);
     utterance.lang = 'es-ES';
     utterance.rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
-    utterance.pitch = 0.92;
+    utterance.pitch = selectTtsPitch ? parseFloat(selectTtsPitch.value) : 0.82;
     utterance.volume = 1.0;
 
     const voices = window.speechSynthesis.getVoices();
-    const esVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('es') || v.lang.toLowerCase().includes('spanish')));
-    const preferredNames = ['alvaro', 'álvaro', 'alonso', 'jorge', 'raul', 'raúl', 'enrique', 'pablo', 'diego', 'carlos'];
-    let selectedVoice = null;
-    for (const name of preferredNames) {
-      selectedVoice = esVoices.find(v => v.name.toLowerCase().includes(name));
-      if (selectedVoice) break;
-    }
+    const chosenName = selectTtsVoice ? selectTtsVoice.value : '';
+    let selectedVoice = voices.find(v => v.name === chosenName || v.voiceURI === chosenName);
+
     if (!selectedVoice) {
-      selectedVoice = esVoices.find(v => v.lang.toLowerCase().startsWith('es-es')) || esVoices[0];
+      const esVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().startsWith('es') || v.lang.toLowerCase().includes('spanish')));
+      selectedVoice = esVoices[0] || voices[0];
     }
+
     if (selectedVoice) utterance.voice = selectedVoice;
 
     window.speechSynthesis.speak(utterance);
   } catch (err) {
     console.warn('Error en preview de voz admin:', err);
   }
+}
+
+if (btnPreviewVoiceSample) {
+  btnPreviewVoiceSample.addEventListener('click', () => {
+    playAdminButlerPreview('A su entera disposición para la transmisión de BirraVerde', 'BirraVerde');
+  });
 }
 
 if (btnSendAnnouncement) {
@@ -2007,13 +2098,19 @@ if (btnSendAnnouncement) {
       return;
     }
 
+    const style = selectTtsStyle ? selectTtsStyle.value : 'senor';
+    const rate = selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93;
+    const pitch = selectTtsPitch ? parseFloat(selectTtsPitch.value) : 0.82;
+    const voiceName = selectTtsVoice ? selectTtsVoice.value : '';
+
     socket.emit('trigger-chat-announcement', {
       user: user,
       text: text,
       tts: currentLiveState.chatOverlay ? currentLiveState.chatOverlay.ttsEnabled !== false : true,
-      ttsStyle: selectTtsStyle ? selectTtsStyle.value : 'butler',
-      ttsRate: selectTtsRate ? parseFloat(selectTtsRate.value) : 0.93,
-      ttsPitch: 0.92
+      ttsStyle: style,
+      ttsRate: rate,
+      ttsPitch: pitch,
+      ttsVoiceName: voiceName
     });
 
     // Reproducir también muestra audible para el anfitrión en este navegador

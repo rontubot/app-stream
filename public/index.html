@@ -1155,39 +1155,89 @@
 
         </div>
 
-        <!-- Personalidad y Tono de la Voz (Modo Mayordomo Formal y Servicial) -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-cyber-card/70 p-4 rounded-xl border border-cyber-border">
-          
-          <!-- Estilo de Personalidad -->
-          <div class="md:col-span-6 space-y-2">
-            <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
-              <span class="text-sm">🎩</span>
-              <span>Personalidad y Tono de la Voz:</span>
-            </label>
-            <select id="select-tts-style" class="w-full bg-cyber-dark border border-cyber-border hover:border-purple-400 rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-purple-400 transition-colors">
-              <option value="butler" selected>🎩 Mayordomo Servicial ("Con su debido permiso, un mensaje de...")</option>
-              <option value="formal">📜 Comunicado Formal ("Atención por favor. Comunicado de...")</option>
-              <option value="classic">💬 Clásico Directo ("X dice...")</option>
-            </select>
-            <p class="text-[11px] text-gray-400">
-              Adapta la locución a un trato cordial, respetuoso y servicial como el de un mayordomo formal.
-            </p>
+        <!-- Personalidad, Voz y Tono (Modo Mayordomo "Señor") -->
+        <div class="bg-cyber-card/70 p-4 sm:p-5 rounded-xl border border-cyber-border space-y-4">
+          <div class="flex items-center justify-between pb-2 border-b border-cyber-border/60">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🎩</span>
+              <h3 class="text-xs sm:text-sm font-bold font-chakra uppercase tracking-wider text-white">
+                CONFIGURACIÓN DE VOZ Y PERSONALIDAD DEL MAYORDOMO
+              </h3>
+            </div>
+            <button id="btn-preview-voice-sample" type="button" class="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500 hover:text-black text-purple-300 font-chakra font-bold text-xs flex items-center gap-1.5 transition-all border border-purple-500/40 cursor-pointer">
+              <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+              <span>Escuchar Muestra ("Señor...")</span>
+            </button>
           </div>
 
-          <!-- Velocidad / Cadencia Humana -->
-          <div class="md:col-span-6 space-y-2">
-            <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
-              <i data-lucide="gauge" class="w-4 h-4 text-purple-400"></i>
-              <span>Cadencia y Modulación Humana:</span>
-            </label>
-            <select id="select-tts-rate" class="w-full bg-cyber-dark border border-cyber-border hover:border-purple-400 rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-purple-400 transition-colors">
-              <option value="0.90">Pausado y Distinguido (0.90x)</option>
-              <option value="0.93" selected>Formal y Servicial (0.93x - Recomendado)</option>
-              <option value="1.0">Estándar (1.0x)</option>
-            </select>
-            <p class="text-[11px] text-gray-400">
-              Una cadencia pausada elimina el tono robótico acelerado y produce una dicción natural y elegante.
-            </p>
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+            
+            <!-- Selector de Voz Real del Sistema -->
+            <div class="md:col-span-6 space-y-2">
+              <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
+                <i data-lucide="mic" class="w-4 h-4 text-purple-400"></i>
+                <span>Voz Instalada en el Sistema / Navegador:</span>
+              </label>
+              <select id="select-tts-voice" class="w-full bg-cyber-dark border border-cyber-border hover:border-purple-400 rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-purple-400 transition-colors">
+                <option value="">Detectando voces del sistema...</option>
+              </select>
+              <p class="text-[11px] text-gray-400 font-mono" id="voice-detected-count">
+                Detectando voces en español...
+              </p>
+            </div>
+
+            <!-- Tono / Pitch (Grave / Barítono / Agudo) -->
+            <div class="md:col-span-3 space-y-2">
+              <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-cyber-green"></i>
+                <span>Tono de Voz (Pitch):</span>
+              </label>
+              <select id="select-tts-pitch" class="w-full bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-cyber-green transition-colors">
+                <option value="0.75">Barítono Muy Grave (0.75)</option>
+                <option value="0.82" selected>Mayordomo Distinguido Grave (0.82)</option>
+                <option value="0.92">Formal Moderado (0.92)</option>
+                <option value="1.0">Tono Natural Original (1.0)</option>
+                <option value="1.15">Agudo (1.15)</option>
+              </select>
+              <p class="text-[11px] text-gray-400">
+                Un tono grave (0.82) le da un cuerpo señorial a cualquier voz.
+              </p>
+            </div>
+
+            <!-- Velocidad / Cadencia Humana -->
+            <div class="md:col-span-3 space-y-2">
+              <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
+                <i data-lucide="gauge" class="w-4 h-4 text-purple-400"></i>
+                <span>Velocidad (Cadencia):</span>
+              </label>
+              <select id="select-tts-rate" class="w-full bg-cyber-dark border border-cyber-border hover:border-purple-400 rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-purple-400 transition-colors">
+                <option value="0.88">Pausado y Solemne (0.88x)</option>
+                <option value="0.93" selected>Formal y Servicial (0.93x - Recomendado)</option>
+                <option value="1.0">Estándar (1.0x)</option>
+                <option value="1.1">Rápido (1.1x)</option>
+              </select>
+              <p class="text-[11px] text-gray-400">
+                Pausado para que se entienda claro en stream.
+              </p>
+            </div>
+
+          </div>
+
+          <!-- Estilo de Fraseo / Introducción -->
+          <div class="pt-3 border-t border-cyber-border/40 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            <div class="md:col-span-8 space-y-1">
+              <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
+                <span>Introducción de Mensajes:</span>
+              </label>
+              <select id="select-tts-style" class="w-full bg-cyber-dark border border-cyber-border hover:border-purple-400 rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-bold focus:outline-none focus:border-purple-400 transition-colors">
+                <option value="senor" selected>🎩 Mayordomo Leal ("Señor, [Usuario] nos comunica...")</option>
+                <option value="senor_breve">🎩 Mayordomo Breve ("Señor, mensaje de [Usuario]:...")</option>
+                <option value="classic">💬 Clásico Directo ("[Usuario] dice...")</option>
+              </select>
+            </div>
+            <div class="md:col-span-4 text-[11px] text-gray-400">
+              Siempre se dirigirá a ti como <strong class="text-cyber-green">"Señor"</strong> al presentar cualquier mensaje del chat.
+            </div>
           </div>
 
         </div>
