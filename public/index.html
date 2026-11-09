@@ -997,7 +997,87 @@
       </div>
 
       <!-- ============================================================
-           MÓDULO 1: SISTEMA DE LECTURA POR VOZ (TTS) & KICK CHAT
+           MÓDULO 1: CONFIGURACIÓN DEL OVERLAY DINÁMICO (HUD SUPERIOR)
+           ============================================================ -->
+      <section class="bg-gradient-to-r from-cyber-dark to-[#09120c] border border-cyber-green/40 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5 relative overflow-hidden">
+        
+        <!-- Cabecera del Módulo HUD Superior -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-cyber-border/70">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-cyber-green/10 border border-cyber-green flex items-center justify-center p-1.5 shadow-[0_0_15px_rgba(0,255,102,0.3)] shrink-0">
+              <img src="/assets/logo-birraverde.png" class="w-full h-full object-contain" alt="BirraVerde">
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base font-bold font-chakra uppercase tracking-wide text-white">
+                  OVERLAY SUPERIOR: HUD & MARQUESINA PERMANENTE
+                </h2>
+                <span id="top-hud-status-badge" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/40 uppercase">
+                  HUD SUPERIOR ACTIVO
+                </span>
+              </div>
+              <p class="text-xs text-gray-400">
+                Barra superior fija con logo oficial de BirraVerde, reloj, texto informativo personalizable y notificaciones de eventos.
+              </p>
+            </div>
+          </div>
+
+          <!-- Botón Toggle Activar/Desactivar Overlay Superior -->
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <button id="btn-toggle-top-hud" type="button" class="px-4 py-2 rounded-xl bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,102,0.35)] cursor-pointer">
+              <i data-lucide="eye" id="icon-top-hud-toggle" class="w-4 h-4"></i>
+              <span id="text-top-hud-toggle">HUD SUPERIOR ACTIVO</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Controles Marquesina Superior -->
+        <div class="bg-cyber-card/80 p-4 rounded-xl border border-cyber-border space-y-3">
+          <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
+            <i data-lucide="message-square" class="w-4 h-4 text-cyber-green"></i>
+            <span>Texto de la Marquesina Superior (Ticker):</span>
+          </label>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <input type="text" id="input-top-hud-text" placeholder="Ej: ¡Bienvenidos al stream! • Kick: @birraverde • La Velada del Caos" class="flex-1 bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-semibold focus:outline-none focus:border-cyber-green">
+            <button id="btn-save-top-hud-text" type="button" class="px-4 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all shrink-0 cursor-pointer">
+              Guardar Texto
+            </button>
+          </div>
+          <p class="text-[11px] text-gray-400 font-mono">
+            Este texto se alternará automáticamente en la barra superior del directo cada pocos segundos.
+          </p>
+        </div>
+
+        <!-- Simulador de Alertas de Eventos del HUD -->
+        <div class="bg-cyber-card/80 p-4 rounded-xl border border-cyber-border space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
+              <i data-lucide="bell" class="w-4 h-4 text-yellow-400"></i>
+              <span>Simulador de Alertas en Marquesina Superior:</span>
+            </label>
+            <span class="text-[10px] text-gray-400 font-mono">Prueba las animaciones en el HUD</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button id="btn-test-follow" type="button" class="px-3.5 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 hover:bg-emerald-500 hover:text-black text-emerald-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+              <span class="text-base">⭐</span>
+              <span>SIMULAR SEGUIDOR</span>
+            </button>
+            <button id="btn-test-donation" type="button" class="px-3.5 py-2.5 rounded-xl bg-yellow-500/15 border border-yellow-500/40 hover:bg-yellow-500 hover:text-black text-yellow-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+              <span class="text-base">💎</span>
+              <span>SIMULAR DONACIÓN</span>
+            </button>
+            <button id="btn-test-comment" type="button" class="px-3.5 py-2.5 rounded-xl bg-blue-500/15 border border-blue-500/40 hover:bg-blue-500 hover:text-black text-blue-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+              <span class="text-base">💬</span>
+              <span>SIMULAR COMENTARIO</span>
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================================
+           MÓDULO 2: SISTEMA DE LECTURA POR VOZ (TTS) & KICK CHAT
            ============================================================ -->
       <section class="bg-gradient-to-r from-cyber-dark to-[#09120c] border border-purple-500/40 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5 relative overflow-hidden">
         
@@ -1117,86 +1197,6 @@
             </button>
             <button type="button" onclick="setQuickTestMessage('!anuncio Pregunta para el chat: ¿Quién creen que gana el próximo combate?')" class="px-2.5 py-1 rounded-lg bg-cyber-dark hover:bg-purple-500/20 border border-cyber-border text-gray-300 hover:text-purple-300 text-[11px] font-rajdhani font-medium transition-all cursor-pointer">
               🥊 Pregunta Boxeo
-            </button>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- ============================================================
-           MÓDULO 2: CONFIGURACIÓN DEL OVERLAY DINÁMICO (HUD SUPERIOR)
-           ============================================================ -->
-      <section class="bg-gradient-to-r from-cyber-dark to-[#09120c] border border-cyber-green/40 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5 relative overflow-hidden">
-        
-        <!-- Cabecera del Módulo HUD Superior -->
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-cyber-border/70">
-          <div class="flex items-center gap-3">
-            <div class="w-11 h-11 rounded-xl bg-cyber-green/10 border border-cyber-green flex items-center justify-center p-1.5 shadow-[0_0_15px_rgba(0,255,102,0.3)] shrink-0">
-              <img src="/assets/logo-birraverde.png" class="w-full h-full object-contain" alt="BirraVerde">
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h2 class="text-base font-bold font-chakra uppercase tracking-wide text-white">
-                  OVERLAY SUPERIOR: HUD & MARQUESINA PERMANENTE
-                </h2>
-                <span id="top-hud-status-badge" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/40 uppercase">
-                  HUD SUPERIOR ACTIVO
-                </span>
-              </div>
-              <p class="text-xs text-gray-400">
-                Barra superior fija con logo oficial de BirraVerde, reloj, texto informativo personalizable y notificaciones de eventos.
-              </p>
-            </div>
-          </div>
-
-          <!-- Botón Toggle Activar/Desactivar Overlay Superior -->
-          <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            <button id="btn-toggle-top-hud" type="button" class="px-4 py-2 rounded-xl bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,102,0.35)] cursor-pointer">
-              <i data-lucide="eye" id="icon-top-hud-toggle" class="w-4 h-4"></i>
-              <span id="text-top-hud-toggle">HUD SUPERIOR ACTIVO</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Controles Marquesina Superior -->
-        <div class="bg-cyber-card/80 p-4 rounded-xl border border-cyber-border space-y-3">
-          <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
-            <i data-lucide="message-square" class="w-4 h-4 text-cyber-green"></i>
-            <span>Texto de la Marquesina Superior (Ticker):</span>
-          </label>
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <input type="text" id="input-top-hud-text" placeholder="Ej: ¡Bienvenidos al stream! • Kick: @birraverde • La Velada del Caos" class="flex-1 bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-2 text-xs text-white font-rajdhani font-semibold focus:outline-none focus:border-cyber-green">
-            <button id="btn-save-top-hud-text" type="button" class="px-4 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all shrink-0 cursor-pointer">
-              Guardar Texto
-            </button>
-          </div>
-          <p class="text-[11px] text-gray-400 font-mono">
-            Este texto se alternará automáticamente en la barra superior del directo cada pocos segundos.
-          </p>
-        </div>
-
-        <!-- Simulador de Alertas de Eventos del HUD -->
-        <div class="bg-cyber-card/80 p-4 rounded-xl border border-cyber-border space-y-3">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-chakra font-bold text-gray-200 flex items-center gap-2">
-              <i data-lucide="bell" class="w-4 h-4 text-yellow-400"></i>
-              <span>Simulador de Alertas en Marquesina Superior:</span>
-            </label>
-            <span class="text-[10px] text-gray-400 font-mono">Prueba las animaciones en el HUD</span>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button id="btn-test-follow" type="button" class="px-3.5 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 hover:bg-emerald-500 hover:text-black text-emerald-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-              <span class="text-base">⭐</span>
-              <span>SIMULAR SEGUIDOR</span>
-            </button>
-            <button id="btn-test-donation" type="button" class="px-3.5 py-2.5 rounded-xl bg-yellow-500/15 border border-yellow-500/40 hover:bg-yellow-500 hover:text-black text-yellow-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-              <span class="text-base">💎</span>
-              <span>SIMULAR DONACIÓN</span>
-            </button>
-            <button id="btn-test-comment" type="button" class="px-3.5 py-2.5 rounded-xl bg-blue-500/15 border border-blue-500/40 hover:bg-blue-500 hover:text-black text-blue-400 text-xs font-chakra font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-              <span class="text-base">💬</span>
-              <span>SIMULAR COMENTARIO</span>
             </button>
           </div>
         </div>
