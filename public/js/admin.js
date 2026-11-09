@@ -46,11 +46,13 @@ const btnHideAnnouncement = document.getElementById('btn-hide-announcement');
 const navTabMain = document.getElementById('nav-tab-main');
 const navTabMulticam = document.getElementById('nav-tab-multicam');
 const navTabAnimations = document.getElementById('nav-tab-animations');
+const navTabConfig = document.getElementById('nav-tab-config');
 const navBadgeVs = document.getElementById('nav-badge-vs');
 const navBadgeMulticamCount = document.getElementById('nav-badge-multicam-count');
 const tabPanelMain = document.getElementById('tab-panel-main');
 const tabPanelMulticam = document.getElementById('tab-panel-multicam');
 const tabPanelAnimations = document.getElementById('tab-panel-animations');
+const tabPanelConfig = document.getElementById('tab-panel-config');
 
 // Elementos DOM del Sistema Multicam
 const multicamGuestLink = document.getElementById('multicam-guest-link');
@@ -1588,13 +1590,24 @@ function switchMainTab(tab) {
   const inactiveBtnClass = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
   const activeBtnClass = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
 
-  if (tab === 'animations' || tab === 'scenes' || tab === 'multicam') {
-    if (tabPanelMain) tabPanelMain.classList.add('hidden');
-    if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
-    if (tabPanelAnimations) tabPanelAnimations.classList.remove('hidden');
+  // Ocultar todos los paneles
+  if (tabPanelMain) tabPanelMain.classList.add('hidden');
+  if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
+  if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
+  if (tabPanelConfig) tabPanelConfig.classList.add('hidden');
 
-    if (navTabMain) navTabMain.className = inactiveBtnClass;
-    if (navTabMulticam) navTabMulticam.className = inactiveBtnClass;
+  // Resetear estados visuales de botones
+  if (navTabMain) navTabMain.className = inactiveBtnClass;
+  if (navTabMulticam) navTabMulticam.className = inactiveBtnClass;
+  if (navTabAnimations) navTabAnimations.className = inactiveBtnClass;
+  if (navTabConfig) navTabConfig.className = inactiveBtnClass;
+
+  if (tab === 'config' || tab === 'settings') {
+    if (tabPanelConfig) tabPanelConfig.classList.remove('hidden');
+    if (navTabConfig) navTabConfig.className = activeBtnClass;
+    localStorage.setItem('birraverde_active_tab', 'config');
+  } else if (tab === 'animations' || tab === 'scenes' || tab === 'multicam') {
+    if (tabPanelAnimations) tabPanelAnimations.classList.remove('hidden');
     if (navTabAnimations) navTabAnimations.className = activeBtnClass;
 
     // Actualizar URLs de Multicam con el host actual
@@ -1606,13 +1619,8 @@ function switchMainTab(tab) {
     }
     localStorage.setItem('birraverde_active_tab', 'scenes');
   } else {
-    if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
-    if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
     if (tabPanelMain) tabPanelMain.classList.remove('hidden');
-
     if (navTabMain) navTabMain.className = activeBtnClass;
-    if (navTabMulticam) navTabMulticam.className = inactiveBtnClass;
-    if (navTabAnimations) navTabAnimations.className = inactiveBtnClass;
     localStorage.setItem('birraverde_active_tab', 'main');
     setTimeout(adjustPreviewScale, 50);
   }
@@ -1628,6 +1636,16 @@ if (navTabMulticam) {
 if (navTabAnimations) {
   navTabAnimations.addEventListener('click', () => switchMainTab('animations'));
 }
+if (navTabConfig) {
+  navTabConfig.addEventListener('click', () => switchMainTab('config'));
+}
+
+window.setQuickTestMessage = function(text) {
+  if (inputAnnouncementText) {
+    inputAnnouncementText.value = text;
+    inputAnnouncementText.focus();
+  }
+};
 
 // ============================================================
 // BANCO DE ANIMACIONES: DESPLEGAR/CONTRAER ESCENA
