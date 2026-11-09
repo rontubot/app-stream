@@ -52,6 +52,11 @@ app.get(['/assets/logo-velada-del-caos.png', '/assets/la%20velada%20del%20caos%2
   res.sendFile(path.join(__dirname, 'public', 'assets', 'la velada del caos logo.png'));
 });
 
+// Favicon oficial BirraVerde
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Estado actual del overlay en vivo, cola, escenas y banco de VS Boxeo
