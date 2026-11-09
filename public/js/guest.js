@@ -432,8 +432,14 @@
   });
 
   // ============================================================
-  // UNIRSE A LA SALA
   // ============================================================
+  // SOLICITUD DE INGRESO (SALA DE ESPERA) Y UNIÓN A LA SALA
+  // ============================================================
+  const waitingApprovalBox = document.getElementById('waiting-approval-box');
+  const btnCancelJoinRequest = document.getElementById('btn-cancel-join-request');
+  const joinRejectedBanner = document.getElementById('join-rejected-banner');
+  const joinRejectedText = document.getElementById('join-rejected-text');
+
   btnJoinRoom.addEventListener('click', () => {
     const enteredName = inputName.value.trim();
     if (!enteredName) {
@@ -445,10 +451,82 @@
 
     state.name = enteredName;
     state.initials = computeInitials(state.name);
+    localStorage.setItem('birra_multicam_name', state.name);
 
     unlockAllAudio();
 
+    requestJoinRoom();
+  });
+
+  function requestJoinRoom() {
+    if (joinRejectedBanner) joinRejectedBanner.classList.add('hidden');
+    if (waitingApprovalBox) waitingApprovalBox.classList.remove('hidden');
+    if (btnJoinRoom) btnJoinRoom.classList.add('hidden');
+
+    state.isWaitingApproval = true;
+    connDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping';
+    connText.textContent = 'Esperando aprobación del Host...';
+
+    socket.emit('multicam-request-join', {
+      roomId: state.roomId,
+      peerId: state.peerId,
+      role: state.isHost ? 'host' : 'guest',
+      userInfo: {
+        name: state.name,
+        photo: state.photo,
+        initials: state.initials,
+        hasVideo: state.hasVideo,
+        hasAudio: state.hasAudio,
+        isHost: state.isHost
+      }
+    }, (res) => {
+      if (res && res.status === 'approved') {
+        state.isWaitingApproval = false;
+        if (waitingApprovalBox) waitingApprovalBox.classList.add('hidden');
+        joinMulticamRoom();
+      }
+    });
+  }
+
+  if (btnCancelJoinRequest) {
+    btnCancelJoinRequest.addEventListener('click', () => {
+      state.isWaitingApproval = false;
+      socket.emit('multicam-cancel-join', {
+        roomId: state.roomId,
+        peerId: state.peerId
+      });
+      if (waitingApprovalBox) waitingApprovalBox.classList.add('hidden');
+      if (btnJoinRoom) btnJoinRoom.classList.remove('hidden');
+      connDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green';
+      connText.textContent = 'Listo para entrar';
+    });
+  }
+
+  socket.on('multicam-join-approved', ({ isHost } = {}) => {
+    state.isWaitingApproval = false;
+    if (typeof isHost === 'boolean') {
+      state.isHost = isHost;
+      if (checkIsHost) checkIsHost.checked = isHost;
+      localStorage.setItem('birra_multicam_is_host', isHost ? 'true' : 'false');
+    }
+    if (waitingApprovalBox) waitingApprovalBox.classList.add('hidden');
+    if (joinRejectedBanner) joinRejectedBanner.classList.add('hidden');
     joinMulticamRoom();
+  });
+
+  socket.on('multicam-join-rejected', ({ reason } = {}) => {
+    state.isWaitingApproval = false;
+    if (waitingApprovalBox) waitingApprovalBox.classList.add('hidden');
+    if (btnJoinRoom) btnJoinRoom.classList.remove('hidden');
+    if (joinRejectedBanner) {
+      if (joinRejectedText) {
+        joinRejectedText.textContent = reason || 'El anfitrión no autorizó tu ingreso a la sala en este momento.';
+      }
+      joinRejectedBanner.classList.remove('hidden');
+    }
+    connDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-red';
+    connText.textContent = 'Solicitud rechazada';
+    if (window.lucide) lucide.createIcons();
   });
 
   function joinMulticamRoom() {
@@ -1152,6 +1230,8 @@
     connText.textContent = state.isJoined ? 'En Sala: ' + state.roomId : 'Listo para entrar';
     if (state.isJoined) {
       joinMulticamRoom();
+    } else if (state.isWaitingApproval) {
+      requestJoinRoom();
     }
   });
 

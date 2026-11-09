@@ -298,21 +298,35 @@ function saveMulticamSettings(persistDb = true) {
   }
 }
 
-// Memoria volátil de participantes por sala de videollamada
+// Memoria volátil de participantes y sala de espera por sala de videollamada
 let multicamRooms = {
   main: {
-    peers: {}
+    peers: {},
+    waiting: {}
   }
 };
 
+// Conjunto de peerIds ya aprobados por el Host en la sesión actual (para reconexiones transparentes)
+const approvedPeerIds = new Set();
+
 function getRoomPeers(roomId) {
   if (!multicamRooms[roomId]) {
-    multicamRooms[roomId] = { peers: {} };
+    multicamRooms[roomId] = { peers: {}, waiting: {} };
   }
   return Object.values(multicamRooms[roomId].peers).map(peer => ({
     ...peer,
     isStreamMuted: !!(peer.isStreamMuted || liveState.masterMuted)
   }));
+}
+
+function getWaitingPeers(roomId) {
+  if (!multicamRooms[roomId]) {
+    multicamRooms[roomId] = { peers: {}, waiting: {} };
+  }
+  if (!multicamRooms[roomId].waiting) {
+    multicamRooms[roomId].waiting = {};
+  }
+  return Object.values(multicamRooms[roomId].waiting);
 }
 
 // Búsqueda de IP real del cliente (con soporte para proxies de Railway/Cloudflare)
@@ -1406,7 +1420,152 @@ io.on('connection', async (socket) => {
   // Enviar estado actual a nuevos clientes conectados
   socket.emit('multicam-settings-updated', multicamSettings);
   socket.emit('multicam-admin-peers-updated', { roomId: 'main', peers: getRoomPeers('main') });
+  socket.emit('multicam-waiting-updated', { roomId: 'main', waiting: getWaitingPeers('main') });
   socket.emit('multicam-banned-ips-updated', { bannedIps: Array.from(bannedIps) });
+
+  // Solicitud de ingreso a la sala (Verificación / Sala de Espera para que el Host acepte o rechace)
+  socket.on('multicam-request-join', ({ roomId = 'main', peerId, userInfo = {}, role = 'guest' }, callback) => {
+    if (!peerId) {
+      if (typeof callback === 'function') callback({ success: false, error: 'peerId requerido' });
+      return;
+    }
+
+    if (!multicamRooms[roomId]) {
+      multicamRooms[roomId] = { peers: {}, waiting: {} };
+    }
+    if (!multicamRooms[roomId].waiting) {
+      multicamRooms[roomId].waiting = {};
+    }
+
+    const clientIp = getClientIp(socket);
+    if (role !== 'overlay' && bannedIps.has(clientIp)) {
+      socket.emit('multicam-banned', { reason: 'Has sido bloqueado de esta sala por el anfitrión.' });
+      if (typeof callback === 'function') callback({ success: false, banned: true, error: 'Has sido bloqueado por el anfitrión.' });
+      socket.disconnect(true);
+      return;
+    }
+
+    // Si es un overlay de OBS o un participante que ya fue aprobado previamente en esta sesión, aprobar directo
+    if (role === 'overlay' || approvedPeerIds.has(peerId)) {
+      if (typeof callback === 'function') {
+        callback({ success: true, status: 'approved' });
+      }
+      return;
+    }
+
+    let initials = userInfo.initials;
+    if (!initials && userInfo.name) {
+      const parts = userInfo.name.trim().split(/\s+/);
+      initials = (parts.length > 1)
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : parts[0].substring(0, 2).toUpperCase();
+    }
+    if (!initials) initials = 'BV';
+
+    const isHost = !!(userInfo.isHost || role === 'host');
+    const waitingPeer = {
+      id: peerId,
+      socketId: socket.id,
+      roomId,
+      role: isHost ? 'host' : 'guest',
+      isHost,
+      name: userInfo.name || 'Invitado',
+      photo: userInfo.photo || '',
+      initials,
+      hasVideo: userInfo.hasVideo !== false,
+      hasAudio: userInfo.hasAudio !== false,
+      clientIp,
+      requestedAt: Date.now()
+    };
+
+    multicamRooms[roomId].waiting[peerId] = waitingPeer;
+    socket.multicamRoomId = roomId;
+    socket.multicamPeerId = peerId;
+    socket.multicamWaiting = true;
+
+    io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
+    io.emit('multicam-join-request-alert', waitingPeer);
+
+    if (typeof callback === 'function') {
+      callback({ success: true, status: 'waiting' });
+    }
+  });
+
+  // Cancelar solicitud de ingreso desde /guest
+  socket.on('multicam-cancel-join', ({ roomId = 'main', peerId }) => {
+    const targetId = peerId || socket.multicamPeerId;
+    if (targetId && multicamRooms[roomId] && multicamRooms[roomId].waiting && multicamRooms[roomId].waiting[targetId]) {
+      delete multicamRooms[roomId].waiting[targetId];
+      socket.multicamWaiting = false;
+      io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
+    }
+  });
+
+  // Aprobar ingreso de un participante desde el Panel de Host
+  socket.on('multicam-approve-join', ({ roomId = 'main', peerId, asHost = null }) => {
+    if (!peerId || !multicamRooms[roomId] || !multicamRooms[roomId].waiting) return;
+    const waitingPeer = multicamRooms[roomId].waiting[peerId];
+    approvedPeerIds.add(peerId);
+    delete multicamRooms[roomId].waiting[peerId];
+
+    if (waitingPeer && waitingPeer.socketId) {
+      const finalIsHost = typeof asHost === 'boolean' ? asHost : !!waitingPeer.isHost;
+      io.to(waitingPeer.socketId).emit('multicam-join-approved', {
+        roomId,
+        peerId,
+        isHost: finalIsHost
+      });
+    }
+
+    io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
+  });
+
+  // Aprobar a todos los que están en sala de espera
+  socket.on('multicam-approve-all-waiting', ({ roomId = 'main' } = {}) => {
+    if (!multicamRooms[roomId] || !multicamRooms[roomId].waiting) return;
+    const waitingList = Object.values(multicamRooms[roomId].waiting);
+    multicamRooms[roomId].waiting = {};
+
+    waitingList.forEach(waitingPeer => {
+      approvedPeerIds.add(waitingPeer.id);
+      if (waitingPeer.socketId) {
+        io.to(waitingPeer.socketId).emit('multicam-join-approved', {
+          roomId,
+          peerId: waitingPeer.id,
+          isHost: !!waitingPeer.isHost
+        });
+      }
+    });
+
+    io.emit('multicam-waiting-updated', { roomId, waiting: [] });
+  });
+
+  // Rechazar ingreso de un participante desde el Panel de Host (con opción de banear IP)
+  socket.on('multicam-reject-join', ({ roomId = 'main', peerId, banIp = false }) => {
+    if (!peerId || !multicamRooms[roomId] || !multicamRooms[roomId].waiting) return;
+    const waitingPeer = multicamRooms[roomId].waiting[peerId];
+    approvedPeerIds.delete(peerId);
+    delete multicamRooms[roomId].waiting[peerId];
+
+    if (waitingPeer) {
+      if (banIp && waitingPeer.clientIp && waitingPeer.clientIp !== 'unknown') {
+        bannedIps.add(waitingPeer.clientIp);
+        saveBannedIps();
+        io.emit('multicam-banned-ips-updated', { bannedIps: Array.from(bannedIps) });
+        if (waitingPeer.socketId) {
+          io.to(waitingPeer.socketId).emit('multicam-banned', {
+            reason: 'Tu solicitud de ingreso fue rechazada y tu IP fue bloqueada por el anfitrión.'
+          });
+        }
+      } else if (waitingPeer.socketId) {
+        io.to(waitingPeer.socketId).emit('multicam-join-rejected', {
+          reason: 'El anfitrión no autorizó tu ingreso a la sala en este momento.'
+        });
+      }
+    }
+
+    io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
+  });
 
   // Unirse a una sala (Invitado, Host u Overlay de OBS)
   socket.on('multicam-join', ({ roomId = 'main', peerId, userInfo = {}, role = 'guest' }, callback) => {
@@ -1416,8 +1575,14 @@ io.on('connection', async (socket) => {
     }
 
     if (!multicamRooms[roomId]) {
-      multicamRooms[roomId] = { peers: {} };
+      multicamRooms[roomId] = { peers: {}, waiting: {} };
     }
+    if (multicamRooms[roomId].waiting && multicamRooms[roomId].waiting[peerId]) {
+      delete multicamRooms[roomId].waiting[peerId];
+      io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
+    }
+    socket.multicamWaiting = false;
+    approvedPeerIds.add(peerId);
 
     // Iniciales automáticas estilo Teams (primer letra de nombre y apellido, o 2 primeras letras)
     let initials = userInfo.initials;
@@ -1568,6 +1733,7 @@ io.on('connection', async (socket) => {
 
   // Expulsar participante de la sala
   socket.on('multicam-kick-peer', ({ roomId = 'main', peerId }) => {
+    approvedPeerIds.delete(peerId);
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       const targetSocketId = multicamRooms[roomId].peers[peerId].socketId;
       io.to(targetSocketId).emit('multicam-kicked');
@@ -1602,6 +1768,7 @@ io.on('connection', async (socket) => {
 
   // Banear participante por IP
   socket.on('multicam-ban-peer', ({ roomId = 'main', peerId, reason }) => {
+    approvedPeerIds.delete(peerId);
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       const peer = multicamRooms[roomId].peers[peerId];
       const targetSocketId = peer.socketId;
@@ -1642,16 +1809,22 @@ io.on('connection', async (socket) => {
   // Enviar estado de Kick Chat al conectarse el socket
   socket.emit('kick-chat-status', kickChatState);
 
-  // Manejo de desconexión para limpiar WebRTC
+  // Manejo de desconexión para limpiar WebRTC y sala de espera
   socket.on('disconnect', () => {
     const roomId = socket.multicamRoomId;
     const peerId = socket.multicamPeerId;
-    if (roomId && peerId && multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
-      delete multicamRooms[roomId].peers[peerId];
-      const currentPeers = getRoomPeers(roomId);
-      io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
-      io.to('multicam-' + roomId).emit('multicam-peer-left', { peerId });
-      io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+    if (roomId && peerId && multicamRooms[roomId]) {
+      if (multicamRooms[roomId].waiting && multicamRooms[roomId].waiting[peerId]) {
+        delete multicamRooms[roomId].waiting[peerId];
+        io.emit('multicam-waiting-updated', { roomId, waiting: getWaitingPeers(roomId) });
+      }
+      if (multicamRooms[roomId].peers && multicamRooms[roomId].peers[peerId]) {
+        delete multicamRooms[roomId].peers[peerId];
+        const currentPeers = getRoomPeers(roomId);
+        io.to('multicam-' + roomId).emit('multicam-peers-updated', { roomId, peers: currentPeers });
+        io.to('multicam-' + roomId).emit('multicam-peer-left', { peerId });
+        io.emit('multicam-admin-peers-updated', { roomId, peers: currentPeers });
+      }
     }
   });
 });

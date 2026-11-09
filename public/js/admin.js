@@ -2692,6 +2692,139 @@ socket.on('master-mute-changed', (data) => {
   }
 });
 
+// ============================================================
+// SALA DE ESPERA Y VERIFICACIÓN DE INGRESO A /GUEST
+// ============================================================
+const multicamWaitingSection = document.getElementById('multicam-waiting-section');
+const multicamWaitingBadge = document.getElementById('multicam-waiting-badge');
+const multicamWaitingList = document.getElementById('multicam-waiting-list');
+const btnApproveAllWaiting = document.getElementById('btn-approve-all-waiting');
+
+const floatingWaitingPanel = document.getElementById('floating-waiting-panel');
+const floatingWaitingCount = document.getElementById('floating-waiting-count');
+const floatingWaitingList = document.getElementById('floating-waiting-list');
+const btnApproveAllFloating = document.getElementById('btn-approve-all-floating');
+
+function renderWaitingPeersList(waitingPeers) {
+  const list = Array.isArray(waitingPeers) ? waitingPeers : [];
+  const count = list.length;
+
+  if (multicamWaitingBadge) multicamWaitingBadge.textContent = count;
+  if (floatingWaitingCount) floatingWaitingCount.textContent = count;
+
+  if (count === 0) {
+    if (multicamWaitingSection) multicamWaitingSection.classList.add('hidden');
+    if (floatingWaitingPanel) floatingWaitingPanel.classList.add('hidden');
+    if (multicamWaitingList) multicamWaitingList.innerHTML = '';
+    if (floatingWaitingList) floatingWaitingList.innerHTML = '';
+    return;
+  }
+
+  if (multicamWaitingSection) multicamWaitingSection.classList.remove('hidden');
+  if (floatingWaitingPanel) floatingWaitingPanel.classList.remove('hidden');
+
+  let html = '';
+  list.forEach(peer => {
+    const initials = peer.initials || 'BV';
+    const wantsHost = !!(peer.isHost || peer.role === 'host');
+    const safeName = escapeHtml(peer.name || 'Invitado');
+    const safeIp = escapeHtml(peer.clientIp || '');
+
+    html += `
+      <div class="bg-cyber-card/95 border border-amber-400/50 rounded-xl p-3 space-y-2.5 shadow-md">
+        <div class="flex items-center justify-between gap-2.5">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-10 h-10 rounded-full border-2 border-amber-400 flex items-center justify-center font-chakra font-bold text-xs text-white shrink-0 overflow-hidden bg-emerald-700">
+              ${peer.photo ? `<img src="${peer.photo}" class="w-full h-full object-cover" alt="${safeName}">` : `<span>${escapeHtml(initials)}</span>`}
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs sm:text-sm font-chakra font-bold text-white truncate max-w-[160px]">${safeName}</span>
+                ${wantsHost ? '<span class="px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 text-[9px] font-mono font-bold">👑 PIDE HOST</span>' : ''}
+              </div>
+              <div class="flex items-center gap-2 text-[10px] font-mono text-gray-400 mt-0.5">
+                <span class="${peer.hasVideo ? 'text-cyber-green' : 'text-yellow-500'}">${peer.hasVideo ? '📹 Cam ON' : '📹 Sin Cam'}</span>
+                <span>&bull;</span>
+                <span class="${peer.hasAudio ? 'text-cyber-green' : 'text-red-400'}">${peer.hasAudio ? '🎙️ Mic ON' : '🎙️ Mic OFF'}</span>
+                ${safeIp ? `<span>&bull;</span><span class="text-gray-500">IP: ${safeIp}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1.5 border-t border-cyber-border/60">
+          <button type="button" onclick="approveWaitingPeer('${peer.id}', false, '${safeName}')" class="px-2.5 py-1.5 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-[11px] uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-1 shadow-[0_0_10px_rgba(0,255,102,0.3)]">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>Aceptar</span>
+          </button>
+
+          <button type="button" onclick="approveWaitingPeer('${peer.id}', true, '${safeName}')" class="px-2 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400 text-cyan-300 hover:bg-cyan-400 hover:text-black font-chakra font-bold text-[11px] uppercase transition-all flex items-center justify-center gap-1" title="Aceptar asignándole directamente rol de Host (Sin eco en OBS)">
+            <span>👑</span>
+            <span>Como Host</span>
+          </button>
+
+          <button type="button" onclick="rejectWaitingPeer('${peer.id}', false, '${safeName}')" class="px-2 py-1.5 rounded-lg bg-red-600/20 border border-red-500/50 text-red-300 hover:bg-red-600 hover:text-white font-chakra font-bold text-[11px] uppercase transition-all flex items-center justify-center gap-1">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            <span>Rechazar</span>
+          </button>
+
+          <button type="button" onclick="rejectWaitingPeer('${peer.id}', true, '${safeName}')" class="px-2 py-1.5 rounded-lg bg-red-950 border border-red-600 text-red-400 hover:bg-red-600 hover:text-white font-chakra font-bold text-[11px] uppercase transition-all flex items-center justify-center gap-1" title="Rechazar y bloquear IP">
+            <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+            <span>Ban IP</span>
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  if (multicamWaitingList) multicamWaitingList.innerHTML = html;
+  if (floatingWaitingList) floatingWaitingList.innerHTML = html;
+  refreshIcons();
+}
+
+window.approveWaitingPeer = function(peerId, asHost, name) {
+  socket.emit('multicam-approve-join', {
+    roomId: 'main',
+    peerId,
+    asHost: !!asHost
+  });
+  showToast(asHost ? `👑 Ingreso aprobado como Host: ${name}` : `✅ Ingreso aprobado a la sala: ${name}`);
+};
+
+window.rejectWaitingPeer = function(peerId, banIp, name) {
+  if (banIp && !confirm(`¿Rechazar y BANEAR por IP a "${name}"?`)) {
+    return;
+  }
+  socket.emit('multicam-reject-join', {
+    roomId: 'main',
+    peerId,
+    banIp: !!banIp
+  });
+  showToast(banIp ? `⛔ Solicitud rechazada e IP bloqueada: ${name}` : `❌ Solicitud de ingreso rechazada: ${name}`, 'error');
+};
+
+function approveAllWaitingPeers() {
+  socket.emit('multicam-approve-all-waiting', { roomId: 'main' });
+  showToast('✅ Todos los participantes en espera fueron aceptados');
+}
+
+if (btnApproveAllWaiting) {
+  btnApproveAllWaiting.addEventListener('click', approveAllWaitingPeers);
+}
+if (btnApproveAllFloating) {
+  btnApproveAllFloating.addEventListener('click', approveAllWaitingPeers);
+}
+
+socket.on('multicam-waiting-updated', ({ waiting }) => {
+  renderWaitingPeersList(waiting);
+});
+
+socket.on('multicam-join-request-alert', (peer) => {
+  if (peer && peer.name) {
+    showToast(`🔔 "${peer.name}" solicita ingresar a la sala de videollamada`);
+  }
+});
+
 // Inicialización
 if (multicamGuestLink) multicamGuestLink.value = window.location.origin + '/guest';
 if (multicamObsLink) multicamObsLink.value = window.location.origin + '/overlay';
