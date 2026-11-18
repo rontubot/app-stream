@@ -34,6 +34,28 @@ const sceneLogoWrapper = document.getElementById('scene-logo-wrapper');
 const sceneLaser = document.getElementById('scene-laser');
 const sceneRadarGlow = document.getElementById('scene-radar-glow');
 
+// Elementos del Contador de Evento en Pantallas de Espera
+const sceneEventCard = document.getElementById('scene-event-card');
+const sceneEventMedia = document.getElementById('scene-event-media');
+const sceneEventImg = document.getElementById('scene-event-img');
+const sceneEventImgBlur = document.getElementById('scene-event-img-blur');
+const sceneEventTimePill = document.getElementById('scene-event-time-pill');
+const sceneEventTimeVal = document.getElementById('scene-event-time-val');
+const sceneEventTitle = document.getElementById('scene-event-title');
+const sceneEventDesc = document.getElementById('scene-event-desc');
+const sceneCdHours = document.getElementById('scene-cd-hours');
+const sceneCdMinutes = document.getElementById('scene-cd-minutes');
+const sceneCdSeconds = document.getElementById('scene-cd-seconds');
+
+let currentEventCountdownState = {
+  enabled: false,
+  title: 'LA VELADA DEL CAOS',
+  description: 'Transmisión especial en vivo • Prepárate para el gran evento',
+  image: '',
+  targetTime: '22:00',
+  targetTimestamp: null
+};
+
 let sceneHideTimeout = null;
 let sceneTransitionTimer = null;
 let sceneCleanupTimer = null;
@@ -303,7 +325,105 @@ function applySceneContent(info) {
     sceneBadge.classList.remove('badge-starting', 'badge-brb', 'badge-ended');
     sceneBadge.classList.add(info.badgeClass);
   }
+
+  renderEventCountdownOnScene();
 }
+
+function resolveEventTargetTimestamp(ev) {
+  if (!ev) return null;
+  if (typeof ev.targetTimestamp === 'number' && !isNaN(ev.targetTimestamp)) {
+    return ev.targetTimestamp;
+  }
+  if (ev.targetTime && typeof ev.targetTime === 'string' && ev.targetTime.includes(':')) {
+    const [hStr, mStr] = ev.targetTime.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (!isNaN(h) && !isNaN(m)) {
+      const now = new Date();
+      const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+      if (target.getTime() < now.getTime() - 6 * 60 * 60 * 1000) {
+        target.setDate(target.getDate() + 1);
+      }
+      return target.getTime();
+    }
+  }
+  return null;
+}
+
+function tickEventCountdownOverlay() {
+  if (!sceneEl || !sceneEventCard) return;
+  if (!currentEventCountdownState || !currentEventCountdownState.enabled) return;
+
+  const targetTs = resolveEventTargetTimestamp(currentEventCountdownState);
+  const now = Date.now();
+  const remainingMs = targetTs !== null ? (targetTs - now) : 0;
+
+  if (remainingMs > 0) {
+    sceneEventCard.classList.remove('is-countdown-completed');
+    const totalSeconds = Math.ceil(remainingMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (sceneCdHours) sceneCdHours.textContent = String(hours).padStart(2, '0');
+    if (sceneCdMinutes) sceneCdMinutes.textContent = String(minutes).padStart(2, '0');
+    if (sceneCdSeconds) sceneCdSeconds.textContent = String(seconds).padStart(2, '0');
+  } else {
+    // Tiempo completado: desaparece el contador y coloca que estamos por empezar
+    sceneEventCard.classList.add('is-countdown-completed');
+    if (sceneCdHours) sceneCdHours.textContent = '00';
+    if (sceneCdMinutes) sceneCdMinutes.textContent = '00';
+    if (sceneCdSeconds) sceneCdSeconds.textContent = '00';
+  }
+}
+
+function renderEventCountdownOnScene() {
+  if (!sceneEl || !sceneEventCard) return;
+
+  const ev = currentEventCountdownState;
+  const isWaitingScreen = !currentSceneType || ['starting', 'brb', 'ended'].includes(currentSceneType);
+
+  if (ev && ev.enabled && isWaitingScreen) {
+    sceneEl.classList.add('has-event-countdown');
+
+    if (sceneEventTitle) {
+      sceneEventTitle.textContent = ev.title || 'PRÓXIMO EVENTO EN VIVO';
+    }
+    if (sceneEventDesc) {
+      sceneEventDesc.textContent = ev.description || 'La transmisión comenzará en breve';
+      sceneEventDesc.style.display = ev.description ? '' : 'none';
+    }
+    if (sceneEventTimePill && sceneEventTimeVal) {
+      if (ev.targetTime) {
+        sceneEventTimeVal.textContent = ev.targetTime;
+        sceneEventTimePill.style.display = 'inline-flex';
+      } else {
+        sceneEventTimePill.style.display = 'none';
+      }
+    }
+
+    const imgUrl = (ev.image || '').trim();
+    if (imgUrl) {
+      sceneEventCard.classList.remove('no-custom-image');
+      if (sceneEventMedia) sceneEventMedia.style.display = 'block';
+      if (sceneEventImg && sceneEventImg.getAttribute('src') !== imgUrl) {
+        sceneEventImg.src = imgUrl;
+      }
+      if (sceneEventImgBlur && sceneEventImgBlur.getAttribute('src') !== imgUrl) {
+        sceneEventImgBlur.src = imgUrl;
+      }
+    } else {
+      sceneEventCard.classList.add('no-custom-image');
+      if (sceneEventMedia) sceneEventMedia.style.display = 'none';
+    }
+
+    tickEventCountdownOverlay();
+  } else {
+    sceneEl.classList.remove('has-event-countdown');
+  }
+}
+
+setInterval(tickEventCountdownOverlay, 1000);
 
 // Disparar animación de transición con escaneo láser minimalista de arriba a abajo
 function triggerSceneTransition(info) {
@@ -442,9 +562,18 @@ socket.on('state-update', (state) => {
     document.documentElement.style.setProperty('--overlay-scale', scaleVal);
   }
 
+  // Contador de Evento en Pantallas de Espera
+  if (state.eventCountdown && typeof state.eventCountdown === 'object') {
+    currentEventCountdownState = {
+      ...currentEventCountdownState,
+      ...state.eventCountdown
+    };
+  }
+
   // Escena Pantalla Completa
   if (state.scene && state.scene.isActive) {
     showScene(state.scene);
+    renderEventCountdownOnScene();
   } else {
     hideScene();
   }

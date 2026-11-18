@@ -1,6 +1,7 @@
 {
   "scale": 65,
   "defaultAutoHide": 5,
+  "masterMuted": false,
   "queue": {
     "leftId": "pres-1",
     "rightId": "pres-2"
@@ -11,6 +12,19 @@
   },
   "chatOverlay": {
     "ttsEnabled": true,
-    "commandPrefix": "!anuncio"
+    "commandPrefix": "!anuncio",
+    "ttsStyle": "equipo",
+    "ttsRate": 0.93,
+    "ttsPitch": 0.82,
+    "ttsVoiceName": ""
+  },
+  "eventCountdown": {
+    "enabled": false,
+    "title": "LA VELADA DEL CAOS",
+    "description": "Transmisión especial en vivo • Prepárate para el gran evento",
+    "image": "",
+    "targetTime": "22:00",
+    "targetTimestamp": null,
+    "updatedAt": null
   }
 }

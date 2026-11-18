@@ -109,6 +109,15 @@ let liveState = {
     ttsPitch: 0.82,
     ttsVoiceName: '',
     lastMessage: null
+  },
+  eventCountdown: {
+    enabled: false,
+    title: 'LA VELADA DEL CAOS',
+    description: 'Transmisión especial en vivo • Prepárate para el gran evento',
+    image: '',
+    targetTime: '22:00',
+    targetTimestamp: null,
+    updatedAt: null
   }
 };
 
@@ -181,6 +190,29 @@ function loadSettings() {
           liveState.chatOverlay.ttsVoiceName = data.chatOverlay.ttsVoiceName;
         }
       }
+      if (data.eventCountdown && typeof data.eventCountdown === 'object') {
+        if (typeof data.eventCountdown.enabled === 'boolean') {
+          liveState.eventCountdown.enabled = data.eventCountdown.enabled;
+        }
+        if (typeof data.eventCountdown.title === 'string') {
+          liveState.eventCountdown.title = data.eventCountdown.title;
+        }
+        if (typeof data.eventCountdown.description === 'string') {
+          liveState.eventCountdown.description = data.eventCountdown.description;
+        }
+        if (typeof data.eventCountdown.image === 'string') {
+          liveState.eventCountdown.image = data.eventCountdown.image;
+        }
+        if (typeof data.eventCountdown.targetTime === 'string') {
+          liveState.eventCountdown.targetTime = data.eventCountdown.targetTime;
+        }
+        if (typeof data.eventCountdown.targetTimestamp === 'number' || data.eventCountdown.targetTimestamp === null) {
+          liveState.eventCountdown.targetTimestamp = data.eventCountdown.targetTimestamp;
+        }
+        if (typeof data.eventCountdown.updatedAt === 'number' || data.eventCountdown.updatedAt === null) {
+          liveState.eventCountdown.updatedAt = data.eventCountdown.updatedAt;
+        }
+      }
       return data;
     }
   } catch (err) {
@@ -209,6 +241,15 @@ function getSettingsPayload() {
       ttsRate: liveState.chatOverlay.ttsRate || 0.93,
       ttsPitch: liveState.chatOverlay.ttsPitch || 0.82,
       ttsVoiceName: liveState.chatOverlay.ttsVoiceName || ''
+    },
+    eventCountdown: {
+      enabled: !!liveState.eventCountdown.enabled,
+      title: liveState.eventCountdown.title || '',
+      description: liveState.eventCountdown.description || '',
+      image: liveState.eventCountdown.image || '',
+      targetTime: liveState.eventCountdown.targetTime || '',
+      targetTimestamp: liveState.eventCountdown.targetTimestamp || null,
+      updatedAt: liveState.eventCountdown.updatedAt || null
     }
   };
 }
@@ -581,6 +622,7 @@ async function syncDataFromDatabase() {
       if (typeof s.masterMuted === 'boolean') liveState.masterMuted = s.masterMuted;
       if (s.topHud) liveState.topHud = { ...liveState.topHud, ...s.topHud };
       if (s.chatOverlay) liveState.chatOverlay = { ...liveState.chatOverlay, ...s.chatOverlay };
+      if (s.eventCountdown) liveState.eventCountdown = { ...liveState.eventCountdown, ...s.eventCountdown };
       if (s.queue) {
         if (s.queue.leftId) {
           liveState.queue.left = presenters.find(p => p.id === s.queue.leftId) || presenters[0] || null;
@@ -762,6 +804,22 @@ app.post('/api/settings', (req, res) => {
   saveSettings();
   io.emit('state-update', liveState);
   res.json({ success: true, settings: { scale: liveState.scale, defaultAutoHide: liveState.defaultAutoHide } });
+});
+
+app.post('/api/event-countdown', (req, res) => {
+  const data = req.body || {};
+  if (typeof data.enabled === 'boolean') liveState.eventCountdown.enabled = data.enabled;
+  if (typeof data.title === 'string') liveState.eventCountdown.title = data.title.trim();
+  if (typeof data.description === 'string') liveState.eventCountdown.description = data.description.trim();
+  if (typeof data.image === 'string') liveState.eventCountdown.image = data.image.trim();
+  if (typeof data.targetTime === 'string') liveState.eventCountdown.targetTime = data.targetTime.trim();
+  if (typeof data.targetTimestamp === 'number' || data.targetTimestamp === null) {
+    liveState.eventCountdown.targetTimestamp = data.targetTimestamp;
+  }
+  liveState.eventCountdown.updatedAt = Date.now();
+  saveSettings();
+  io.emit('state-update', liveState);
+  res.json({ success: true, eventCountdown: liveState.eventCountdown });
 });
 
 app.post('/api/presenters', (req, res) => {
@@ -1197,6 +1255,49 @@ io.on('connection', async (socket) => {
     io.emit('hud-alert', alertData);
   });
 
+  // 5.c.2. Contador de Próximo Evento en Pantallas de Espera
+  socket.on('toggle-event-countdown', (payload, callback) => {
+    if (payload && typeof payload.enabled === 'boolean') {
+      liveState.eventCountdown.enabled = payload.enabled;
+    } else {
+      liveState.eventCountdown.enabled = !liveState.eventCountdown.enabled;
+    }
+    liveState.eventCountdown.updatedAt = Date.now();
+    saveSettings();
+    io.emit('state-update', liveState);
+    if (typeof callback === 'function') {
+      callback({ success: true, eventCountdown: liveState.eventCountdown });
+    }
+  });
+
+  socket.on('update-event-countdown', (data, callback) => {
+    if (!data || typeof data !== 'object') return;
+    if (typeof data.enabled === 'boolean') {
+      liveState.eventCountdown.enabled = data.enabled;
+    }
+    if (typeof data.title === 'string') {
+      liveState.eventCountdown.title = data.title.trim();
+    }
+    if (typeof data.description === 'string') {
+      liveState.eventCountdown.description = data.description.trim();
+    }
+    if (typeof data.image === 'string') {
+      liveState.eventCountdown.image = data.image.trim();
+    }
+    if (typeof data.targetTime === 'string') {
+      liveState.eventCountdown.targetTime = data.targetTime.trim();
+    }
+    if (typeof data.targetTimestamp === 'number' || data.targetTimestamp === null) {
+      liveState.eventCountdown.targetTimestamp = data.targetTimestamp;
+    }
+    liveState.eventCountdown.updatedAt = Date.now();
+    saveSettings();
+    io.emit('state-update', liveState);
+    if (typeof callback === 'function') {
+      callback({ success: true, eventCountdown: liveState.eventCountdown });
+    }
+  });
+
   // 5.d. Overlay Inferior de Chat Destacado y TTS
   socket.on('trigger-chat-announcement', (data) => {
     // data: { user: '@...', text: '...', tts: boolean }
@@ -1419,6 +1520,9 @@ io.on('connection', async (socket) => {
       if (backupData.settings) {
         if (typeof backupData.settings.scale === 'number') liveState.scale = backupData.settings.scale;
         if (typeof backupData.settings.defaultAutoHide === 'number') liveState.defaultAutoHide = backupData.settings.defaultAutoHide;
+        if (backupData.settings.eventCountdown && typeof backupData.settings.eventCountdown === 'object') {
+          liveState.eventCountdown = { ...liveState.eventCountdown, ...backupData.settings.eventCountdown };
+        }
       }
       if (presenters.length > 0) {
         liveState.queue.left = presenters[0];

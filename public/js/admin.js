@@ -689,6 +689,13 @@ socket.on('state-update', (state) => {
     updateMasterMuteUI(state.masterMuted);
   }
 
+  // Estado del Contador de Próximo Evento en Pantallas de Espera
+  if (state.eventCountdown && typeof state.eventCountdown === 'object') {
+    if (typeof syncEventCountdownUI === 'function') {
+      syncEventCountdownUI(state.eventCountdown);
+    }
+  }
+
   refreshIcons();
 
   saveToLocalStorage();
@@ -2924,6 +2931,398 @@ socket.on('multicam-join-request-alert', (peer) => {
     showToast(`🔔 "${peer.name}" solicita ingresar a la sala (Verificación en Escenas)`);
   }
 });
+
+// ============================================================
+// CONTADOR Y TARJETA DE PRÓXIMO EVENTO EN PANTALLAS DE ESPERA
+// ============================================================
+const mainEventCdStatusBadge = document.getElementById('main-event-cd-status-badge');
+const mainEventCdLiveTimer = document.getElementById('main-event-cd-live-timer');
+const btnMainToggleEventCd = document.getElementById('btn-main-toggle-event-cd');
+const iconMainEventCdToggle = document.getElementById('icon-main-event-cd-toggle');
+const textMainEventCdToggle = document.getElementById('text-main-event-cd-toggle');
+const btnToggleMainEventForm = document.getElementById('btn-toggle-main-event-form');
+const textToggleMainEventForm = document.getElementById('text-toggle-main-event-form');
+const iconToggleMainEventForm = document.getElementById('icon-toggle-main-event-form');
+const mainEventCdFormPanel = document.getElementById('main-event-cd-form-panel');
+
+const inputMainEventTitle = document.getElementById('input-main-event-title');
+const inputMainEventTime = document.getElementById('input-main-event-time');
+const inputMainEventDesc = document.getElementById('input-main-event-desc');
+const inputMainEventImage = document.getElementById('input-main-event-image');
+const fileMainEventImage = document.getElementById('file-main-event-image');
+const imgMainEventPreview = document.getElementById('img-main-event-preview');
+const btnMainClearEventImage = document.getElementById('btn-main-clear-event-image');
+const btnMainResetEvent = document.getElementById('btn-main-reset-event');
+const btnMainSaveEvent = document.getElementById('btn-main-save-event');
+const btnMainSaveActivateEvent = document.getElementById('btn-main-save-activate-event');
+
+// Elementos en la Pestaña de Configuración
+const cfgEventCdStatusBadge = document.getElementById('cfg-event-cd-status-badge');
+const cfgEventCdLiveTimer = document.getElementById('cfg-event-cd-live-timer');
+const btnCfgToggleEventCd = document.getElementById('btn-cfg-toggle-event-cd');
+const iconCfgEventCdToggle = document.getElementById('icon-cfg-event-cd-toggle');
+const textCfgEventCdToggle = document.getElementById('text-cfg-event-cd-toggle');
+
+const inputCfgEventTitle = document.getElementById('input-cfg-event-title');
+const inputCfgEventTime = document.getElementById('input-cfg-event-time');
+const inputCfgEventDesc = document.getElementById('input-cfg-event-desc');
+const inputCfgEventImage = document.getElementById('input-cfg-event-image');
+const fileCfgEventImage = document.getElementById('file-cfg-event-image');
+const imgCfgEventPreview = document.getElementById('img-cfg-event-preview');
+const btnCfgClearEventImage = document.getElementById('btn-cfg-clear-event-image');
+const btnCfgResetEvent = document.getElementById('btn-cfg-reset-event');
+const btnCfgSaveEvent = document.getElementById('btn-cfg-save-event');
+const btnCfgSaveActivateEvent = document.getElementById('btn-cfg-save-activate-event');
+
+let isMainEventFormExpanded = true;
+
+function computeTargetTimestampFromTimeStr(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return null;
+  const [hStr, mStr] = timeStr.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return null;
+
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+  if (target.getTime() < now.getTime() - 6 * 60 * 60 * 1000) {
+    target.setDate(target.getDate() + 1);
+  }
+  return target.getTime();
+}
+
+function syncEventCountdownUI(ev) {
+  if (!ev) return;
+  currentLiveState.eventCountdown = {
+    ...(currentLiveState.eventCountdown || {}),
+    ...ev
+  };
+
+  const isEnabled = !!ev.enabled;
+
+  // Badges y Botones de Activación (Control Principal)
+  if (mainEventCdStatusBadge) {
+    if (isEnabled) {
+      mainEventCdStatusBadge.className = 'px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/50 uppercase shadow-[0_0_10px_rgba(0,255,102,0.3)]';
+      mainEventCdStatusBadge.textContent = 'ACTIVO EN PANTALLAS DE ESPERA';
+    } else {
+      mainEventCdStatusBadge.className = 'px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px] font-mono font-bold border border-gray-700 uppercase';
+      mainEventCdStatusBadge.textContent = 'DESACTIVADO';
+    }
+  }
+
+  if (btnMainToggleEventCd) {
+    if (isEnabled) {
+      btnMainToggleEventCd.className = 'flex-1 sm:flex-initial px-3.5 py-2 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(0,255,102,0.35)] cursor-pointer';
+      if (textMainEventCdToggle) textMainEventCdToggle.textContent = 'CONTADOR ACTIVO (CLIC PARA DESACTIVAR)';
+    } else {
+      btnMainToggleEventCd.className = 'flex-1 sm:flex-initial px-3.5 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-300 font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer';
+      if (textMainEventCdToggle) textMainEventCdToggle.textContent = 'ACTIVAR CONTADOR';
+    }
+  }
+
+  // Badges y Botones de Activación (Pestaña Configuración)
+  if (cfgEventCdStatusBadge) {
+    if (isEnabled) {
+      cfgEventCdStatusBadge.className = 'px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/50 uppercase shadow-[0_0_10px_rgba(0,255,102,0.3)]';
+      cfgEventCdStatusBadge.textContent = 'CONTADOR ACTIVO EN PANTALLAS DE CARGA';
+    } else {
+      cfgEventCdStatusBadge.className = 'px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px] font-mono font-bold border border-gray-700 uppercase';
+      cfgEventCdStatusBadge.textContent = 'CONTADOR DESACTIVADO';
+    }
+  }
+
+  if (btnCfgToggleEventCd) {
+    if (isEnabled) {
+      btnCfgToggleEventCd.className = 'px-4 py-2.5 rounded-xl bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(0,255,102,0.35)] cursor-pointer';
+      if (textCfgEventCdToggle) textCfgEventCdToggle.textContent = 'CONTADOR ACTIVO (DESACTIVAR)';
+    } else {
+      btnCfgToggleEventCd.className = 'px-4 py-2.5 rounded-xl bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-200 font-chakra font-extrabold text-xs uppercase transition-all flex items-center gap-2 cursor-pointer';
+      if (textCfgEventCdToggle) textCfgEventCdToggle.textContent = 'ACTIVAR CONTADOR EN ESPERA';
+    }
+  }
+
+  // Sincronizar campos de formulario (sin pisar si el usuario está escribiendo activamente en ese input)
+  const activeEl = document.activeElement;
+  const titleVal = ev.title || '';
+  const descVal = ev.description || '';
+  const timeVal = ev.targetTime || '22:00';
+  const imgVal = ev.image || '';
+
+  if (inputMainEventTitle && activeEl !== inputMainEventTitle) inputMainEventTitle.value = titleVal;
+  if (inputCfgEventTitle && activeEl !== inputCfgEventTitle) inputCfgEventTitle.value = titleVal;
+
+  if (inputMainEventDesc && activeEl !== inputMainEventDesc) inputMainEventDesc.value = descVal;
+  if (inputCfgEventDesc && activeEl !== inputCfgEventDesc) inputCfgEventDesc.value = descVal;
+
+  if (inputMainEventTime && activeEl !== inputMainEventTime) inputMainEventTime.value = timeVal;
+  if (inputCfgEventTime && activeEl !== inputCfgEventTime) inputCfgEventTime.value = timeVal;
+
+  if (inputMainEventImage && activeEl !== inputMainEventImage) inputMainEventImage.value = imgVal;
+  if (inputCfgEventImage && activeEl !== inputCfgEventImage) inputCfgEventImage.value = imgVal;
+
+  const previewSrc = imgVal || '/assets/logo-birraverde.png';
+  if (imgMainEventPreview) imgMainEventPreview.src = previewSrc;
+  if (imgCfgEventPreview) imgCfgEventPreview.src = previewSrc;
+
+  tickAdminEventCountdown();
+}
+
+function tickAdminEventCountdown() {
+  const ev = currentLiveState.eventCountdown;
+  if (!ev) return;
+
+  let targetTs = (typeof ev.targetTimestamp === 'number' && !isNaN(ev.targetTimestamp))
+    ? ev.targetTimestamp
+    : computeTargetTimestampFromTimeStr(ev.targetTime);
+
+  const remainingMs = targetTs !== null ? (targetTs - Date.now()) : 0;
+  let timerText = '';
+
+  if (remainingMs > 0) {
+    const totalSec = Math.ceil(remainingMs / 1000);
+    const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const secs = String(totalSec % 60).padStart(2, '0');
+    timerText = `⏳ FALTAN ${hrs}:${mins}:${secs} (${ev.targetTime || '--:--'} HS)`;
+  } else {
+    timerText = `⚡ ¡TIEMPO COMPLETADO! → MOSTRANDO "ESTAMOS POR EMPEZAR"`;
+  }
+
+  if (mainEventCdLiveTimer) mainEventCdLiveTimer.textContent = timerText;
+  if (cfgEventCdLiveTimer) cfgEventCdLiveTimer.textContent = timerText;
+}
+
+setInterval(tickAdminEventCountdown, 1000);
+
+// Mantener ambos formularios sincronizados entre sí al escribir
+function bindDualInputSync(inputA, inputB, onUpdate) {
+  if (inputA && inputB) {
+    inputA.addEventListener('input', () => {
+      inputB.value = inputA.value;
+      if (typeof onUpdate === 'function') onUpdate(inputA.value);
+    });
+    inputB.addEventListener('input', () => {
+      inputA.value = inputB.value;
+      if (typeof onUpdate === 'function') onUpdate(inputB.value);
+    });
+  }
+}
+
+bindDualInputSync(inputMainEventTitle, inputCfgEventTitle);
+bindDualInputSync(inputMainEventDesc, inputCfgEventDesc);
+bindDualInputSync(inputMainEventTime, inputCfgEventTime);
+bindDualInputSync(inputMainEventImage, inputCfgEventImage, (val) => {
+  const src = (val || '').trim() || '/assets/logo-birraverde.png';
+  if (imgMainEventPreview) imgMainEventPreview.src = src;
+  if (imgCfgEventPreview) imgCfgEventPreview.src = src;
+});
+
+// Subida de imagen para el Evento
+function setupEventImageUpload(fileInput) {
+  if (!fileInput) return;
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const dataUrl = evt.target.result;
+      if (imgMainEventPreview) imgMainEventPreview.src = dataUrl;
+      if (imgCfgEventPreview) imgCfgEventPreview.src = dataUrl;
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataUrl, filename: file.name })
+        });
+        const result = await res.json();
+        const finalUrl = (result && result.url) ? result.url : dataUrl;
+        if (inputMainEventImage) inputMainEventImage.value = finalUrl;
+        if (inputCfgEventImage) inputCfgEventImage.value = finalUrl;
+        if (imgMainEventPreview) imgMainEventPreview.src = finalUrl;
+        if (imgCfgEventPreview) imgCfgEventPreview.src = finalUrl;
+        showToast('🖼️ Imagen del evento cargada correctamente');
+      } catch (err) {
+        if (inputMainEventImage) inputMainEventImage.value = dataUrl;
+        if (inputCfgEventImage) inputCfgEventImage.value = dataUrl;
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+setupEventImageUpload(fileMainEventImage);
+setupEventImageUpload(fileCfgEventImage);
+
+function clearEventImage() {
+  if (inputMainEventImage) inputMainEventImage.value = '';
+  if (inputCfgEventImage) inputCfgEventImage.value = '';
+  if (fileMainEventImage) fileMainEventImage.value = '';
+  if (fileCfgEventImage) fileCfgEventImage.value = '';
+  if (imgMainEventPreview) imgMainEventPreview.src = '/assets/logo-birraverde.png';
+  if (imgCfgEventPreview) imgCfgEventPreview.src = '/assets/logo-birraverde.png';
+  showToast('🗑️ Imagen del evento quitada');
+}
+
+if (btnMainClearEventImage) btnMainClearEventImage.addEventListener('click', clearEventImage);
+if (btnCfgClearEventImage) btnCfgClearEventImage.addEventListener('click', clearEventImage);
+
+// Guardar y emitir datos del Evento
+function saveEventCountdownData(forceEnabled = null, customTargetTs = undefined) {
+  const title = (inputMainEventTitle ? inputMainEventTitle.value.trim() : '') ||
+                (inputCfgEventTitle ? inputCfgEventTitle.value.trim() : '') ||
+                'PRÓXIMO EVENTO EN VIVO';
+  const description = (inputMainEventDesc ? inputMainEventDesc.value.trim() : '') ||
+                      (inputCfgEventDesc ? inputCfgEventDesc.value.trim() : '');
+  const targetTime = (inputMainEventTime ? inputMainEventTime.value.trim() : '') ||
+                     (inputCfgEventTime ? inputCfgEventTime.value.trim() : '') ||
+                     '22:00';
+  const image = (inputMainEventImage ? inputMainEventImage.value.trim() : '') ||
+                (inputCfgEventImage ? inputCfgEventImage.value.trim() : '');
+
+  const enabled = (typeof forceEnabled === 'boolean')
+    ? forceEnabled
+    : !!(currentLiveState.eventCountdown && currentLiveState.eventCountdown.enabled);
+
+  const targetTimestamp = (customTargetTs !== undefined)
+    ? customTargetTs
+    : computeTargetTimestampFromTimeStr(targetTime);
+
+  const payload = {
+    enabled,
+    title,
+    description,
+    image,
+    targetTime,
+    targetTimestamp
+  };
+
+  socket.emit('update-event-countdown', payload);
+  fetch('/api/event-countdown', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(() => {});
+
+  return payload;
+}
+
+// Botones Guardar y Guardar+Activar
+if (btnMainSaveEvent) {
+  btnMainSaveEvent.addEventListener('click', () => {
+    const saved = saveEventCountdownData(null);
+    showToast(`💾 Evento "${saved.title}" actualizado (${saved.targetTime} HS)`);
+  });
+}
+if (btnCfgSaveEvent) {
+  btnCfgSaveEvent.addEventListener('click', () => {
+    const saved = saveEventCountdownData(null);
+    showToast(`💾 Evento "${saved.title}" actualizado (${saved.targetTime} HS)`);
+  });
+}
+
+if (btnMainSaveActivateEvent) {
+  btnMainSaveActivateEvent.addEventListener('click', () => {
+    const saved = saveEventCountdownData(true);
+    showToast(`🚀 Contador activado en pantallas de espera: "${saved.title}"`);
+  });
+}
+if (btnCfgSaveActivateEvent) {
+  btnCfgSaveActivateEvent.addEventListener('click', () => {
+    const saved = saveEventCountdownData(true);
+    showToast(`🚀 Contador activado en pantallas de espera: "${saved.title}"`);
+  });
+}
+
+// Botones Toggle Activar / Desactivar Contador
+function toggleEventCountdownEnabled() {
+  const currentlyEnabled = !!(currentLiveState.eventCountdown && currentLiveState.eventCountdown.enabled);
+  const nextEnabled = !currentlyEnabled;
+  if (nextEnabled) {
+    // Al activar, aseguramos guardar también los campos actuales del formulario
+    saveEventCountdownData(true);
+    showToast('⏱️ Contador de Evento ACTIVADO en pantallas de espera');
+  } else {
+    socket.emit('toggle-event-countdown', { enabled: false });
+    fetch('/api/event-countdown', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: false })
+    }).catch(() => {});
+    showToast('👁️‍🗨️ Contador de Evento DESACTIVADO (oculto en pantallas de carga)');
+  }
+}
+
+if (btnMainToggleEventCd) btnMainToggleEventCd.addEventListener('click', toggleEventCountdownEnabled);
+if (btnCfgToggleEventCd) btnCfgToggleEventCd.addEventListener('click', toggleEventCountdownEnabled);
+
+// Botones de Ajuste Rápido de Hora (+5m, +10m, +15m, +30m, +1h, Completar Ahora)
+document.querySelectorAll('.btn-quick-event-time').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const addMin = parseInt(btn.getAttribute('data-add-min'), 10);
+    const targetDate = new Date(Date.now() + addMin * 60 * 1000);
+    const hh = String(targetDate.getHours()).padStart(2, '0');
+    const mm = String(targetDate.getMinutes()).padStart(2, '0');
+    const formattedTime = `${hh}:${mm}`;
+
+    if (inputMainEventTime) inputMainEventTime.value = formattedTime;
+    if (inputCfgEventTime) inputCfgEventTime.value = formattedTime;
+
+    const customTs = addMin === 0 ? (Date.now() - 1000) : targetDate.getTime();
+    saveEventCountdownData(null, customTs);
+
+    if (addMin === 0) {
+      showToast('⚡ Tiempo completado (00:00) → Mostrando "ESTAMOS POR EMPEZAR"');
+    } else {
+      showToast(`⏱️ Hora del evento ajustada a ${formattedTime} (+${addMin} min)`);
+    }
+  });
+});
+
+// Botón Limpiar / Nuevo Evento para cambiar de evento fácilmente
+function resetForNewEvent() {
+  const nextHour = new Date(Date.now() + 30 * 60 * 1000);
+  const hh = String(nextHour.getHours()).padStart(2, '0');
+  const mm = String(nextHour.getMinutes()).padStart(2, '0');
+  const defaultTime = `${hh}:${mm}`;
+
+  if (inputMainEventTitle) inputMainEventTitle.value = '';
+  if (inputCfgEventTitle) inputCfgEventTitle.value = '';
+  if (inputMainEventDesc) inputMainEventDesc.value = '';
+  if (inputCfgEventDesc) inputCfgEventDesc.value = '';
+  if (inputMainEventTime) inputMainEventTime.value = defaultTime;
+  if (inputCfgEventTime) inputCfgEventTime.value = defaultTime;
+  clearEventImage();
+
+  if (inputMainEventTitle && !tabPanelMain.classList.contains('hidden')) {
+    inputMainEventTitle.focus();
+  } else if (inputCfgEventTitle) {
+    inputCfgEventTitle.focus();
+  }
+  showToast('✨ Campos listos para ingresar el nuevo evento');
+}
+
+if (btnMainResetEvent) btnMainResetEvent.addEventListener('click', resetForNewEvent);
+if (btnCfgResetEvent) btnCfgResetEvent.addEventListener('click', resetForNewEvent);
+
+// Expandir / Contraer panel de formulario en Control Principal
+if (btnToggleMainEventForm && mainEventCdFormPanel) {
+  btnToggleMainEventForm.addEventListener('click', () => {
+    isMainEventFormExpanded = !isMainEventFormExpanded;
+    if (isMainEventFormExpanded) {
+      mainEventCdFormPanel.classList.remove('hidden');
+      if (textToggleMainEventForm) textToggleMainEventForm.textContent = 'OCULTAR EDITOR';
+      if (iconToggleMainEventForm) iconToggleMainEventForm.setAttribute('data-lucide', 'chevron-up');
+    } else {
+      mainEventCdFormPanel.classList.add('hidden');
+      if (textToggleMainEventForm) textToggleMainEventForm.textContent = 'EDITAR EVENTO';
+      if (iconToggleMainEventForm) iconToggleMainEventForm.setAttribute('data-lucide', 'chevron-down');
+    }
+    refreshIcons();
+  });
+}
 
 // Inicialización
 if (multicamGuestLink) multicamGuestLink.value = window.location.origin + '/guest';

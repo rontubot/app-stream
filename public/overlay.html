@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-192.png">
-  <link rel="stylesheet" href="/css/overlay.css?v=20261109f">
+  <link rel="stylesheet" href="/css/overlay.css?v=20261118a">
   <link rel="stylesheet" href="/css/multicam.css">
 </head>
 <body>
@@ -147,9 +147,15 @@
       </div>
 
       <div class="scene-content">
-        <div class="scene-badge" id="scene-badge">
-          <span class="scene-dot"></span>
-          <span id="scene-badge-text">TRANSMISIÓN EN PAUSA</span>
+        <div class="scene-top-bar">
+          <div class="scene-mini-brand" id="scene-mini-brand">
+            <img src="/assets/logo-birraverde.png" alt="BirraVerde" class="scene-mini-brand-img">
+            <span>BIRRAVERDE</span>
+          </div>
+          <div class="scene-badge" id="scene-badge">
+            <span class="scene-dot"></span>
+            <span id="scene-badge-text">TRANSMISIÓN EN PAUSA</span>
+          </div>
         </div>
 
         <div class="scene-logo-wrapper" id="scene-logo-wrapper">
@@ -160,6 +166,70 @@
         <div class="scene-text-block" id="scene-text-block">
           <h1 class="scene-title" id="scene-title">YA VOLVEMOS</h1>
           <p class="scene-subtitle" id="scene-subtitle">Breve pausa comercial • Enseguida regresamos</p>
+        </div>
+
+        <!-- TARJETA DE EVENTO Y CONTADOR EN PANTALLAS DE ESPERA -->
+        <div class="scene-event-card" id="scene-event-card">
+          <div class="scene-event-shimmer"></div>
+          <div class="scene-event-inner">
+            <!-- Columna de Imagen del Evento -->
+            <div class="scene-event-media" id="scene-event-media">
+              <div class="scene-event-img-frame">
+                <img src="/assets/logo-birraverde.png" alt="" class="scene-event-img-blur" id="scene-event-img-blur">
+                <img src="/assets/logo-birraverde.png" alt="Evento" class="scene-event-img" id="scene-event-img">
+                <div class="scene-event-img-scan"></div>
+              </div>
+            </div>
+
+            <!-- Columna de Información y Contador -->
+            <div class="scene-event-details">
+              <div class="scene-event-meta-row">
+                <span class="scene-event-tag">
+                  <span class="scene-event-tag-dot"></span>
+                  <span>EVENTO ESPECIAL</span>
+                </span>
+                <span class="scene-event-time-pill" id="scene-event-time-pill">
+                  🕒 HORA: <strong id="scene-event-time-val">22:00</strong> HS
+                </span>
+              </div>
+
+              <h2 class="scene-event-title" id="scene-event-title">LA VELADA DEL CAOS</h2>
+              <p class="scene-event-desc" id="scene-event-desc">Transmisión especial en vivo • Prepárate para el gran evento</p>
+
+              <div class="scene-event-divider"></div>
+
+              <!-- ESTADO 1: CONTADOR ACTIVO (CUANDO FALTA TIEMPO) -->
+              <div class="scene-countdown-box" id="scene-countdown-box">
+                <div class="scene-countdown-label">⏳ TIEMPO RESTANTE PARA EL EVENTO</div>
+                <div class="scene-countdown-grid">
+                  <div class="scene-cd-unit">
+                    <div class="scene-cd-digits" id="scene-cd-hours">00</div>
+                    <div class="scene-cd-unit-label">HORAS</div>
+                  </div>
+                  <div class="scene-cd-sep">:</div>
+                  <div class="scene-cd-unit">
+                    <div class="scene-cd-digits" id="scene-cd-minutes">00</div>
+                    <div class="scene-cd-unit-label">MINUTOS</div>
+                  </div>
+                  <div class="scene-cd-sep">:</div>
+                  <div class="scene-cd-unit">
+                    <div class="scene-cd-digits" id="scene-cd-seconds">00</div>
+                    <div class="scene-cd-unit-label">SEGUNDOS</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ESTADO 2: TIEMPO COMPLETADO (DESAPARECE EL CONTADOR Y DICE ESTAMOS POR EMPEZAR) -->
+              <div class="scene-countdown-completed" id="scene-countdown-completed">
+                <div class="scene-completed-badge">
+                  <span class="scene-completed-dot"></span>
+                  <span>¡CUENTA REGRESIVA COMPLETADA!</span>
+                </div>
+                <div class="scene-completed-title">ESTAMOS POR EMPEZAR</div>
+                <div class="scene-completed-sub">El evento comenzará en cualquier momento • No te muevas de la transmisión</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="scene-visualizer" id="scene-visualizer">
@@ -436,6 +506,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/overlay.js?v=20261109f"></script>
+  <script src="/js/overlay.js?v=20261118a"></script>
 </body>
 </html>
