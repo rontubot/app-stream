@@ -59,6 +59,38 @@ app.get('/favicon.ico', (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Respaldo dinámico desde PostgreSQL si el contenedor de Railway se reinició o hubo un nuevo deploy/push
+app.get('/uploads/:filename', async (req, res) => {
+  const safeName = path.basename(req.params.filename || '');
+  if (!safeName) return res.status(404).end();
+  const localPath = path.join(UPLOADS_DIR, safeName);
+  if (fs.existsSync(localPath)) {
+    return res.sendFile(localPath);
+  }
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  if (dbPool && isDbReady) {
+    try {
+      const result = await dbPool.query(
+        'SELECT mime_type, data_base64 FROM uploaded_files WHERE filename = $1',
+        [safeName]
+      );
+      if (result.rows.length > 0) {
+        const { mime_type, data_base64 } = result.rows[0];
+        const buffer = Buffer.from(data_base64, 'base64');
+        try {
+          fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+          fs.writeFileSync(localPath, buffer);
+        } catch (e) {}
+        res.setHeader('Content-Type', mime_type || 'image/png');
+        return res.send(buffer);
+      }
+    } catch (err) {
+      console.error('Error recuperando imagen desde PostgreSQL:', err.message);
+    }
+  }
+  return res.status(404).send('Imagen no encontrada');
+});
+
 // Estado actual del overlay en vivo, cola, escenas y banco de VS Boxeo
 let liveState = {
   left: {
@@ -580,6 +612,81 @@ async function saveToDb(key, data) {
   }
 }
 
+async function saveUploadedFileToDb(filename, mimeType, base64Data) {
+  if (dbPool && isDbReady && filename && base64Data) {
+    try {
+      await dbPool.query(
+        `INSERT INTO uploaded_files (filename, mime_type, data_base64, created_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (filename) DO UPDATE
+         SET mime_type = EXCLUDED.mime_type,
+             data_base64 = EXCLUDED.data_base64,
+             created_at = CURRENT_TIMESTAMP`,
+        [filename, mimeType || 'image/png', base64Data]
+      );
+    } catch (err) {
+      console.error(`Error guardando archivo ${filename} en PostgreSQL:`, err.message);
+    }
+  }
+}
+
+async function syncUploadedFilesWithDatabase() {
+  if (!dbPool || !isDbReady) return;
+  try {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+    // 1. Restaurar desde PostgreSQL hacia disco local (public/uploads) tras un deploy o push
+    const res = await dbPool.query('SELECT filename, data_base64 FROM uploaded_files');
+    const dbFiles = new Set();
+    let restoredCount = 0;
+
+    for (const row of res.rows) {
+      if (!row.filename || !row.data_base64) continue;
+      const safeName = path.basename(row.filename);
+      dbFiles.add(safeName);
+      const localPath = path.join(UPLOADS_DIR, safeName);
+      if (!fs.existsSync(localPath)) {
+        try {
+          fs.writeFileSync(localPath, Buffer.from(row.data_base64, 'base64'));
+          restoredCount++;
+        } catch (e) {
+          console.error(`No se pudo restaurar ${safeName} en disco:`, e.message);
+        }
+      }
+    }
+
+    // 2. Respaldar hacia PostgreSQL cualquier imagen que exista en disco y aún no esté en la BD
+    const diskFiles = fs.readdirSync(UPLOADS_DIR);
+    for (const file of diskFiles) {
+      if (file.startsWith('.') || dbFiles.has(file)) continue;
+      const fullPath = path.join(UPLOADS_DIR, file);
+      try {
+        const stat = fs.statSync(fullPath);
+        if (stat.isFile()) {
+          const ext = path.extname(file).toLowerCase().replace('.', '');
+          const mime = ext === 'jpg' || ext === 'jpeg'
+            ? 'image/jpeg'
+            : ext === 'svg'
+              ? 'image/svg+xml'
+              : ext === 'webp'
+                ? 'image/webp'
+                : ext === 'gif'
+                  ? 'image/gif'
+                  : 'image/png';
+          const b64 = fs.readFileSync(fullPath).toString('base64');
+          await saveUploadedFileToDb(file, mime, b64);
+        }
+      } catch (e) {}
+    }
+
+    if (restoredCount > 0) {
+      console.log(`🖼️ ${restoredCount} imágenes restauradas desde PostgreSQL a /uploads`);
+    }
+  } catch (err) {
+    console.error('Error sincronizando imágenes con PostgreSQL:', err.message);
+  }
+}
+
 async function syncDataFromDatabase() {
   if (!dbPool || !isDbReady) return;
   try {
@@ -707,8 +814,18 @@ async function initDatabase() {
         );
       `);
 
-      console.log('🐘 PostgreSQL conectado exitosamente y tabla app_storage lista');
+      await dbPool.query(`
+        CREATE TABLE IF NOT EXISTS uploaded_files (
+          filename VARCHAR(255) PRIMARY KEY,
+          mime_type VARCHAR(100) NOT NULL,
+          data_base64 TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      console.log('🐘 PostgreSQL conectado exitosamente y tablas app_storage / uploaded_files listas');
       isDbReady = true;
+      await syncUploadedFilesWithDatabase();
       await syncDataFromDatabase();
     } catch (err) {
       console.warn('⚠️ No se pudo inicializar tabla en PostgreSQL, usando almacenamiento local:', err.message);
@@ -948,8 +1065,8 @@ app.delete('/api/fights/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// Endpoint de subida de imágenes PNG para boxeadores
-app.post('/api/upload', (req, res) => {
+// Endpoint de subida de imágenes (Eventos, Boxeadores, etc.) con persistencia en PostgreSQL
+app.post('/api/upload', async (req, res) => {
   try {
     const { dataUrl, filename } = req.body;
     if (!dataUrl) {
@@ -961,16 +1078,20 @@ app.post('/api/upload', (req, res) => {
       return res.status(400).json({ error: 'Formato base64 no válido' });
     }
 
+    const mimeType = matches[1] || 'image/png';
+    const base64Data = matches[2];
     const ext = filename ? path.extname(filename) || '.png' : '.png';
     const cleanName = `boxer-${Date.now()}-${Math.random().toString(36).substring(2, 7)}${ext}`;
     
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     const filePath = path.join(UPLOADS_DIR, cleanName);
-    fs.writeFileSync(filePath, Buffer.from(matches[2], 'base64'));
+    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+
+    await saveUploadedFileToDb(cleanName, mimeType, base64Data);
 
     res.json({ success: true, url: `/uploads/${cleanName}` });
   } catch (err) {
-    console.error('Error al subir imagen de boxeador:', err);
+    console.error('Error al subir imagen:', err);
     res.status(500).json({ error: 'No se pudo guardar la imagen' });
   }
 });
@@ -1035,7 +1156,7 @@ app.post('/api/multicam/settings', (req, res) => {
   res.json({ success: true, settings: multicamSettings });
 });
 
-app.post('/api/multicam/upload-avatar', (req, res) => {
+app.post('/api/multicam/upload-avatar', async (req, res) => {
   try {
     const { imageBase64, filename } = req.body;
     if (!imageBase64) {
@@ -1045,11 +1166,14 @@ app.post('/api/multicam/upload-avatar', (req, res) => {
     if (!matches || matches.length !== 3) {
       return res.status(400).json({ error: 'Formato de imagen inválido' });
     }
+    const mimeType = `image/${matches[1]}`;
+    const base64Data = matches[2];
     const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1].replace('svg+xml', 'svg');
     const cleanName = `avatar-${Date.now()}-${Math.round(Math.random() * 1e5)}.${extension}`;
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     const filePath = path.join(UPLOADS_DIR, cleanName);
-    fs.writeFileSync(filePath, Buffer.from(matches[2], 'base64'));
+    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+    await saveUploadedFileToDb(cleanName, mimeType, base64Data);
     res.json({ success: true, url: `/uploads/${cleanName}` });
   } catch (err) {
     console.error('Error al subir avatar de invitado:', err);

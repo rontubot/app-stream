@@ -3171,10 +3171,12 @@ function setupEventImageUpload(fileInput) {
         if (inputCfgEventImage) inputCfgEventImage.value = finalUrl;
         if (imgMainEventPreview) imgMainEventPreview.src = finalUrl;
         if (imgCfgEventPreview) imgCfgEventPreview.src = finalUrl;
-        showToast('🖼️ Imagen del evento cargada correctamente');
+        saveEventCountdownData(null);
+        showToast('🖼️ Imagen del evento guardada en el servidor y base de datos');
       } catch (err) {
         if (inputMainEventImage) inputMainEventImage.value = dataUrl;
         if (inputCfgEventImage) inputCfgEventImage.value = dataUrl;
+        saveEventCountdownData(null);
       }
     };
     reader.readAsDataURL(file);
@@ -3184,18 +3186,21 @@ function setupEventImageUpload(fileInput) {
 setupEventImageUpload(fileMainEventImage);
 setupEventImageUpload(fileCfgEventImage);
 
-function clearEventImage() {
+function clearEventImage(persist = true) {
   if (inputMainEventImage) inputMainEventImage.value = '';
   if (inputCfgEventImage) inputCfgEventImage.value = '';
   if (fileMainEventImage) fileMainEventImage.value = '';
   if (fileCfgEventImage) fileCfgEventImage.value = '';
   if (imgMainEventPreview) imgMainEventPreview.src = '/assets/logo-birraverde.png';
   if (imgCfgEventPreview) imgCfgEventPreview.src = '/assets/logo-birraverde.png';
-  showToast('🗑️ Imagen del evento quitada');
+  if (persist) {
+    saveEventCountdownData(null);
+    showToast('🗑️ Imagen del evento quitada');
+  }
 }
 
-if (btnMainClearEventImage) btnMainClearEventImage.addEventListener('click', clearEventImage);
-if (btnCfgClearEventImage) btnCfgClearEventImage.addEventListener('click', clearEventImage);
+if (btnMainClearEventImage) btnMainClearEventImage.addEventListener('click', () => clearEventImage(true));
+if (btnCfgClearEventImage) btnCfgClearEventImage.addEventListener('click', () => clearEventImage(true));
 
 // Guardar y emitir datos del Evento
 function saveEventCountdownData(forceEnabled = null, customTargetTs = undefined) {
@@ -3361,7 +3366,7 @@ function resetForNewEvent() {
   if (inputCfgEventDate) inputCfgEventDate.value = defaultDate;
   if (inputMainEventTime) inputMainEventTime.value = defaultTime;
   if (inputCfgEventTime) inputCfgEventTime.value = defaultTime;
-  clearEventImage();
+  clearEventImage(false);
 
   if (inputMainEventTitle && !tabPanelMain.classList.contains('hidden')) {
     inputMainEventTitle.focus();
