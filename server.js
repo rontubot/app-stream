@@ -317,8 +317,46 @@ let liveState = {
     isActive: false,
     triggeredBy: '',
     triggeredAt: null
+  },
+  adminPresence: {
+    status: 'offline', // 'online_mods' | 'online_panel' | 'away' | 'offline'
+    activeTab: 'main',
+    username: 'Admin',
+    updatedAt: null
   }
 };
+
+// Registro en memoria de sesiones conectadas del Admin (Nivel 1) para detectar si está En Línea o Ausente
+const adminSocketsPresence = new Map();
+
+function recomputeAdminPresence() {
+  if (adminSocketsPresence.size === 0) {
+    liveState.adminPresence = {
+      status: 'offline',
+      activeTab: 'main',
+      username: 'Admin',
+      updatedAt: Date.now()
+    };
+    io.emit('admin-presence-updated', liveState.adminPresence);
+    return;
+  }
+
+  const priority = { online_mods: 4, online_panel: 3, away: 2, offline: 1 };
+  let best = null;
+  for (const entry of adminSocketsPresence.values()) {
+    if (!best || (priority[entry.status] || 0) > (priority[best.status] || 0)) {
+      best = entry;
+    }
+  }
+
+  liveState.adminPresence = {
+    status: best ? best.status : 'away',
+    activeTab: best ? best.activeTab : 'main',
+    username: best ? best.username : 'Admin',
+    updatedAt: Date.now()
+  };
+  io.emit('admin-presence-updated', liveState.adminPresence);
+}
 
 // Cargar presentadores del archivo
 function loadPresenters() {
@@ -1688,6 +1726,16 @@ io.on('connection', async (socket) => {
     socket.emit('auth-user', currentUser);
     socket.emit('users-updated', users.map(sanitizeUser));
     socket.emit('mods-chat-history', modsChatHistory);
+    socket.emit('admin-presence-updated', liveState.adminPresence);
+    if (currentUser.level === 'nivel_1') {
+      adminSocketsPresence.set(socket.id, {
+        status: 'online_panel',
+        activeTab: 'main',
+        username: currentUser.displayName || currentUser.username || 'Admin',
+        updatedAt: Date.now()
+      });
+      recomputeAdminPresence();
+    }
   }
 
   // Mute Maestro Global (Silenciar o activar todo el audio de la app en OBS)
@@ -2042,7 +2090,7 @@ io.on('connection', async (socket) => {
     }
   });
 
-  // Cuando el Admin (Usuario Nivel 1) entra al apartado de MODS, se desactiva automáticamente la alerta si estaba activa
+  // Cuando el Admin (Usuario Nivel 1) entra o interactúa activamente en el apartado de MODS, se desactiva la alerta si estaba activa
   socket.on('admin-entered-mods', (data, callback) => {
     const cb = typeof data === 'function' ? data : callback;
     const authUser = getAuthenticatedUserFromSocket(socket);
@@ -2060,6 +2108,35 @@ io.on('connection', async (socket) => {
     if (typeof cb === 'function') {
       cb({ ok: true, success: true, modAlert: liveState.modAlert });
     }
+  });
+
+  // Reporte de presencia real del Admin (En Línea vs Ausente / Ventana Minimizada / Otra Pestaña)
+  socket.on('admin-presence-report', (data) => {
+    const authUser = getAuthenticatedUserFromSocket(socket);
+    if (!authUser || authUser.level !== 'nivel_1') return;
+
+    const activeTab = (data && typeof data.activeTab === 'string') ? data.activeTab : 'main';
+    const isVisible = !!(data && data.isVisible);
+    const isFocused = !!(data && data.isFocused);
+    const isIdle = !!(data && data.isIdle);
+
+    let status = 'away';
+    if (isVisible && isFocused && !isIdle) {
+      status = activeTab === 'mods' ? 'online_mods' : 'online_panel';
+    } else {
+      status = 'away';
+    }
+
+    adminSocketsPresence.set(socket.id, {
+      status,
+      activeTab,
+      isVisible,
+      isFocused,
+      isIdle,
+      username: authUser.displayName || authUser.username || 'Admin',
+      updatedAt: Date.now()
+    });
+    recomputeAdminPresence();
   });
 
   // TTS Especial de MODS para hablar en el stream
@@ -2766,8 +2843,12 @@ io.on('connection', async (socket) => {
   // Enviar estado de Kick Chat al conectarse el socket
   socket.emit('kick-chat-status', kickChatState);
 
-  // Manejo de desconexión para limpiar WebRTC y sala de espera
+  // Manejo de desconexión para limpiar WebRTC, presencia de Admin y sala de espera
   socket.on('disconnect', () => {
+    if (adminSocketsPresence.has(socket.id)) {
+      adminSocketsPresence.delete(socket.id);
+      recomputeAdminPresence();
+    }
     const roomId = socket.multicamRoomId;
     const peerId = socket.multicamPeerId;
     if (roomId && peerId && multicamRooms[roomId]) {

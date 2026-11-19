@@ -1704,12 +1704,20 @@
             </div>
           </div>
 
-          <!-- Identidad activa en el panel -->
-          <div id="mods-panel-active-user" class="px-3.5 py-2 rounded-xl bg-black/50 border border-cyber-border flex items-center gap-2.5 text-xs font-mono shrink-0">
-            <span class="w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse"></span>
-            <span class="text-gray-400">Respondés como:</span>
-            <strong id="mods-active-user-name" class="text-white font-chakra">ADMIN</strong>
-            <span id="mods-active-user-role" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/40 text-[10px] font-bold uppercase">NIVEL 1</span>
+          <!-- Estado de Presencia del Admin + Identidad activa en el panel -->
+          <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div id="mods-admin-presence-badge" class="px-3 py-2 rounded-xl bg-black/50 border border-cyber-border flex items-center gap-2 text-xs font-mono" title="Detecta en tiempo real si el Admin está viendo el panel o tiene la ventana minimizada/ausente">
+              <span id="mods-admin-presence-dot" class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
+              <span class="text-gray-400">Estado Admin:</span>
+              <strong id="mods-admin-presence-text" class="text-gray-300 font-chakra uppercase">VERIFICANDO...</strong>
+            </div>
+
+            <div id="mods-panel-active-user" class="px-3.5 py-2 rounded-xl bg-black/50 border border-cyber-border flex items-center gap-2.5 text-xs font-mono shrink-0">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse"></span>
+              <span class="text-gray-400">Respondés como:</span>
+              <strong id="mods-active-user-name" class="text-white font-chakra">ADMIN</strong>
+              <span id="mods-active-user-role" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/40 text-[10px] font-bold uppercase">NIVEL 1</span>
+            </div>
           </div>
         </div>
       </div>
@@ -2350,6 +2358,6 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/admin.js?v=20261119c"></script>
+  <script src="/js/admin.js?v=20261119d"></script>
 </body>
 </html>

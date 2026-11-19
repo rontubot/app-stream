@@ -710,6 +710,13 @@ socket.on('state-update', (state) => {
     }
   }
 
+  // Estado de Presencia en Vivo del Admin (En Línea vs Ausente / Minimizado)
+  if (state.adminPresence && typeof state.adminPresence === 'object') {
+    if (typeof renderAdminPresenceBadge === 'function') {
+      renderAdminPresenceBadge(state.adminPresence);
+    }
+  }
+
   refreshIcons();
 
   saveToLocalStorage();
@@ -1669,7 +1676,8 @@ btnCopyUrlInside.addEventListener('click', () => {
 // ============================================================
 // NAVEGACIÓN NAVBAR (PESTAÑAS)
 // ============================================================
-function switchMainTab(tab) {
+function switchMainTab(tab, options = {}) {
+  const fromUserClick = !!(options && options.fromUserClick);
   const inactiveBtnClass = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
   const activeBtnClass = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
 
@@ -1698,7 +1706,7 @@ function switchMainTab(tab) {
     if (navTabMods) navTabMods.className = activeBtnClass;
     localStorage.setItem('birraverde_active_tab', 'mods');
     if (typeof onEnterModsTab === 'function') {
-      onEnterModsTab();
+      onEnterModsTab({ fromUserClick });
     }
   } else if (tab === 'announcements' || tab === 'anuncios') {
     if (tabPanelAnnouncements) tabPanelAnnouncements.classList.remove('hidden');
@@ -1722,26 +1730,29 @@ function switchMainTab(tab) {
     localStorage.setItem('birraverde_active_tab', 'main');
     setTimeout(adjustPreviewScale, 50);
   }
+  if (typeof reportAdminPresenceNow === 'function') {
+    reportAdminPresenceNow();
+  }
   refreshIcons();
 }
 
 if (navTabMain) {
-  navTabMain.addEventListener('click', () => switchMainTab('main'));
+  navTabMain.addEventListener('click', () => switchMainTab('main', { fromUserClick: true }));
 }
 if (navTabMulticam) {
-  navTabMulticam.addEventListener('click', () => switchMainTab('multicam'));
+  navTabMulticam.addEventListener('click', () => switchMainTab('multicam', { fromUserClick: true }));
 }
 if (navTabAnimations) {
-  navTabAnimations.addEventListener('click', () => switchMainTab('animations'));
+  navTabAnimations.addEventListener('click', () => switchMainTab('animations', { fromUserClick: true }));
 }
 if (navTabAnnouncements) {
-  navTabAnnouncements.addEventListener('click', () => switchMainTab('announcements'));
+  navTabAnnouncements.addEventListener('click', () => switchMainTab('announcements', { fromUserClick: true }));
 }
 if (navTabMods) {
-  navTabMods.addEventListener('click', () => switchMainTab('mods'));
+  navTabMods.addEventListener('click', () => switchMainTab('mods', { fromUserClick: true }));
 }
 if (navTabConfig) {
-  navTabConfig.addEventListener('click', () => switchMainTab('config'));
+  navTabConfig.addEventListener('click', () => switchMainTab('config', { fromUserClick: true }));
 }
 
 window.setQuickTestMessage = function(text) {
@@ -3524,9 +3535,8 @@ function applyAuthUserUI(user) {
     renderModsChatMessages();
   }
 
-  // Si el Admin Nivel 1 ya está parado en la pestaña MODS al autenticar, desactivar alerta si estaba activa
-  if (isNivel1 && localStorage.getItem('birraverde_active_tab') === 'mods') {
-    socket.emit('admin-entered-mods');
+  if (typeof reportAdminPresenceNow === 'function') {
+    reportAdminPresenceNow();
   }
 }
 
@@ -3761,8 +3771,141 @@ const inputModTtsText = document.getElementById('input-mod-tts-text');
 const btnSendModTts = document.getElementById('btn-send-mod-tts');
 const btnHideModTts = document.getElementById('btn-hide-mod-tts');
 
+const modsAdminPresenceBadge = document.getElementById('mods-admin-presence-badge');
+const modsAdminPresenceDot = document.getElementById('mods-admin-presence-dot');
+const modsAdminPresenceText = document.getElementById('mods-admin-presence-text');
+
 let modsChatList = [];
 let modsUnreadCount = 0;
+
+// Detección real de presencia y atención del Admin (En línea vs Ausente / Ventana minimizada)
+const ADMIN_IDLE_THRESHOLD_MS = 35000; // 35 segundos sin mover ratón ni teclado = Ausente
+let lastAdminPhysicalActivityAt = Date.now();
+let modAlertRequiresRealInteractionAfter = 0;
+let lastPresenceReportHash = '';
+
+function isAdminCurrentlyOnModsTab() {
+  return !!(
+    localStorage.getItem('birraverde_active_tab') === 'mods' &&
+    tabPanelMods &&
+    !tabPanelMods.classList.contains('hidden')
+  );
+}
+
+function isWindowActivelyViewed() {
+  const isVisible = document.visibilityState === 'visible' && !document.hidden;
+  const isFocused = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+  return isVisible && isFocused;
+}
+
+function reportAdminPresenceNow(force = false) {
+  if (!currentAuthUser || currentAuthUser.level !== 'nivel_1') return;
+
+  const activeTab = localStorage.getItem('birraverde_active_tab') || 'main';
+  const isVisible = document.visibilityState === 'visible' && !document.hidden;
+  const isFocused = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+  const isIdle = (Date.now() - lastAdminPhysicalActivityAt) > ADMIN_IDLE_THRESHOLD_MS;
+
+  const hash = `${activeTab}|${isVisible}|${isFocused}|${isIdle}`;
+  if (!force && hash === lastPresenceReportHash) return;
+  lastPresenceReportHash = hash;
+
+  socket.emit('admin-presence-report', {
+    activeTab,
+    isVisible,
+    isFocused,
+    isIdle
+  });
+}
+
+function renderAdminPresenceBadge(presence) {
+  if (!modsAdminPresenceBadge || !modsAdminPresenceDot || !modsAdminPresenceText) return;
+  const status = (presence && presence.status) ? presence.status : 'offline';
+
+  if (status === 'online_mods') {
+    modsAdminPresenceBadge.className = 'px-3 py-2 rounded-xl bg-cyber-green/10 border border-cyber-green/60 flex items-center gap-2 text-xs font-mono shadow-[0_0_12px_rgba(0,255,102,0.2)]';
+    modsAdminPresenceDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping';
+    modsAdminPresenceText.className = 'text-cyber-green font-chakra font-extrabold uppercase';
+    modsAdminPresenceText.textContent = 'EN LÍNEA (VIENDO MODS)';
+  } else if (status === 'online_panel') {
+    modsAdminPresenceBadge.className = 'px-3 py-2 rounded-xl bg-cyan-500/10 border border-cyan-400/50 flex items-center gap-2 text-xs font-mono';
+    modsAdminPresenceDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse';
+    modsAdminPresenceText.className = 'text-cyan-300 font-chakra font-extrabold uppercase';
+    modsAdminPresenceText.textContent = 'EN LÍNEA (EN OTRA PESTAÑA)';
+  } else if (status === 'away') {
+    modsAdminPresenceBadge.className = 'px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-400/50 flex items-center gap-2 text-xs font-mono';
+    modsAdminPresenceDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+    modsAdminPresenceText.className = 'text-amber-300 font-chakra font-extrabold uppercase';
+    modsAdminPresenceText.textContent = 'AUSENTE / MINIMIZADO';
+  } else {
+    modsAdminPresenceBadge.className = 'px-3 py-2 rounded-xl bg-black/50 border border-cyber-border flex items-center gap-2 text-xs font-mono';
+    modsAdminPresenceDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+    modsAdminPresenceText.className = 'text-gray-400 font-chakra font-bold uppercase';
+    modsAdminPresenceText.textContent = 'DESCONECTADO';
+  }
+}
+
+socket.on('admin-presence-updated', (presence) => {
+  renderAdminPresenceBadge(presence);
+});
+
+// Función que confirma que el Admin realmente vio la alerta (solo con ventana visible, con foco e interacción física real)
+function tryAcknowledgeModAlertByAdminPhysicalAction() {
+  if (!currentAuthUser || currentAuthUser.level !== 'nivel_1') return;
+  if (!currentLiveState.modAlert || !currentLiveState.modAlert.isActive) return;
+  if (!isAdminCurrentlyOnModsTab()) return;
+  if (!isWindowActivelyViewed()) return;
+
+  const now = Date.now();
+  if (now < modAlertRequiresRealInteractionAfter) return;
+
+  // El Admin está en línea, con la ventana activa y enfocada en MODS, e interactuó físicamente después de la alerta
+  currentLiveState.modAlert.isActive = false;
+  socket.emit('admin-entered-mods');
+}
+
+function handleAdminPhysicalInteraction() {
+  const wasIdle = (Date.now() - lastAdminPhysicalActivityAt) > ADMIN_IDLE_THRESHOLD_MS;
+  lastAdminPhysicalActivityAt = Date.now();
+  if (wasIdle) {
+    reportAdminPresenceNow(true);
+  }
+  tryAcknowledgeModAlertByAdminPhysicalAction();
+}
+
+['mousedown', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((evtName) => {
+  window.addEventListener(evtName, handleAdminPhysicalInteraction, { passive: true });
+});
+
+// Para movimiento del mouse, solo cuenta si la ventana tiene foco activo del sistema operativo
+let lastMouseMoveAckCheck = 0;
+window.addEventListener('mousemove', () => {
+  if (!isWindowActivelyViewed()) return;
+  const now = Date.now();
+  if (now - lastMouseMoveAckCheck < 250) return;
+  lastMouseMoveAckCheck = now;
+  handleAdminPhysicalInteraction();
+}, { passive: true });
+
+window.addEventListener('focus', () => {
+  lastAdminPhysicalActivityAt = Date.now();
+  reportAdminPresenceNow(true);
+});
+
+window.addEventListener('blur', () => {
+  reportAdminPresenceNow(true);
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    lastAdminPhysicalActivityAt = Date.now();
+  }
+  reportAdminPresenceNow(true);
+});
+
+setInterval(() => {
+  reportAdminPresenceNow(false);
+}, 5000);
 
 function escapeModsHtml(str) {
   return String(str || '')
@@ -3783,7 +3926,8 @@ function updateModsUnreadBadge() {
   }
 }
 
-function onEnterModsTab() {
+function onEnterModsTab(options = {}) {
+  const fromUserClick = !!(options && options.fromUserClick);
   modsUnreadCount = 0;
   updateModsUnreadBadge();
 
@@ -3793,9 +3937,15 @@ function onEnterModsTab() {
     }, 30);
   }
 
-  // Regla estricta: si el usuario Admin (Usuario Nivel 1) entra al apartado de MODS, se desactiva la alerta en el stream
-  if (currentAuthUser && currentAuthUser.level === 'nivel_1') {
+  // Solo desactivar de inmediato si el Admin hizo clic físicamente para entrar a la pestaña MODS con la ventana visible y enfocada
+  if (fromUserClick && currentAuthUser && currentAuthUser.level === 'nivel_1' && isWindowActivelyViewed()) {
+    lastAdminPhysicalActivityAt = Date.now();
+    reportAdminPresenceNow(true);
     socket.emit('admin-entered-mods');
+  } else {
+    // Si la pestaña ya estaba abierta (ej: al cargar la página), requerir interacción real cuando el Admin mire la ventana
+    modAlertRequiresRealInteractionAfter = Date.now() + 800;
+    reportAdminPresenceNow(true);
   }
 }
 
@@ -4020,24 +4170,23 @@ if (btnToggleModAlert) {
 }
 
 socket.on('mod-alert-triggered', (modAlert) => {
-  syncModAlertAdminUI(modAlert || { isActive: true });
+  currentLiveState.modAlert = modAlert || { isActive: true, triggeredAt: Date.now() };
+  syncModAlertAdminUI(currentLiveState.modAlert);
   playAdminModAlertOneSecondSound();
 
-  // Si el Admin Nivel 1 ya está dentro de la pestaña MODS viendo el chat en este instante, apagarla tras el primer segundo de aviso
-  const isOnModsTab = localStorage.getItem('birraverde_active_tab') === 'mods' && tabPanelMods && !tabPanelMods.classList.contains('hidden');
-  if (currentAuthUser && currentAuthUser.level === 'nivel_1' && isOnModsTab) {
-    setTimeout(() => {
-      socket.emit('admin-entered-mods');
-    }, 1200);
-  } else {
-    showToast(`🔔 ¡ALERTA DE ${modAlert?.triggeredBy || 'MODS'} EN EL STREAM! Revisar apartado MODS`);
-  }
+  // NUNCA desactivar automáticamente con un timer aunque la pestaña MODS haya quedado abierta.
+  // Se requiere interacción física real del Admin con la ventana enfocada y visible después de recibir la alerta.
+  modAlertRequiresRealInteractionAfter = Date.now() + 1200;
+  showToast(`🔔 ¡ALERTA DE ${modAlert?.triggeredBy || 'MODS'} EN EL STREAM! Revisar apartado MODS`);
 });
 
 socket.on('mod-alert-cleared', (info) => {
+  if (currentLiveState.modAlert) {
+    currentLiveState.modAlert.isActive = false;
+  }
   syncModAlertAdminUI({ isActive: false });
   if (info && info.reason === 'admin-entered-mods') {
-    showToast('✅ El Admin entró al apartado MODS (Alerta desactivada en stream)');
+    showToast('✅ El Admin vio la alerta en el apartado MODS (Alerta desactivada en stream)');
   }
 });
 
