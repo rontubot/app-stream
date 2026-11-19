@@ -2662,17 +2662,17 @@ function updateMasterMuteUI(isMuted) {
     }
   }
 
-  // Botón flotante en la esquina inferior izquierda
+  // Botón en Configuración (Primero de la fila)
   if (btnMasterMuteFloating) {
     if (currentMasterMuted) {
-      btnMasterMuteFloating.className = 'flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 border-2 border-red-300 text-white font-chakra font-extrabold text-xs uppercase tracking-wider shadow-[0_0_25px_rgba(239,68,68,0.75)] transition-all transform hover:scale-105 active:scale-95';
-      if (dotMasterMuteFloating) dotMasterMuteFloating.className = 'w-2.5 h-2.5 rounded-full bg-white animate-ping';
-      if (textMasterMuteFloating) textMasterMuteFloating.textContent = '🔇 OBS MUTEADO · REACTIVAR AUDIO';
+      btnMasterMuteFloating.className = 'flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 border border-red-300 text-white font-chakra font-extrabold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(239,68,68,0.65)] transition-all cursor-pointer';
+      if (dotMasterMuteFloating) dotMasterMuteFloating.className = 'w-2 h-2 rounded-full bg-white animate-ping shrink-0';
+      if (textMasterMuteFloating) textMasterMuteFloating.textContent = 'OBS MUTEADO (REACTIVAR)';
       if (iconMasterMuteFloating) iconMasterMuteFloating.setAttribute('data-lucide', 'volume-x');
     } else {
-      btnMasterMuteFloating.className = 'flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-cyber-dark/95 backdrop-blur-md border-2 border-cyber-green/60 hover:border-cyber-green text-cyber-green font-chakra font-extrabold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(0,255,102,0.25)] transition-all transform hover:scale-105 active:scale-95';
-      if (dotMasterMuteFloating) dotMasterMuteFloating.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse';
-      if (textMasterMuteFloating) textMasterMuteFloating.textContent = '🔊 MUTEAR TODO EN OBS';
+      btnMasterMuteFloating.className = 'flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-cyber-card border border-cyber-green/60 hover:border-cyber-green text-cyber-green font-chakra font-extrabold text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(0,255,102,0.2)] transition-all cursor-pointer';
+      if (dotMasterMuteFloating) dotMasterMuteFloating.className = 'w-2 h-2 rounded-full bg-cyber-green animate-pulse shrink-0';
+      if (textMasterMuteFloating) textMasterMuteFloating.textContent = 'MUTEAR TODO EN OBS';
       if (iconMasterMuteFloating) iconMasterMuteFloating.setAttribute('data-lucide', 'volume-2');
     }
   }

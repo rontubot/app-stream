@@ -1195,15 +1195,22 @@
           </div>
         </div>
 
-        <!-- Botones de Utilidad y Acceso Rápido: Instructivo PDF y Copiar URL OBS -->
+        <!-- Botones de Utilidad y Acceso Rápido: 1. Mutear Todo en OBS, 2. Instructivo PDF, 3. Copiar URL OBS -->
         <div class="flex items-center gap-2.5 w-full lg:w-auto justify-end flex-wrap sm:flex-nowrap">
-          <!-- Botón Descargar Instructivo PDF de Moderador -->
+          <!-- 1. Botón Primero: Mutear Todo en OBS -->
+          <button id="btn-master-mute-floating" type="button" title="Silenciar o reactivar todo el audio en OBS al instante" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-cyber-card border border-cyber-green/60 hover:border-cyber-green text-cyber-green font-chakra font-extrabold text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(0,255,102,0.2)] transition-all cursor-pointer">
+            <span id="dot-master-mute-floating" class="w-2 h-2 rounded-full bg-cyber-green animate-pulse shrink-0"></span>
+            <i id="icon-master-mute-floating" data-lucide="volume-2" class="w-4 h-4 shrink-0"></i>
+            <span id="text-master-mute-floating">MUTEAR TODO EN OBS</span>
+          </button>
+
+          <!-- 2. Botón Descargar Instructivo PDF de Moderador -->
           <a href="/Instructivo_Moderador_BirraVerde.pdf" target="_blank" download="Instructivo_Moderador_BirraVerde.pdf" title="Abrir o descargar el Instructivo Oficial de Moderación en PDF" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-cyber-card border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 hover:text-white text-xs font-chakra font-bold transition-all">
             <i data-lucide="file-text" class="w-4 h-4 text-cyan-400"></i>
             <span>Instructivo Mod (PDF)</span>
           </a>
 
-          <!-- Botón Copiar URL OBS -->
+          <!-- 3. Botón Copiar URL OBS -->
           <button id="btn-copy-obs" type="button" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-cyber-card border border-cyber-green/50 hover:border-cyber-green hover:bg-cyber-green hover:text-black text-cyber-green text-xs font-chakra font-bold transition-all group cursor-pointer">
             <i data-lucide="link" class="w-4 h-4 group-hover:rotate-45 transition-transform"></i>
             <span>Copiar URL para OBS</span>
@@ -2128,15 +2135,6 @@
       </div>
       <div id="floating-waiting-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1"></div>
     </div>
-  </div>
-
-  <!-- Botón de Emergencia Flotante en Esquina Inferior Izquierda: Mute Maestro OBS -->
-  <div class="fixed bottom-5 left-5 z-50">
-    <button id="btn-master-mute-floating" type="button" title="Botón de emergencia: Silenciar o reactivar todo el audio en OBS al instante" class="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-cyber-dark/95 backdrop-blur-md border-2 border-cyber-green/60 hover:border-cyber-green text-cyber-green font-chakra font-extrabold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(0,255,102,0.25)] transition-all transform hover:scale-105 active:scale-95">
-      <span id="dot-master-mute-floating" class="w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse"></span>
-      <i id="icon-master-mute-floating" data-lucide="volume-2" class="w-4 h-4"></i>
-      <span id="text-master-mute-floating">MUTEAR TODO EN OBS</span>
-    </button>
   </div>
 
   <!-- Toast Notification Flotante -->
