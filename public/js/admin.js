@@ -2946,6 +2946,7 @@ const iconToggleMainEventForm = document.getElementById('icon-toggle-main-event-
 const mainEventCdFormPanel = document.getElementById('main-event-cd-form-panel');
 
 const inputMainEventTitle = document.getElementById('input-main-event-title');
+const inputMainEventDate = document.getElementById('input-main-event-date');
 const inputMainEventTime = document.getElementById('input-main-event-time');
 const inputMainEventDesc = document.getElementById('input-main-event-desc');
 const inputMainEventImage = document.getElementById('input-main-event-image');
@@ -2964,6 +2965,7 @@ const iconCfgEventCdToggle = document.getElementById('icon-cfg-event-cd-toggle')
 const textCfgEventCdToggle = document.getElementById('text-cfg-event-cd-toggle');
 
 const inputCfgEventTitle = document.getElementById('input-cfg-event-title');
+const inputCfgEventDate = document.getElementById('input-cfg-event-date');
 const inputCfgEventTime = document.getElementById('input-cfg-event-time');
 const inputCfgEventDesc = document.getElementById('input-cfg-event-desc');
 const inputCfgEventImage = document.getElementById('input-cfg-event-image');
@@ -2976,12 +2978,30 @@ const btnCfgSaveActivateEvent = document.getElementById('btn-cfg-save-activate-e
 
 let isMainEventFormExpanded = true;
 
-function computeTargetTimestampFromTimeStr(timeStr) {
+function getTodayDateString() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function computeTargetTimestampFromDateTime(dateStr, timeStr) {
   if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return null;
   const [hStr, mStr] = timeStr.split(':');
   const h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);
   if (isNaN(h) || isNaN(m)) return null;
+
+  if (dateStr && typeof dateStr === 'string' && dateStr.includes('-')) {
+    const [yStr, moStr, dStr] = dateStr.split('-');
+    const y = parseInt(yStr, 10);
+    const mo = parseInt(moStr, 10);
+    const d = parseInt(dStr, 10);
+    if (!isNaN(y) && !isNaN(mo) && !isNaN(d)) {
+      return new Date(y, mo - 1, d, h, m, 0, 0).getTime();
+    }
+  }
 
   const now = new Date();
   const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
@@ -3046,6 +3066,7 @@ function syncEventCountdownUI(ev) {
   const activeEl = document.activeElement;
   const titleVal = ev.title || '';
   const descVal = ev.description || '';
+  const dateVal = ev.targetDate || getTodayDateString();
   const timeVal = ev.targetTime || '22:00';
   const imgVal = ev.image || '';
 
@@ -3054,6 +3075,9 @@ function syncEventCountdownUI(ev) {
 
   if (inputMainEventDesc && activeEl !== inputMainEventDesc) inputMainEventDesc.value = descVal;
   if (inputCfgEventDesc && activeEl !== inputCfgEventDesc) inputCfgEventDesc.value = descVal;
+
+  if (inputMainEventDate && activeEl !== inputMainEventDate) inputMainEventDate.value = dateVal;
+  if (inputCfgEventDate && activeEl !== inputCfgEventDate) inputCfgEventDate.value = dateVal;
 
   if (inputMainEventTime && activeEl !== inputMainEventTime) inputMainEventTime.value = timeVal;
   if (inputCfgEventTime && activeEl !== inputCfgEventTime) inputCfgEventTime.value = timeVal;
@@ -3074,17 +3098,20 @@ function tickAdminEventCountdown() {
 
   let targetTs = (typeof ev.targetTimestamp === 'number' && !isNaN(ev.targetTimestamp))
     ? ev.targetTimestamp
-    : computeTargetTimestampFromTimeStr(ev.targetTime);
+    : computeTargetTimestampFromDateTime(ev.targetDate, ev.targetTime);
 
   const remainingMs = targetTs !== null ? (targetTs - Date.now()) : 0;
   let timerText = '';
 
   if (remainingMs > 0) {
     const totalSec = Math.ceil(remainingMs / 1000);
-    const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const days = Math.floor(totalSec / 86400);
+    const hrs = String(Math.floor((totalSec % 86400) / 3600)).padStart(2, '0');
     const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
     const secs = String(totalSec % 60).padStart(2, '0');
-    timerText = `⏳ FALTAN ${hrs}:${mins}:${secs} (${ev.targetTime || '--:--'} HS)`;
+    const daysPrefix = days > 0 ? `${days}d ` : '00d ';
+    const dateLabel = ev.targetDate ? `${ev.targetDate} • ` : '';
+    timerText = `⏳ FALTAN ${daysPrefix}${hrs}:${mins}:${secs} (${dateLabel}${ev.targetTime || '--:--'} HS)`;
   } else {
     timerText = `⚡ ¡TIEMPO COMPLETADO! → MOSTRANDO "ESTAMOS POR EMPEZAR"`;
   }
@@ -3111,6 +3138,7 @@ function bindDualInputSync(inputA, inputB, onUpdate) {
 
 bindDualInputSync(inputMainEventTitle, inputCfgEventTitle);
 bindDualInputSync(inputMainEventDesc, inputCfgEventDesc);
+bindDualInputSync(inputMainEventDate, inputCfgEventDate);
 bindDualInputSync(inputMainEventTime, inputCfgEventTime);
 bindDualInputSync(inputMainEventImage, inputCfgEventImage, (val) => {
   const src = (val || '').trim() || '/assets/logo-birraverde.png';
@@ -3176,6 +3204,9 @@ function saveEventCountdownData(forceEnabled = null, customTargetTs = undefined)
                 'PRÓXIMO EVENTO EN VIVO';
   const description = (inputMainEventDesc ? inputMainEventDesc.value.trim() : '') ||
                       (inputCfgEventDesc ? inputCfgEventDesc.value.trim() : '');
+  const targetDate = (inputMainEventDate ? inputMainEventDate.value.trim() : '') ||
+                     (inputCfgEventDate ? inputCfgEventDate.value.trim() : '') ||
+                     getTodayDateString();
   const targetTime = (inputMainEventTime ? inputMainEventTime.value.trim() : '') ||
                      (inputCfgEventTime ? inputCfgEventTime.value.trim() : '') ||
                      '22:00';
@@ -3188,13 +3219,14 @@ function saveEventCountdownData(forceEnabled = null, customTargetTs = undefined)
 
   const targetTimestamp = (customTargetTs !== undefined)
     ? customTargetTs
-    : computeTargetTimestampFromTimeStr(targetTime);
+    : computeTargetTimestampFromDateTime(targetDate, targetTime);
 
   const payload = {
     enabled,
     title,
     description,
     image,
+    targetDate,
     targetTime,
     targetTimestamp
   };
@@ -3213,13 +3245,13 @@ function saveEventCountdownData(forceEnabled = null, customTargetTs = undefined)
 if (btnMainSaveEvent) {
   btnMainSaveEvent.addEventListener('click', () => {
     const saved = saveEventCountdownData(null);
-    showToast(`💾 Evento "${saved.title}" actualizado (${saved.targetTime} HS)`);
+    showToast(`💾 Evento "${saved.title}" actualizado (${saved.targetDate} • ${saved.targetTime} HS)`);
   });
 }
 if (btnCfgSaveEvent) {
   btnCfgSaveEvent.addEventListener('click', () => {
     const saved = saveEventCountdownData(null);
-    showToast(`💾 Evento "${saved.title}" actualizado (${saved.targetTime} HS)`);
+    showToast(`💾 Evento "${saved.title}" actualizado (${saved.targetDate} • ${saved.targetTime} HS)`);
   });
 }
 
@@ -3258,15 +3290,44 @@ function toggleEventCountdownEnabled() {
 if (btnMainToggleEventCd) btnMainToggleEventCd.addEventListener('click', toggleEventCountdownEnabled);
 if (btnCfgToggleEventCd) btnCfgToggleEventCd.addEventListener('click', toggleEventCountdownEnabled);
 
-// Botones de Ajuste Rápido de Hora (+5m, +10m, +15m, +30m, +1h, Completar Ahora)
+// Botones de Ajuste Rápido de Días de Preparación (Hoy, +1 día, +2 días, +3 días, +7 días)
+document.querySelectorAll('.btn-quick-event-days').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const addDays = parseInt(btn.getAttribute('data-add-days'), 10) || 0;
+    const targetDateObj = new Date();
+    targetDateObj.setDate(targetDateObj.getDate() + addDays);
+    const y = targetDateObj.getFullYear();
+    const m = String(targetDateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(targetDateObj.getDate()).padStart(2, '0');
+    const formattedDate = `${y}-${m}-${d}`;
+
+    if (inputMainEventDate) inputMainEventDate.value = formattedDate;
+    if (inputCfgEventDate) inputCfgEventDate.value = formattedDate;
+
+    saveEventCountdownData(null);
+    if (addDays === 0) {
+      showToast(`📅 Fecha del evento ajustada a Hoy (${formattedDate})`);
+    } else {
+      showToast(`📅 Fecha del evento ajustada a +${addDays} ${addDays === 1 ? 'día' : 'días'} (${formattedDate})`);
+    }
+  });
+});
+
+// Botones de Ajuste Rápido de Hora (+15m, +30m, +1h, Completar Ahora)
 document.querySelectorAll('.btn-quick-event-time').forEach(btn => {
   btn.addEventListener('click', () => {
     const addMin = parseInt(btn.getAttribute('data-add-min'), 10);
     const targetDate = new Date(Date.now() + addMin * 60 * 1000);
+    const y = targetDate.getFullYear();
+    const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const d = String(targetDate.getDate()).padStart(2, '0');
+    const formattedDate = `${y}-${m}-${d}`;
     const hh = String(targetDate.getHours()).padStart(2, '0');
     const mm = String(targetDate.getMinutes()).padStart(2, '0');
     const formattedTime = `${hh}:${mm}`;
 
+    if (inputMainEventDate) inputMainEventDate.value = formattedDate;
+    if (inputCfgEventDate) inputCfgEventDate.value = formattedDate;
     if (inputMainEventTime) inputMainEventTime.value = formattedTime;
     if (inputCfgEventTime) inputCfgEventTime.value = formattedTime;
 
@@ -3284,6 +3345,10 @@ document.querySelectorAll('.btn-quick-event-time').forEach(btn => {
 // Botón Limpiar / Nuevo Evento para cambiar de evento fácilmente
 function resetForNewEvent() {
   const nextHour = new Date(Date.now() + 30 * 60 * 1000);
+  const y = nextHour.getFullYear();
+  const m = String(nextHour.getMonth() + 1).padStart(2, '0');
+  const d = String(nextHour.getDate()).padStart(2, '0');
+  const defaultDate = `${y}-${m}-${d}`;
   const hh = String(nextHour.getHours()).padStart(2, '0');
   const mm = String(nextHour.getMinutes()).padStart(2, '0');
   const defaultTime = `${hh}:${mm}`;
@@ -3292,6 +3357,8 @@ function resetForNewEvent() {
   if (inputCfgEventTitle) inputCfgEventTitle.value = '';
   if (inputMainEventDesc) inputMainEventDesc.value = '';
   if (inputCfgEventDesc) inputCfgEventDesc.value = '';
+  if (inputMainEventDate) inputMainEventDate.value = defaultDate;
+  if (inputCfgEventDate) inputCfgEventDate.value = defaultDate;
   if (inputMainEventTime) inputMainEventTime.value = defaultTime;
   if (inputCfgEventTime) inputCfgEventTime.value = defaultTime;
   clearEventImage();

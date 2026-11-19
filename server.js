@@ -115,6 +115,7 @@ let liveState = {
     title: 'LA VELADA DEL CAOS',
     description: 'Transmisión especial en vivo • Prepárate para el gran evento',
     image: '',
+    targetDate: '',
     targetTime: '22:00',
     targetTimestamp: null,
     updatedAt: null
@@ -203,6 +204,9 @@ function loadSettings() {
         if (typeof data.eventCountdown.image === 'string') {
           liveState.eventCountdown.image = data.eventCountdown.image;
         }
+        if (typeof data.eventCountdown.targetDate === 'string') {
+          liveState.eventCountdown.targetDate = data.eventCountdown.targetDate;
+        }
         if (typeof data.eventCountdown.targetTime === 'string') {
           liveState.eventCountdown.targetTime = data.eventCountdown.targetTime;
         }
@@ -247,6 +251,7 @@ function getSettingsPayload() {
       title: liveState.eventCountdown.title || '',
       description: liveState.eventCountdown.description || '',
       image: liveState.eventCountdown.image || '',
+      targetDate: liveState.eventCountdown.targetDate || '',
       targetTime: liveState.eventCountdown.targetTime || '',
       targetTimestamp: liveState.eventCountdown.targetTimestamp || null,
       updatedAt: liveState.eventCountdown.updatedAt || null
@@ -812,6 +817,7 @@ app.post('/api/event-countdown', (req, res) => {
   if (typeof data.title === 'string') liveState.eventCountdown.title = data.title.trim();
   if (typeof data.description === 'string') liveState.eventCountdown.description = data.description.trim();
   if (typeof data.image === 'string') liveState.eventCountdown.image = data.image.trim();
+  if (typeof data.targetDate === 'string') liveState.eventCountdown.targetDate = data.targetDate.trim();
   if (typeof data.targetTime === 'string') liveState.eventCountdown.targetTime = data.targetTime.trim();
   if (typeof data.targetTimestamp === 'number' || data.targetTimestamp === null) {
     liveState.eventCountdown.targetTimestamp = data.targetTimestamp;
@@ -1283,6 +1289,9 @@ io.on('connection', async (socket) => {
     }
     if (typeof data.image === 'string') {
       liveState.eventCountdown.image = data.image.trim();
+    }
+    if (typeof data.targetDate === 'string') {
+      liveState.eventCountdown.targetDate = data.targetDate.trim();
     }
     if (typeof data.targetTime === 'string') {
       liveState.eventCountdown.targetTime = data.targetTime.trim();

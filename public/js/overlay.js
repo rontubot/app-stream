@@ -39,10 +39,15 @@ const sceneEventCard = document.getElementById('scene-event-card');
 const sceneEventMedia = document.getElementById('scene-event-media');
 const sceneEventImg = document.getElementById('scene-event-img');
 const sceneEventImgBlur = document.getElementById('scene-event-img-blur');
+const sceneEventDatePill = document.getElementById('scene-event-date-pill');
+const sceneEventDateVal = document.getElementById('scene-event-date-val');
 const sceneEventTimePill = document.getElementById('scene-event-time-pill');
 const sceneEventTimeVal = document.getElementById('scene-event-time-val');
 const sceneEventTitle = document.getElementById('scene-event-title');
 const sceneEventDesc = document.getElementById('scene-event-desc');
+const sceneCdDaysUnit = document.getElementById('scene-cd-days-unit');
+const sceneCdDaysSep = document.getElementById('scene-cd-days-sep');
+const sceneCdDays = document.getElementById('scene-cd-days');
 const sceneCdHours = document.getElementById('scene-cd-hours');
 const sceneCdMinutes = document.getElementById('scene-cd-minutes');
 const sceneCdSeconds = document.getElementById('scene-cd-seconds');
@@ -52,6 +57,7 @@ let currentEventCountdownState = {
   title: 'LA VELADA DEL CAOS',
   description: 'Transmisión especial en vivo • Prepárate para el gran evento',
   image: '',
+  targetDate: '',
   targetTime: '22:00',
   targetTimestamp: null
 };
@@ -340,6 +346,15 @@ function resolveEventTargetTimestamp(ev) {
     const m = parseInt(mStr, 10);
     if (!isNaN(h) && !isNaN(m)) {
       const now = new Date();
+      if (ev.targetDate && typeof ev.targetDate === 'string' && ev.targetDate.includes('-')) {
+        const [yStr, moStr, dStr] = ev.targetDate.split('-');
+        const y = parseInt(yStr, 10);
+        const mo = parseInt(moStr, 10);
+        const d = parseInt(dStr, 10);
+        if (!isNaN(y) && !isNaN(mo) && !isNaN(d)) {
+          return new Date(y, mo - 1, d, h, m, 0, 0).getTime();
+        }
+      }
       const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
       if (target.getTime() < now.getTime() - 6 * 60 * 60 * 1000) {
         target.setDate(target.getDate() + 1);
@@ -348,6 +363,31 @@ function resolveEventTargetTimestamp(ev) {
     }
   }
   return null;
+}
+
+function formatEventDateLabel(dateStr, targetTs) {
+  const MONTHS_ES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+  let dObj = null;
+  if (dateStr && typeof dateStr === 'string' && dateStr.includes('-')) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+      dObj = new Date(y, m - 1, d);
+    }
+  } else if (typeof targetTs === 'number' && !isNaN(targetTs)) {
+    dObj = new Date(targetTs);
+  }
+  if (!dObj) return 'HOY';
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const targetStart = new Date(dObj.getFullYear(), dObj.getMonth(), dObj.getDate()).getTime();
+  const diffDays = Math.round((targetStart - todayStart) / 86400000);
+
+  const dayNum = String(dObj.getDate()).padStart(2, '0');
+  const monthName = MONTHS_ES[dObj.getMonth()] || '';
+  if (diffDays === 0) return `HOY (${dayNum} ${monthName})`;
+  if (diffDays === 1) return `MAÑANA (${dayNum} ${monthName})`;
+  return `${dayNum} ${monthName} ${dObj.getFullYear()}`;
 }
 
 function tickEventCountdownOverlay() {
@@ -361,16 +401,19 @@ function tickEventCountdownOverlay() {
   if (remainingMs > 0) {
     sceneEventCard.classList.remove('is-countdown-completed');
     const totalSeconds = Math.ceil(remainingMs / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
+    if (sceneCdDays) sceneCdDays.textContent = String(days).padStart(2, '0');
     if (sceneCdHours) sceneCdHours.textContent = String(hours).padStart(2, '0');
     if (sceneCdMinutes) sceneCdMinutes.textContent = String(minutes).padStart(2, '0');
     if (sceneCdSeconds) sceneCdSeconds.textContent = String(seconds).padStart(2, '0');
   } else {
     // Tiempo completado: desaparece el contador y coloca que estamos por empezar
     sceneEventCard.classList.add('is-countdown-completed');
+    if (sceneCdDays) sceneCdDays.textContent = '00';
     if (sceneCdHours) sceneCdHours.textContent = '00';
     if (sceneCdMinutes) sceneCdMinutes.textContent = '00';
     if (sceneCdSeconds) sceneCdSeconds.textContent = '00';
@@ -393,6 +436,13 @@ function renderEventCountdownOnScene() {
       sceneEventDesc.textContent = ev.description || 'La transmisión comenzará en breve';
       sceneEventDesc.style.display = ev.description ? '' : 'none';
     }
+
+    const targetTs = resolveEventTargetTimestamp(ev);
+    if (sceneEventDatePill && sceneEventDateVal) {
+      sceneEventDateVal.textContent = formatEventDateLabel(ev.targetDate, targetTs);
+      sceneEventDatePill.style.display = 'inline-flex';
+    }
+
     if (sceneEventTimePill && sceneEventTimeVal) {
       if (ev.targetTime) {
         sceneEventTimeVal.textContent = ev.targetTime;

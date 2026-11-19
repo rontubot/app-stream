@@ -803,58 +803,58 @@ html, body {
 }
 
 /* ============================================================
-   TARJETA DE EVENTO Y CONTADOR EN PANTALLAS DE ESPERA
+   BARRA COMPACTA INFERIOR DE EVENTO Y CONTADOR (COMPLEMENTA LA ESCENA)
    ============================================================ */
 
-.scene-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 30px;
+/* Cuando el contador de evento está activo, ajustamos ligeramente el espacio
+   superior para que la escena principal (logo + título) y la barra inferior
+   convivan en perfecta armonía sin taparse */
+#fullscreen-scene.has-event-countdown .scene-content {
+  max-width: 1120px;
+  padding: 15px 24px;
+  margin-top: 22px;
 }
 
-.scene-top-bar .scene-badge {
-  margin-bottom: 0;
+#fullscreen-scene.has-event-countdown .scene-badge {
+  margin-bottom: 18px;
 }
 
-.scene-mini-brand {
-  display: none;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 18px;
-  background: rgba(14, 20, 27, 0.9);
-  border: 1px solid rgba(0, 255, 102, 0.45);
-  border-radius: 30px;
-  color: #ffffff;
-  font-family: 'Chakra Petch', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  box-shadow: 0 0 15px rgba(0, 255, 102, 0.18);
+#fullscreen-scene.has-event-countdown .scene-logo-wrapper {
+  padding: 24px 44px;
+  margin-bottom: 20px;
 }
 
-.scene-mini-brand-img {
-  height: 22px;
-  width: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(0, 255, 102, 0.6));
+#fullscreen-scene.has-event-countdown .scene-logo-img {
+  max-width: 450px;
+}
+
+#fullscreen-scene.has-event-countdown .scene-title {
+  font-size: 54px;
+  margin-bottom: 6px;
+}
+
+#fullscreen-scene.has-event-countdown .scene-subtitle {
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+#fullscreen-scene.has-event-countdown .scene-visualizer {
+  margin-bottom: 22px;
 }
 
 .scene-event-card {
   display: none;
   position: relative;
-  width: 1180px;
+  width: 940px;
   max-width: 92vw;
-  background: linear-gradient(135deg, rgba(16, 24, 33, 0.94) 0%, rgba(8, 12, 17, 0.97) 100%);
-  border: 2px solid rgba(0, 255, 102, 0.5);
-  border-radius: 22px;
-  padding: 34px 40px;
-  margin-bottom: 28px;
+  background: linear-gradient(135deg, rgba(16, 24, 33, 0.92) 0%, rgba(8, 12, 17, 0.96) 100%);
+  border: 1.5px solid rgba(0, 255, 102, 0.45);
+  border-radius: 16px;
+  padding: 14px 22px;
   box-shadow:
-    0 25px 65px rgba(0, 0, 0, 0.88),
-    0 0 40px rgba(0, 255, 102, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 14px 35px rgba(0, 0, 0, 0.8),
+    0 0 24px rgba(0, 255, 102, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
   text-align: left;
 }
@@ -864,11 +864,11 @@ html, body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 24px;
-  height: 24px;
-  border-top: 4px solid #00ff66;
-  border-left: 4px solid #00ff66;
-  border-top-left-radius: 18px;
+  width: 14px;
+  height: 14px;
+  border-top: 3px solid #00ff66;
+  border-left: 3px solid #00ff66;
+  border-top-left-radius: 14px;
   pointer-events: none;
 }
 
@@ -877,11 +877,11 @@ html, body {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 24px;
-  height: 24px;
-  border-bottom: 4px solid #00ff66;
-  border-right: 4px solid #00ff66;
-  border-bottom-right-radius: 18px;
+  width: 14px;
+  height: 14px;
+  border-bottom: 3px solid #00ff66;
+  border-right: 3px solid #00ff66;
+  border-bottom-right-radius: 14px;
   pointer-events: none;
 }
 
@@ -894,9 +894,9 @@ html, body {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(0, 255, 102, 0.04) 40%,
-    rgba(255, 255, 255, 0.14) 50%,
-    rgba(0, 255, 102, 0.04) 60%,
+    rgba(0, 255, 102, 0.03) 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(0, 255, 102, 0.03) 60%,
     transparent 100%
   );
   transform: rotate(28deg);
@@ -904,29 +904,9 @@ html, body {
   pointer-events: none;
 }
 
-/* Cuando el contador de evento está activo en la pantalla de espera */
-#fullscreen-scene.has-event-countdown .scene-content {
-  max-width: 1260px;
-  padding: 20px 30px;
-  margin-top: 28px;
-}
-
-#fullscreen-scene.has-event-countdown .scene-top-bar {
-  margin-bottom: 22px;
-}
-
-#fullscreen-scene.has-event-countdown .scene-mini-brand {
-  display: inline-flex;
-}
-
-#fullscreen-scene.has-event-countdown .scene-logo-wrapper,
-#fullscreen-scene.has-event-countdown .scene-text-block {
-  display: none;
-}
-
 #fullscreen-scene.has-event-countdown .scene-event-card {
   display: block;
-  animation: textEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: textEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .scene-event-inner {
@@ -934,42 +914,42 @@ html, body {
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 38px;
+  justify-content: space-between;
+  gap: 22px;
 }
 
-.scene-event-card.no-custom-image .scene-event-inner {
-  justify-content: center;
-  text-align: center;
-}
-
-.scene-event-card.no-custom-image .scene-event-details {
+.scene-event-left {
+  display: flex;
   align-items: center;
-  text-align: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
 }
 
-.scene-event-card.no-custom-image .scene-event-meta-row {
-  justify-content: center;
+.scene-event-right {
+  flex-shrink: 0;
+  padding-left: 20px;
+  border-left: 1px solid rgba(0, 255, 102, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.scene-event-card.no-custom-image .scene-countdown-grid {
-  justify-content: center;
-}
-
-/* Marco de Imagen del Evento */
+/* Miniatura de Imagen del Evento */
 .scene-event-media {
   flex-shrink: 0;
 }
 
 .scene-event-img-frame {
   position: relative;
-  width: 360px;
-  height: 360px;
-  border-radius: 16px;
+  width: 82px;
+  height: 82px;
+  border-radius: 12px;
   background: radial-gradient(circle at center, #14222e 0%, #070b0f 100%);
-  border: 2px solid rgba(0, 255, 102, 0.45);
+  border: 1.5px solid rgba(0, 255, 102, 0.45);
   box-shadow:
-    0 12px 35px rgba(0, 0, 0, 0.8),
-    0 0 25px rgba(0, 255, 102, 0.2);
+    0 6px 18px rgba(0, 0, 0, 0.7),
+    0 0 14px rgba(0, 255, 102, 0.18);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -978,11 +958,11 @@ html, body {
 
 .scene-event-img-blur {
   position: absolute;
-  inset: -15px;
-  width: calc(100% + 30px);
-  height: calc(100% + 30px);
+  inset: -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 16px);
   object-fit: cover;
-  filter: blur(22px) brightness(0.45);
+  filter: blur(10px) brightness(0.45);
   opacity: 0.75;
   pointer-events: none;
 }
@@ -993,21 +973,8 @@ html, body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 10px;
-  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.75));
-}
-
-.scene-event-img-scan {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(0, 255, 102, 0.08) 50%,
-    transparent 100%
-  );
-  pointer-events: none;
+  padding: 4px;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.75));
 }
 
 /* Detalles del Evento */
@@ -1023,130 +990,117 @@ html, body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 5px;
 }
 
 .scene-event-tag {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 14px;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: 6px;
   background: rgba(0, 255, 102, 0.14);
   border: 1px solid rgba(0, 255, 102, 0.5);
   color: #00ff66;
   font-family: 'Chakra Petch', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-.scene-event-tag-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #00ff66;
-  box-shadow: 0 0 8px #00ff66;
-}
-
-.scene-event-time-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 15px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: #e2e8f0;
-  font-family: 'Chakra Petch', sans-serif;
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
+.scene-event-tag-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #00ff66;
+  box-shadow: 0 0 6px #00ff66;
+}
+
+.scene-event-time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
 .scene-event-time-pill strong {
   color: #00ff66;
-  font-size: 16px;
-  text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+  font-size: 12px;
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.45);
 }
 
 .scene-event-title {
   color: #ffffff;
   font-family: 'Rajdhani', sans-serif;
   font-weight: 800;
-  font-size: 52px;
-  line-height: 1.05;
+  font-size: 27px;
+  line-height: 1.08;
   text-transform: uppercase;
-  letter-spacing: 2.5px;
+  letter-spacing: 1.5px;
   text-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.9),
-    0 0 22px rgba(0, 255, 102, 0.45);
-  margin-bottom: 10px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+    0 2px 8px rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(0, 255, 102, 0.4);
+  margin-bottom: 3px;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .scene-event-desc {
   color: #cbd5e1;
   font-family: 'Chakra Petch', sans-serif;
-  font-size: 19px;
+  font-size: 13.5px;
   font-weight: 500;
-  line-height: 1.35;
-  letter-spacing: 1px;
-  margin-bottom: 18px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  line-height: 1.25;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.scene-event-divider {
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, rgba(0, 255, 102, 0.65) 0%, rgba(0, 255, 102, 0.15) 70%, transparent 100%);
-  box-shadow: 0 0 12px rgba(0, 255, 102, 0.4);
-  margin-bottom: 20px;
-}
-
-.scene-event-card.no-custom-image .scene-event-divider {
-  background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 102, 0.65) 50%, transparent 100%);
-}
-
-/* CONTADOR NUMÉRICO ACTIVO */
+/* CONTADOR NUMÉRICO COMPACTO (DÍAS : HRS : MIN : SEG) */
 .scene-countdown-box {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .scene-countdown-label {
   color: #94a3b8;
   font-family: 'Chakra Petch', sans-serif;
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 2.5px;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  margin-bottom: 12px;
+  margin-bottom: 5px;
 }
 
 .scene-countdown-grid {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 6px;
 }
 
 .scene-cd-unit {
-  min-width: 132px;
-  padding: 12px 18px;
-  border-radius: 14px;
+  min-width: 58px;
+  padding: 5px 8px;
+  border-radius: 9px;
   background: linear-gradient(180deg, rgba(7, 11, 15, 0.95) 0%, rgba(15, 24, 34, 0.95) 100%);
-  border: 2px solid rgba(0, 255, 102, 0.45);
+  border: 1.5px solid rgba(0, 255, 102, 0.45);
   box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.7),
-    0 0 18px rgba(0, 255, 102, 0.18),
+    0 5px 14px rgba(0, 0, 0, 0.65),
+    0 0 12px rgba(0, 255, 102, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   text-align: center;
 }
@@ -1155,22 +1109,21 @@ html, body {
   color: #00ff66;
   font-family: 'Rajdhani', sans-serif;
   font-weight: 800;
-  font-size: 62px;
+  font-size: 29px;
   line-height: 1;
-  letter-spacing: 3px;
+  letter-spacing: 1.5px;
   text-shadow:
-    0 0 16px rgba(0, 255, 102, 0.75),
-    0 0 32px rgba(0, 255, 102, 0.35),
-    0 3px 6px rgba(0, 0, 0, 0.95);
+    0 0 12px rgba(0, 255, 102, 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 .scene-cd-unit-label {
   color: #cbd5e1;
   font-family: 'Chakra Petch', sans-serif;
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 2.5px;
-  margin-top: 4px;
+  letter-spacing: 1.5px;
+  margin-top: 2px;
   text-transform: uppercase;
 }
 
@@ -1178,48 +1131,49 @@ html, body {
   color: #00ff66;
   font-family: 'Rajdhani', sans-serif;
   font-weight: 800;
-  font-size: 52px;
+  font-size: 24px;
   line-height: 1;
-  margin-top: -16px;
-  text-shadow: 0 0 14px rgba(0, 255, 102, 0.8);
+  margin-top: -10px;
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.8);
   animation: sceneDotPulse 1.2s infinite;
 }
 
 /* ESTADO CUANDO SE COMPLETA EL TIEMPO: DESAPARECE EL CONTADOR Y DICE ESTAMOS POR EMPEZAR */
 .scene-countdown-completed {
   display: none;
-  padding: 20px 26px;
-  border-radius: 16px;
+  padding: 10px 18px;
+  border-radius: 12px;
   background: linear-gradient(135deg, rgba(0, 255, 102, 0.16) 0%, rgba(6, 28, 16, 0.92) 100%);
-  border: 2px solid #00ff66;
+  border: 1.5px solid #00ff66;
   box-shadow:
-    0 12px 35px rgba(0, 0, 0, 0.8),
-    0 0 30px rgba(0, 255, 102, 0.35);
+    0 8px 22px rgba(0, 0, 0, 0.75),
+    0 0 20px rgba(0, 255, 102, 0.3);
+  text-align: center;
 }
 
 .scene-completed-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
+  gap: 6px;
+  padding: 2px 10px;
   border-radius: 20px;
   background: rgba(0, 255, 102, 0.2);
   border: 1px solid rgba(0, 255, 102, 0.6);
   color: #00ff66;
   font-family: 'Chakra Petch', sans-serif;
-  font-size: 12px;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 3px;
 }
 
 .scene-completed-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #00ff66;
-  box-shadow: 0 0 10px #00ff66;
+  box-shadow: 0 0 8px #00ff66;
   animation: sceneDotPulse 1s infinite;
 }
 
@@ -1227,23 +1181,21 @@ html, body {
   color: #ffffff;
   font-family: 'Rajdhani', sans-serif;
   font-weight: 800;
-  font-size: 48px;
+  font-size: 24px;
   line-height: 1.05;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   text-shadow:
-    0 3px 10px rgba(0, 0, 0, 0.9),
-    0 0 20px rgba(0, 255, 102, 0.8),
-    0 0 40px rgba(0, 255, 102, 0.4);
-  margin-bottom: 4px;
+    0 2px 8px rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(0, 255, 102, 0.8);
 }
 
 .scene-completed-sub {
   color: #d1fae5;
   font-family: 'Chakra Petch', sans-serif;
-  font-size: 15px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   text-transform: uppercase;
 }
 
