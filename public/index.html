@@ -103,9 +103,9 @@
         </button>
 
         <button id="nav-tab-mods" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
-          <i data-lucide="shield" class="w-4 h-4 text-cyan-400"></i>
+          <i data-lucide="shield" class="w-4 h-4 text-cyber-green"></i>
           <span>MODS</span>
-          <span id="nav-badge-mods-alert" class="hidden px-1.5 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-mono font-extrabold animate-bounce shadow-[0_0_10px_rgba(251,191,36,0.9)]">🔔 ALERTA</span>
+          <span id="nav-badge-mods-alert" class="hidden px-1.5 py-0.5 rounded-full bg-cyber-green text-black text-[9px] font-mono font-extrabold animate-bounce shadow-[0_0_10px_rgba(0,255,102,0.9)]">🔔 ALERTA</span>
           <span id="nav-badge-mods-unread" class="hidden px-1.5 py-0.5 rounded-full bg-cyan-400 text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(6,182,212,0.7)]">0</span>
         </button>
 
@@ -1763,18 +1763,18 @@
         <div class="lg:col-span-5 space-y-6">
 
           <!-- MÓDULO 1: ALERTA VISUAL Y SONORA EN EL STREAM (ESQUINA INFERIOR IZQUIERDA) -->
-          <section id="card-mod-alert-control" class="bg-cyber-card border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-4 relative overflow-hidden">
+          <section id="card-mod-alert-control" class="bg-cyber-card border border-cyber-green/40 rounded-2xl p-5 shadow-xl space-y-4 relative overflow-hidden">
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-400/50 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
-                  <i data-lucide="bell-ring" class="w-6 h-6 text-amber-400"></i>
+                <div class="w-11 h-11 rounded-xl bg-cyber-green/15 border border-cyber-green/50 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(0,255,102,0.25)]">
+                  <i data-lucide="bell-ring" class="w-6 h-6 text-cyber-green"></i>
                 </div>
                 <div>
                   <h3 class="text-sm sm:text-base font-bold font-chakra text-white uppercase tracking-wide">
                     ALERTA DE MODS EN EL STREAM
                   </h3>
-                  <p class="text-[11px] text-amber-300/90 font-mono">
-                    Esquina inferior izquierda • Sonido 1er segundo
+                  <p class="text-[11px] text-cyber-green/90 font-mono">
+                    HUD Esquina inferior izquierda • Sonido 1er segundo
                   </p>
                 </div>
               </div>
@@ -1786,17 +1786,17 @@
 
             <div class="bg-black/40 border border-cyber-border rounded-xl p-3.5 text-xs text-gray-300 space-y-1.5 leading-relaxed">
               <p class="flex items-start gap-2">
-                <span class="text-amber-400 font-bold">🔔</span>
-                <span>Muestra un <strong>icono de notificación en movimiento</strong> en la esquina inferior izquierda del stream y suena durante el <strong>primer segundo</strong> de recibirla.</span>
+                <span class="text-cyber-green font-bold">🔔</span>
+                <span>Muestra un <strong>HUD de notificación en movimiento estilo BirraVerde</strong> en la esquina inferior izquierda del stream y suena durante el <strong>primer segundo</strong> de recibirla.</span>
               </p>
               <p class="flex items-start gap-2 text-[11px] text-gray-400">
-                <span class="text-cyan-400 font-bold">🔒</span>
+                <span class="text-cyber-green font-bold">🔒</span>
                 <span><strong>Regla de desactivación:</strong> Solo se desactiva si el MOD la apaga desde este botón o automáticamente cuando el <strong>Admin entra al apartado MODS</strong>.</span>
               </p>
             </div>
 
             <div class="pt-1">
-              <button id="btn-toggle-mod-alert" type="button" class="w-full py-3.5 px-5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(251,191,36,0.4)] cursor-pointer">
+              <button id="btn-toggle-mod-alert" type="button" class="w-full py-3.5 px-5 rounded-xl bg-cyber-green hover:bg-emerald-400 text-black font-chakra font-extrabold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(0,255,102,0.4)] cursor-pointer">
                 <i data-lucide="bell-ring" class="w-5 h-5"></i>
                 <span id="text-toggle-mod-alert">ACTIVAR ALERTA EN EL STREAM</span>
               </button>
@@ -2350,6 +2350,6 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/admin.js?v=20261119b"></script>
+  <script src="/js/admin.js?v=20261119c"></script>
 </body>
 </html>

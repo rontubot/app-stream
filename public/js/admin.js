@@ -3958,7 +3958,7 @@ function syncModAlertAdminUI(modAlert) {
 
   if (modAlertStatusBadge) {
     if (isActive) {
-      modAlertStatusBadge.className = 'px-2.5 py-1 rounded-full bg-amber-400 text-black border border-amber-300 text-[10px] font-mono font-extrabold uppercase animate-pulse shadow-[0_0_12px_rgba(251,191,36,0.8)] shrink-0';
+      modAlertStatusBadge.className = 'px-2.5 py-1 rounded-full bg-cyber-green text-black border border-cyber-green text-[10px] font-mono font-extrabold uppercase animate-pulse shadow-[0_0_12px_rgba(0,255,102,0.8)] shrink-0';
       modAlertStatusBadge.textContent = `🔔 ACTIVA EN STREAM (${modAlert.triggeredBy || 'MODS'})`;
     } else {
       modAlertStatusBadge.className = 'px-2.5 py-1 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-[10px] font-mono font-extrabold uppercase shrink-0';
@@ -3968,22 +3968,22 @@ function syncModAlertAdminUI(modAlert) {
 
   if (cardModAlertControl) {
     cardModAlertControl.className = isActive
-      ? 'bg-cyber-card border-2 border-amber-400 rounded-2xl p-5 shadow-[0_0_25px_rgba(251,191,36,0.25)] space-y-4 relative overflow-hidden'
-      : 'bg-cyber-card border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-4 relative overflow-hidden';
+      ? 'bg-cyber-card border-2 border-cyber-green rounded-2xl p-5 shadow-[0_0_25px_rgba(0,255,102,0.25)] space-y-4 relative overflow-hidden'
+      : 'bg-cyber-card border border-cyber-green/40 rounded-2xl p-5 shadow-xl space-y-4 relative overflow-hidden';
   }
 
   if (btnToggleModAlert && textToggleModAlert) {
     const isAdminNivel1 = currentAuthUser && currentAuthUser.level === 'nivel_1';
     if (isActive) {
       if (isAdminNivel1) {
-        btnToggleModAlert.className = 'w-full py-3.5 px-5 rounded-xl bg-amber-500/20 border border-amber-400 text-amber-300 font-chakra font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 cursor-default';
+        btnToggleModAlert.className = 'w-full py-3.5 px-5 rounded-xl bg-cyber-green/20 border border-cyber-green text-cyber-green font-chakra font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 cursor-default';
         textToggleModAlert.textContent = 'ALERTA ACTIVA (SE APAGA AL ENTRAR A MODS O POR EL MOD)';
       } else {
         btnToggleModAlert.className = 'w-full py-3.5 px-5 rounded-xl bg-red-500 hover:bg-red-400 text-white font-chakra font-extrabold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(239,68,68,0.5)] cursor-pointer';
         textToggleModAlert.textContent = 'DESACTIVAR ALERTA EN EL STREAM';
       }
     } else {
-      btnToggleModAlert.className = 'w-full py-3.5 px-5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(251,191,36,0.4)] cursor-pointer';
+      btnToggleModAlert.className = 'w-full py-3.5 px-5 rounded-xl bg-cyber-green hover:bg-emerald-400 text-black font-chakra font-extrabold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(0,255,102,0.4)] cursor-pointer';
       textToggleModAlert.textContent = 'ACTIVAR ALERTA EN EL STREAM';
     }
   }
