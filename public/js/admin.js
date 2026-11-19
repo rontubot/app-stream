@@ -83,12 +83,15 @@ const btnHideAnnouncement = document.getElementById('btn-hide-announcement');
 const navTabMain = document.getElementById('nav-tab-main');
 const navTabMulticam = document.getElementById('nav-tab-multicam');
 const navTabAnimations = document.getElementById('nav-tab-animations');
+const navTabAnnouncements = document.getElementById('nav-tab-announcements');
 const navTabConfig = document.getElementById('nav-tab-config');
 const navBadgeVs = document.getElementById('nav-badge-vs');
 const navBadgeMulticamCount = document.getElementById('nav-badge-multicam-count');
+const navBadgeEventCd = document.getElementById('nav-badge-event-cd');
 const tabPanelMain = document.getElementById('tab-panel-main');
 const tabPanelMulticam = document.getElementById('tab-panel-multicam');
 const tabPanelAnimations = document.getElementById('tab-panel-animations');
+const tabPanelAnnouncements = document.getElementById('tab-panel-announcements');
 const tabPanelConfig = document.getElementById('tab-panel-config');
 
 // Elementos DOM del Sistema Multicam
@@ -1663,18 +1666,24 @@ function switchMainTab(tab) {
   if (tabPanelMain) tabPanelMain.classList.add('hidden');
   if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
   if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
+  if (tabPanelAnnouncements) tabPanelAnnouncements.classList.add('hidden');
   if (tabPanelConfig) tabPanelConfig.classList.add('hidden');
 
   // Resetear estados visuales de botones
   if (navTabMain) navTabMain.className = inactiveBtnClass;
   if (navTabMulticam) navTabMulticam.className = inactiveBtnClass;
   if (navTabAnimations) navTabAnimations.className = inactiveBtnClass;
+  if (navTabAnnouncements) navTabAnnouncements.className = inactiveBtnClass;
   if (navTabConfig) navTabConfig.className = inactiveBtnClass;
 
   if (tab === 'config' || tab === 'settings') {
     if (tabPanelConfig) tabPanelConfig.classList.remove('hidden');
     if (navTabConfig) navTabConfig.className = activeBtnClass;
     localStorage.setItem('birraverde_active_tab', 'config');
+  } else if (tab === 'announcements' || tab === 'anuncios') {
+    if (tabPanelAnnouncements) tabPanelAnnouncements.classList.remove('hidden');
+    if (navTabAnnouncements) navTabAnnouncements.className = activeBtnClass;
+    localStorage.setItem('birraverde_active_tab', 'announcements');
   } else if (tab === 'animations' || tab === 'scenes' || tab === 'multicam') {
     if (tabPanelAnimations) tabPanelAnimations.classList.remove('hidden');
     if (navTabAnimations) navTabAnimations.className = activeBtnClass;
@@ -1704,6 +1713,9 @@ if (navTabMulticam) {
 }
 if (navTabAnimations) {
   navTabAnimations.addEventListener('click', () => switchMainTab('animations'));
+}
+if (navTabAnnouncements) {
+  navTabAnnouncements.addEventListener('click', () => switchMainTab('announcements'));
 }
 if (navTabConfig) {
   navTabConfig.addEventListener('click', () => switchMainTab('config'));
@@ -2938,6 +2950,10 @@ socket.on('multicam-join-request-alert', (peer) => {
 const mainEventCdStatusBadge = document.getElementById('main-event-cd-status-badge');
 const mainEventCdLiveTimer = document.getElementById('main-event-cd-live-timer');
 const btnMainToggleEventCd = document.getElementById('btn-main-toggle-event-cd');
+const btnGotoAnnouncementsTab = document.getElementById('btn-goto-announcements-tab');
+if (btnGotoAnnouncementsTab) {
+  btnGotoAnnouncementsTab.addEventListener('click', () => switchMainTab('announcements'));
+}
 const iconMainEventCdToggle = document.getElementById('icon-main-event-cd-toggle');
 const textMainEventCdToggle = document.getElementById('text-main-event-cd-toggle');
 const btnToggleMainEventForm = document.getElementById('btn-toggle-main-event-form');
@@ -3020,7 +3036,12 @@ function syncEventCountdownUI(ev) {
 
   const isEnabled = !!ev.enabled;
 
-  // Badges y Botones de Activación (Control Principal)
+  if (navBadgeEventCd) {
+    if (isEnabled) navBadgeEventCd.classList.remove('hidden');
+    else navBadgeEventCd.classList.add('hidden');
+  }
+
+  // Badges y Botones de Activación (Menú Anuncios)
   if (mainEventCdStatusBadge) {
     if (isEnabled) {
       mainEventCdStatusBadge.className = 'px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/50 uppercase shadow-[0_0_10px_rgba(0,255,102,0.3)]';
