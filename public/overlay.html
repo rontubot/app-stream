@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-192.png">
-  <link rel="stylesheet" href="/css/overlay.css?v=20261118c">
+  <link rel="stylesheet" href="/css/overlay.css?v=20261119b">
   <link rel="stylesheet" href="/css/multicam.css">
 </head>
 <body>
@@ -452,8 +452,8 @@
         <!-- Cabecera del Anuncio -->
         <div class="chat-hud-header">
           <div class="chat-hud-tag">
-            <span class="chat-hud-icon">📢</span>
-            <span class="chat-hud-title">ANUNCIO DESTACADO</span>
+            <span class="chat-hud-icon" id="chat-hud-icon">📢</span>
+            <span class="chat-hud-title" id="chat-hud-title">ANUNCIO DESTACADO</span>
             <span class="chat-hud-prefix" id="chat-hud-prefix-badge">!anuncio</span>
           </div>
 
@@ -472,7 +472,7 @@
         <div class="chat-hud-body">
           <div class="chat-hud-user-row">
             <div class="chat-user-avatar">
-              <i class="chat-avatar-icon">💬</i>
+              <i class="chat-avatar-icon" id="chat-avatar-icon">💬</i>
             </div>
             <span class="chat-hud-username" id="chat-hud-username">@espectador</span>
             <span class="chat-hud-time" id="chat-hud-time">hace un momento</span>
@@ -484,6 +484,24 @@
 
         <!-- Línea Láser Inferior -->
         <div class="chat-hud-laser"></div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         ALERTA DE MODS EN ESQUINA INFERIOR IZQUIERDA (ICONO EN MOVIMIENTO)
+         ============================================================ -->
+    <div id="obs-corner-mod-alert" class="obs-corner-mod-alert" aria-hidden="true">
+      <div class="mod-alert-pulse-ring"></div>
+      <div class="mod-alert-bell-wrap">
+        <svg class="mod-alert-bell-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="mod-alert-dot"></span>
+      </div>
+      <div class="mod-alert-info">
+        <span class="mod-alert-title">ALERTA DE MOD</span>
+        <span class="mod-alert-sub" id="obs-mod-alert-sub">Mensaje en chat de MODS</span>
       </div>
     </div>
 
@@ -509,6 +527,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/overlay.js?v=20261118c"></script>
+  <script src="/js/overlay.js?v=20261119b"></script>
 </body>
 </html>

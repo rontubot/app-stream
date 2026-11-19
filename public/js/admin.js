@@ -84,14 +84,18 @@ const navTabMain = document.getElementById('nav-tab-main');
 const navTabMulticam = document.getElementById('nav-tab-multicam');
 const navTabAnimations = document.getElementById('nav-tab-animations');
 const navTabAnnouncements = document.getElementById('nav-tab-announcements');
+const navTabMods = document.getElementById('nav-tab-mods');
 const navTabConfig = document.getElementById('nav-tab-config');
 const navBadgeVs = document.getElementById('nav-badge-vs');
 const navBadgeMulticamCount = document.getElementById('nav-badge-multicam-count');
 const navBadgeEventCd = document.getElementById('nav-badge-event-cd');
+const navBadgeModsAlert = document.getElementById('nav-badge-mods-alert');
+const navBadgeModsUnread = document.getElementById('nav-badge-mods-unread');
 const tabPanelMain = document.getElementById('tab-panel-main');
 const tabPanelMulticam = document.getElementById('tab-panel-multicam');
 const tabPanelAnimations = document.getElementById('tab-panel-animations');
 const tabPanelAnnouncements = document.getElementById('tab-panel-announcements');
+const tabPanelMods = document.getElementById('tab-panel-mods');
 const tabPanelConfig = document.getElementById('tab-panel-config');
 
 // Elementos DOM del Sistema Multicam
@@ -696,6 +700,13 @@ socket.on('state-update', (state) => {
   if (state.eventCountdown && typeof state.eventCountdown === 'object') {
     if (typeof syncEventCountdownUI === 'function') {
       syncEventCountdownUI(state.eventCountdown);
+    }
+  }
+
+  // Estado de la Alerta de MODS en el Stream
+  if (state.modAlert && typeof state.modAlert === 'object') {
+    if (typeof syncModAlertAdminUI === 'function') {
+      syncModAlertAdminUI(state.modAlert);
     }
   }
 
@@ -1667,6 +1678,7 @@ function switchMainTab(tab) {
   if (tabPanelMulticam) tabPanelMulticam.classList.add('hidden');
   if (tabPanelAnimations) tabPanelAnimations.classList.add('hidden');
   if (tabPanelAnnouncements) tabPanelAnnouncements.classList.add('hidden');
+  if (tabPanelMods) tabPanelMods.classList.add('hidden');
   if (tabPanelConfig) tabPanelConfig.classList.add('hidden');
 
   // Resetear estados visuales de botones
@@ -1674,12 +1686,20 @@ function switchMainTab(tab) {
   if (navTabMulticam) navTabMulticam.className = inactiveBtnClass;
   if (navTabAnimations) navTabAnimations.className = inactiveBtnClass;
   if (navTabAnnouncements) navTabAnnouncements.className = inactiveBtnClass;
+  if (navTabMods) navTabMods.className = inactiveBtnClass;
   if (navTabConfig) navTabConfig.className = inactiveBtnClass;
 
   if (tab === 'config' || tab === 'settings') {
     if (tabPanelConfig) tabPanelConfig.classList.remove('hidden');
     if (navTabConfig) navTabConfig.className = activeBtnClass;
     localStorage.setItem('birraverde_active_tab', 'config');
+  } else if (tab === 'mods') {
+    if (tabPanelMods) tabPanelMods.classList.remove('hidden');
+    if (navTabMods) navTabMods.className = activeBtnClass;
+    localStorage.setItem('birraverde_active_tab', 'mods');
+    if (typeof onEnterModsTab === 'function') {
+      onEnterModsTab();
+    }
   } else if (tab === 'announcements' || tab === 'anuncios') {
     if (tabPanelAnnouncements) tabPanelAnnouncements.classList.remove('hidden');
     if (navTabAnnouncements) navTabAnnouncements.className = activeBtnClass;
@@ -1716,6 +1736,9 @@ if (navTabAnimations) {
 }
 if (navTabAnnouncements) {
   navTabAnnouncements.addEventListener('click', () => switchMainTab('announcements'));
+}
+if (navTabMods) {
+  navTabMods.addEventListener('click', () => switchMainTab('mods'));
 }
 if (navTabConfig) {
   navTabConfig.addEventListener('click', () => switchMainTab('config'));
@@ -3483,6 +3506,28 @@ function applyAuthUserUI(user) {
     if (usersAdminControls) usersAdminControls.classList.add('hidden');
     if (usersModsNotice) usersModsNotice.classList.remove('hidden');
   }
+
+  // Actualizar identidad en el apartado MODS
+  const modsActiveUserName = document.getElementById('mods-active-user-name');
+  const modsActiveUserRole = document.getElementById('mods-active-user-role');
+  if (modsActiveUserName) {
+    modsActiveUserName.textContent = (user.displayName || user.username || 'USUARIO').toUpperCase();
+  }
+  if (modsActiveUserRole) {
+    modsActiveUserRole.textContent = isNivel1 ? '👑 ADMIN NIVEL 1' : '🛡️ MODS';
+    modsActiveUserRole.className = isNivel1
+      ? 'px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/40 text-[10px] font-bold uppercase'
+      : 'px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 text-[10px] font-bold uppercase';
+  }
+
+  if (typeof renderModsChatMessages === 'function') {
+    renderModsChatMessages();
+  }
+
+  // Si el Admin Nivel 1 ya está parado en la pestaña MODS al autenticar, desactivar alerta si estaba activa
+  if (isNivel1 && localStorage.getItem('birraverde_active_tab') === 'mods') {
+    socket.emit('admin-entered-mods');
+  }
 }
 
 async function verifyCurrentSession() {
@@ -3695,6 +3740,346 @@ if (userDbForm) {
     } catch (err) {
       showToast('❌ Error de conexión al guardar usuario', 'error');
     }
+  });
+}
+
+// ============================================================
+// APARTADO MODS: CHAT ACTIVO ADMIN ↔ MODS, ALERTA EN STREAM Y TTS ESPECIAL
+// ============================================================
+const modsChatMessages = document.getElementById('mods-chat-messages');
+const modsChatForm = document.getElementById('mods-chat-form');
+const inputModsChatText = document.getElementById('input-mods-chat-text');
+const btnClearModsChat = document.getElementById('btn-clear-mods-chat');
+
+const cardModAlertControl = document.getElementById('card-mod-alert-control');
+const modAlertStatusBadge = document.getElementById('mod-alert-status-badge');
+const btnToggleModAlert = document.getElementById('btn-toggle-mod-alert');
+const textToggleModAlert = document.getElementById('text-toggle-mod-alert');
+
+const selectModTtsIntro = document.getElementById('select-mod-tts-intro');
+const inputModTtsText = document.getElementById('input-mod-tts-text');
+const btnSendModTts = document.getElementById('btn-send-mod-tts');
+const btnHideModTts = document.getElementById('btn-hide-mod-tts');
+
+let modsChatList = [];
+let modsUnreadCount = 0;
+
+function escapeModsHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function updateModsUnreadBadge() {
+  if (!navBadgeModsUnread) return;
+  if (modsUnreadCount > 0) {
+    navBadgeModsUnread.textContent = modsUnreadCount > 99 ? '99+' : String(modsUnreadCount);
+    navBadgeModsUnread.classList.remove('hidden');
+  } else {
+    navBadgeModsUnread.classList.add('hidden');
+  }
+}
+
+function onEnterModsTab() {
+  modsUnreadCount = 0;
+  updateModsUnreadBadge();
+
+  if (modsChatMessages) {
+    setTimeout(() => {
+      modsChatMessages.scrollTop = modsChatMessages.scrollHeight;
+    }, 30);
+  }
+
+  // Regla estricta: si el usuario Admin (Usuario Nivel 1) entra al apartado de MODS, se desactiva la alerta en el stream
+  if (currentAuthUser && currentAuthUser.level === 'nivel_1') {
+    socket.emit('admin-entered-mods');
+  }
+}
+
+function renderModsChatMessages() {
+  if (!modsChatMessages) return;
+
+  if (!Array.isArray(modsChatList) || modsChatList.length === 0) {
+    modsChatMessages.innerHTML = `
+      <div class="h-full flex flex-col items-center justify-center text-center text-gray-500 py-10">
+        <i data-lucide="messages-square" class="w-10 h-10 mb-2 text-gray-600"></i>
+        <p class="text-xs font-chakra uppercase tracking-wider text-gray-400">Sin mensajes todavía</p>
+        <p class="text-[11px] text-gray-500 mt-1 max-w-xs">Escribe abajo para conversar en tiempo real entre MODS y el Admin del stream.</p>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
+
+  let html = '';
+  modsChatList.forEach((msg) => {
+    const isAdminMsg = msg.level === 'nivel_1';
+    const isMine = currentAuthUser
+      ? (msg.userId === currentAuthUser.id || msg.username === currentAuthUser.username)
+      : false;
+
+    const d = msg.timestamp ? new Date(msg.timestamp) : new Date();
+    const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
+    const roleTag = isAdminMsg
+      ? `<span class="px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/40 text-[9px] font-mono font-extrabold uppercase">👑 ADMIN</span>`
+      : `<span class="px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 text-[9px] font-mono font-extrabold uppercase">🛡️ MODS</span>`;
+
+    const bubbleBorder = isAdminMsg
+      ? 'border-cyber-green/45 bg-gradient-to-br from-emerald-950/60 to-cyber-dark/95'
+      : 'border-cyan-400/45 bg-gradient-to-br from-cyan-950/60 to-cyber-dark/95';
+
+    const alignClass = isMine ? 'items-end' : 'items-start';
+
+    html += `
+      <div class="flex flex-col ${alignClass}">
+        <div class="max-w-[86%] sm:max-w-[78%] rounded-2xl border ${bubbleBorder} px-3.5 py-2.5 shadow-md">
+          <div class="flex items-center justify-between gap-3 mb-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${roleTag}
+              <span class="text-xs font-chakra font-extrabold ${isAdminMsg ? 'text-cyber-green' : 'text-cyan-300'}">
+                ${escapeModsHtml(msg.displayName || msg.username || (isAdminMsg ? 'Admin' : 'MODS'))}
+              </span>
+              <span class="text-[10px] font-mono text-gray-400">(@${escapeModsHtml(msg.username || 'user')})</span>
+            </div>
+            <span class="text-[10px] font-mono text-gray-400 shrink-0">${timeStr}</span>
+          </div>
+          <p class="text-xs sm:text-sm text-gray-100 font-medium leading-relaxed break-words whitespace-pre-wrap">${escapeModsHtml(msg.text)}</p>
+        </div>
+      </div>
+    `;
+  });
+
+  modsChatMessages.innerHTML = html;
+  modsChatMessages.scrollTop = modsChatMessages.scrollHeight;
+}
+
+socket.on('mods-chat-history', (history) => {
+  modsChatList = Array.isArray(history) ? history : [];
+  renderModsChatMessages();
+});
+
+socket.on('mods-chat-message', (msg) => {
+  if (!msg) return;
+  modsChatList.push(msg);
+  if (modsChatList.length > 200) {
+    modsChatList = modsChatList.slice(-200);
+  }
+  renderModsChatMessages();
+
+  const isOnModsTab = localStorage.getItem('birraverde_active_tab') === 'mods' && tabPanelMods && !tabPanelMods.classList.contains('hidden');
+  const isFromMe = currentAuthUser && (msg.userId === currentAuthUser.id || msg.username === currentAuthUser.username);
+
+  if (!isOnModsTab && !isFromMe) {
+    modsUnreadCount += 1;
+    updateModsUnreadBadge();
+    showToast(`💬 Nuevo mensaje en MODS de ${msg.displayName || msg.username}: "${msg.text.slice(0, 45)}${msg.text.length > 45 ? '...' : ''}"`);
+  }
+});
+
+if (modsChatForm && inputModsChatText) {
+  modsChatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = inputModsChatText.value.trim();
+    if (!text) return;
+
+    socket.emit('send-mods-chat', { text }, (res) => {
+      if (res && res.ok) {
+        inputModsChatText.value = '';
+        inputModsChatText.focus();
+      } else {
+        showToast(`❌ ${res?.error || 'No se pudo enviar el mensaje'}`, 'error');
+      }
+    });
+  });
+}
+
+if (btnClearModsChat) {
+  btnClearModsChat.addEventListener('click', () => {
+    if (!confirm('¿Limpiar todo el historial del chat entre Admin y MODS?')) return;
+    socket.emit('clear-mods-chat', (res) => {
+      if (res && res.ok) {
+        showToast('🧹 Historial de chat MODS limpiado');
+      }
+    });
+  });
+}
+
+// Sonido de 1 segundo también en el panel cuando se dispara la alerta de MODS
+function playAdminModAlertOneSecondSound() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    const freqs = [
+      { f: 880, start: 0, dur: 0.42 },
+      { f: 1174.66, start: 0.14, dur: 0.42 },
+      { f: 1318.51, start: 0.30, dur: 0.65 }
+    ];
+
+    freqs.forEach(({ f, start, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now + start);
+
+      gain.gain.setValueAtTime(0.001, now + start);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + start + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + start + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.02);
+    });
+
+    setTimeout(() => {
+      try { ctx.close(); } catch (e) {}
+    }, 1050);
+  } catch (err) {}
+}
+
+function syncModAlertAdminUI(modAlert) {
+  const isActive = !!(modAlert && modAlert.isActive);
+
+  if (navBadgeModsAlert) {
+    if (isActive) {
+      navBadgeModsAlert.classList.remove('hidden');
+    } else {
+      navBadgeModsAlert.classList.add('hidden');
+    }
+  }
+
+  if (modAlertStatusBadge) {
+    if (isActive) {
+      modAlertStatusBadge.className = 'px-2.5 py-1 rounded-full bg-amber-400 text-black border border-amber-300 text-[10px] font-mono font-extrabold uppercase animate-pulse shadow-[0_0_12px_rgba(251,191,36,0.8)] shrink-0';
+      modAlertStatusBadge.textContent = `🔔 ACTIVA EN STREAM (${modAlert.triggeredBy || 'MODS'})`;
+    } else {
+      modAlertStatusBadge.className = 'px-2.5 py-1 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-[10px] font-mono font-extrabold uppercase shrink-0';
+      modAlertStatusBadge.textContent = 'APAGADA';
+    }
+  }
+
+  if (cardModAlertControl) {
+    cardModAlertControl.className = isActive
+      ? 'bg-cyber-card border-2 border-amber-400 rounded-2xl p-5 shadow-[0_0_25px_rgba(251,191,36,0.25)] space-y-4 relative overflow-hidden'
+      : 'bg-cyber-card border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-4 relative overflow-hidden';
+  }
+
+  if (btnToggleModAlert && textToggleModAlert) {
+    const isAdminNivel1 = currentAuthUser && currentAuthUser.level === 'nivel_1';
+    if (isActive) {
+      if (isAdminNivel1) {
+        btnToggleModAlert.className = 'w-full py-3.5 px-5 rounded-xl bg-amber-500/20 border border-amber-400 text-amber-300 font-chakra font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 cursor-default';
+        textToggleModAlert.textContent = 'ALERTA ACTIVA (SE APAGA AL ENTRAR A MODS O POR EL MOD)';
+      } else {
+        btnToggleModAlert.className = 'w-full py-3.5 px-5 rounded-xl bg-red-500 hover:bg-red-400 text-white font-chakra font-extrabold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(239,68,68,0.5)] cursor-pointer';
+        textToggleModAlert.textContent = 'DESACTIVAR ALERTA EN EL STREAM';
+      }
+    } else {
+      btnToggleModAlert.className = 'w-full py-3.5 px-5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(251,191,36,0.4)] cursor-pointer';
+      textToggleModAlert.textContent = 'ACTIVAR ALERTA EN EL STREAM';
+    }
+  }
+}
+
+if (btnToggleModAlert) {
+  btnToggleModAlert.addEventListener('click', () => {
+    const isCurrentlyActive = !!(currentLiveState.modAlert && currentLiveState.modAlert.isActive);
+    const isAdminNivel1 = currentAuthUser && currentAuthUser.level === 'nivel_1';
+
+    if (!isCurrentlyActive) {
+      socket.emit('activate-mod-alert', (res) => {
+        if (res && res.ok) {
+          showToast('🔔 Alerta de MODS activada en la esquina inferior izquierda del stream');
+        }
+      });
+    } else {
+      // Si es Admin y está dentro del apartado MODS, emite admin-entered-mods; si es MOD, emite deactivate-mod-alert
+      if (isAdminNivel1) {
+        socket.emit('admin-entered-mods', (res) => {
+          if (res && res.ok) {
+            showToast('🔕 Alerta de MODS revisada y desactivada por Admin');
+          }
+        });
+      } else {
+        socket.emit('deactivate-mod-alert', (res) => {
+          if (res && res.ok) {
+            showToast('🔕 Alerta de MODS desactivada del stream');
+          }
+        });
+      }
+    }
+  });
+}
+
+socket.on('mod-alert-triggered', (modAlert) => {
+  syncModAlertAdminUI(modAlert || { isActive: true });
+  playAdminModAlertOneSecondSound();
+
+  // Si el Admin Nivel 1 ya está dentro de la pestaña MODS viendo el chat en este instante, apagarla tras el primer segundo de aviso
+  const isOnModsTab = localStorage.getItem('birraverde_active_tab') === 'mods' && tabPanelMods && !tabPanelMods.classList.contains('hidden');
+  if (currentAuthUser && currentAuthUser.level === 'nivel_1' && isOnModsTab) {
+    setTimeout(() => {
+      socket.emit('admin-entered-mods');
+    }, 1200);
+  } else {
+    showToast(`🔔 ¡ALERTA DE ${modAlert?.triggeredBy || 'MODS'} EN EL STREAM! Revisar apartado MODS`);
+  }
+});
+
+socket.on('mod-alert-cleared', (info) => {
+  syncModAlertAdminUI({ isActive: false });
+  if (info && info.reason === 'admin-entered-mods') {
+    showToast('✅ El Admin entró al apartado MODS (Alerta desactivada en stream)');
+  }
+});
+
+// TTS Especial exclusivo de MODS
+window.setQuickModTtsMessage = function(text) {
+  if (inputModTtsText) {
+    inputModTtsText.value = text;
+    inputModTtsText.focus();
+  }
+};
+
+if (btnSendModTts && inputModTtsText) {
+  btnSendModTts.addEventListener('click', () => {
+    const text = inputModTtsText.value.trim();
+    if (!text) {
+      showToast('⚠️ Escribe un mensaje para que el TTS de MODS lo lea en el stream', 'error');
+      inputModTtsText.focus();
+      return;
+    }
+    const introStyle = selectModTtsIntro ? selectModTtsIntro.value : 'mod_equipo';
+    socket.emit('trigger-mod-tts', { text, introStyle }, (res) => {
+      if (res && res.ok) {
+        showToast('🛡️ TTS Especial de MODS enviado y leyéndose en el stream');
+        inputModTtsText.value = '';
+      } else {
+        showToast(`❌ ${res?.error || 'Error al enviar TTS de MODS'}`, 'error');
+      }
+    });
+  });
+
+  inputModTtsText.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      btnSendModTts.click();
+    }
+  });
+}
+
+if (btnHideModTts) {
+  btnHideModTts.addEventListener('click', () => {
+    socket.emit('hide-mod-tts');
+    showToast('🔇 TTS de MODS detenido y retirado de pantalla');
   });
 }
 

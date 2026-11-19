@@ -102,6 +102,13 @@
           <span id="nav-badge-event-cd" class="hidden px-1.5 py-0.5 rounded-full bg-cyber-green text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(0,255,102,0.5)]">ACTIVO</span>
         </button>
 
+        <button id="nav-tab-mods" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
+          <i data-lucide="shield" class="w-4 h-4 text-cyan-400"></i>
+          <span>MODS</span>
+          <span id="nav-badge-mods-alert" class="hidden px-1.5 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-mono font-extrabold animate-bounce shadow-[0_0_10px_rgba(251,191,36,0.9)]">🔔 ALERTA</span>
+          <span id="nav-badge-mods-unread" class="hidden px-1.5 py-0.5 rounded-full bg-cyan-400 text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(6,182,212,0.7)]">0</span>
+        </button>
+
         <button id="nav-tab-config" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
           <i data-lucide="settings" class="w-4 h-4 text-cyber-green"></i>
           <span>CONFIGURACIÓN</span>
@@ -1669,6 +1676,208 @@
 
     </div>
 
+    <!-- ============================================================
+         VISTA 5: MODS (CHAT ACTIVO ADMIN ↔ MODS, ALERTA EN STREAM Y TTS ESPECIAL)
+         ============================================================ -->
+    <div id="tab-panel-mods" class="hidden space-y-6">
+
+      <!-- Cabecera de MODS -->
+      <div class="bg-cyber-card border border-cyan-500/30 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-amber-500/10 pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-xl bg-cyan-500/15 border border-cyan-400/50 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(6,182,212,0.25)]">
+              <i data-lucide="shield" class="w-6 h-6 text-cyan-400"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h2 class="text-lg sm:text-xl font-bold font-chakra text-white tracking-wide">
+                  CENTRO DE COMANDO • MODS & ADMIN
+                </h2>
+                <span class="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-[10px] font-mono font-bold uppercase">
+                  CANAL INTERNO EN VIVO
+                </span>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">
+                Chat directo entre Moderación y Admin, alerta visual/sonora en la esquina inferior izquierda del stream y voz TTS exclusiva de MODS.
+              </p>
+            </div>
+          </div>
+
+          <!-- Identidad activa en el panel -->
+          <div id="mods-panel-active-user" class="px-3.5 py-2 rounded-xl bg-black/50 border border-cyber-border flex items-center gap-2.5 text-xs font-mono shrink-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse"></span>
+            <span class="text-gray-400">Respondés como:</span>
+            <strong id="mods-active-user-name" class="text-white font-chakra">ADMIN</strong>
+            <span id="mods-active-user-role" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/40 text-[10px] font-bold uppercase">NIVEL 1</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid Principal: Chat Interno (Izquierda 7 cols) + Herramientas de Stream para MODS (Derecha 5 cols) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- COLUMNA IZQUIERDA (7 COLS): CHAT ACTIVO ADMIN ↔ MODS -->
+        <section class="lg:col-span-7 bg-cyber-card border border-cyber-border rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col h-[580px]">
+          <!-- Header del Chat -->
+          <div class="flex items-center justify-between pb-3.5 mb-3 border-b border-cyber-border shrink-0">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-lg bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center">
+                <i data-lucide="messages-square" class="w-5 h-5 text-cyan-400"></i>
+              </div>
+              <div>
+                <h3 class="text-sm sm:text-base font-bold font-chakra text-white flex items-center gap-2">
+                  <span>CHAT ACTIVO • ADMIN ↔ MODS</span>
+                  <span class="w-2 h-2 rounded-full bg-cyber-green animate-ping"></span>
+                </h3>
+                <p class="text-[11px] text-gray-400">Comunicación instantánea en tiempo real con distinción de usuario</p>
+              </div>
+            </div>
+
+            <button id="btn-clear-mods-chat" type="button" class="px-2.5 py-1.5 rounded-lg bg-cyber-dark hover:bg-red-500/20 border border-cyber-border hover:border-red-500/40 text-gray-400 hover:text-red-300 text-[11px] font-chakra font-bold transition-all flex items-center gap-1.5 cursor-pointer" title="Limpiar historial de chat">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Limpiar Chat</span>
+            </button>
+          </div>
+
+          <!-- Contenedor de Mensajes -->
+          <div id="mods-chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-1.5 py-2 bg-black/35 rounded-xl border border-cyber-border/70 p-3.5 font-sans">
+            <div class="h-full flex flex-col items-center justify-center text-center text-gray-500 py-10">
+              <i data-lucide="message-Square-dashed" class="w-10 h-10 mb-2 text-gray-600"></i>
+              <p class="text-xs font-chakra uppercase tracking-wider text-gray-400">Sin mensajes todavía</p>
+              <p class="text-[11px] text-gray-500 mt-1 max-w-xs">Escribe abajo para iniciar la conversación entre MODS y el Admin del stream.</p>
+            </div>
+          </div>
+
+          <!-- Formulario de Envío -->
+          <form id="mods-chat-form" class="pt-3.5 mt-2 border-t border-cyber-border flex items-center gap-2.5 shrink-0">
+            <input type="text" id="input-mods-chat-text" maxlength="500" placeholder="Escribe un mensaje para el chat Admin ↔ MODS..." autocomplete="off" class="flex-1 bg-cyber-dark border border-cyber-border focus:border-cyan-400 rounded-xl px-4 py-2.5 text-sm text-white font-medium focus:outline-none transition-colors">
+            <button id="btn-send-mods-chat" type="submit" class="px-5 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-chakra font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.35)] shrink-0 cursor-pointer">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>ENVIAR</span>
+            </button>
+          </form>
+        </section>
+
+        <!-- COLUMNA DERECHA (5 COLS): ALERTA EN STREAM Y TTS ESPECIAL DE MODS -->
+        <div class="lg:col-span-5 space-y-6">
+
+          <!-- MÓDULO 1: ALERTA VISUAL Y SONORA EN EL STREAM (ESQUINA INFERIOR IZQUIERDA) -->
+          <section id="card-mod-alert-control" class="bg-cyber-card border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-4 relative overflow-hidden">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-400/50 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
+                  <i data-lucide="bell-ring" class="w-6 h-6 text-amber-400"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm sm:text-base font-bold font-chakra text-white uppercase tracking-wide">
+                    ALERTA DE MODS EN EL STREAM
+                  </h3>
+                  <p class="text-[11px] text-amber-300/90 font-mono">
+                    Esquina inferior izquierda • Sonido 1er segundo
+                  </p>
+                </div>
+              </div>
+
+              <span id="mod-alert-status-badge" class="px-2.5 py-1 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-[10px] font-mono font-extrabold uppercase shrink-0">
+                APAGADA
+              </span>
+            </div>
+
+            <div class="bg-black/40 border border-cyber-border rounded-xl p-3.5 text-xs text-gray-300 space-y-1.5 leading-relaxed">
+              <p class="flex items-start gap-2">
+                <span class="text-amber-400 font-bold">🔔</span>
+                <span>Muestra un <strong>icono de notificación en movimiento</strong> en la esquina inferior izquierda del stream y suena durante el <strong>primer segundo</strong> de recibirla.</span>
+              </p>
+              <p class="flex items-start gap-2 text-[11px] text-gray-400">
+                <span class="text-cyan-400 font-bold">🔒</span>
+                <span><strong>Regla de desactivación:</strong> Solo se desactiva si el MOD la apaga desde este botón o automáticamente cuando el <strong>Admin entra al apartado MODS</strong>.</span>
+              </p>
+            </div>
+
+            <div class="pt-1">
+              <button id="btn-toggle-mod-alert" type="button" class="w-full py-3.5 px-5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-[0_0_20px_rgba(251,191,36,0.4)] cursor-pointer">
+                <i data-lucide="bell-ring" class="w-5 h-5"></i>
+                <span id="text-toggle-mod-alert">ACTIVAR ALERTA EN EL STREAM</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- MÓDULO 2: HABLAR EN EL STREAM (TTS ESPECIAL EXCLUSIVO PARA MODS) -->
+          <section class="bg-cyber-card border border-cyan-500/40 rounded-2xl p-5 shadow-xl space-y-4 relative overflow-hidden">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-400/50 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.25)]">
+                  <i data-lucide="mic" class="w-6 h-6 text-cyan-400"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm sm:text-base font-bold font-chakra text-white uppercase tracking-wide">
+                    TTS ESPECIAL DE MODS (HABLAR AL STREAM)
+                  </h3>
+                  <p class="text-[11px] text-cyan-300/90 font-mono">
+                    Tarjeta especial de Moderación + Lectura por voz TTS
+                  </p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-[10px] font-mono font-bold uppercase">
+                🛡️ VOZ MODS
+              </span>
+            </div>
+
+            <div class="space-y-3">
+              <div class="space-y-1">
+                <label class="text-[11px] font-mono text-gray-300 uppercase flex items-center gap-1.5">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cyan-400"></i>
+                  Estilo de Presentación de Voz TTS
+                </label>
+                <select id="select-mod-tts-intro" class="w-full bg-cyber-dark border border-cyber-border hover:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white font-chakra font-bold focus:outline-none focus:border-cyan-400 cursor-pointer">
+                  <option value="mod_equipo" selected>🛡️ "Atención equipo, moderación informa: [Mensaje]"</option>
+                  <option value="mod_user">🎙️ "Equipo, comunicado de [Tu Usuario]: [Mensaje]"</option>
+                  <option value="direct">⚡ Leer mensaje directo sin introducción</option>
+                </select>
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-[11px] font-mono text-gray-300 uppercase flex items-center gap-1.5">
+                  <i data-lucide="message-square-text" class="w-3.5 h-3.5 text-cyan-400"></i>
+                  Mensaje para leer en el stream
+                </label>
+                <textarea id="input-mod-tts-text" rows="3" maxlength="320" placeholder="Escribe lo que el TTS especial de MODS leerá en vivo en el stream..." class="w-full bg-cyber-dark border border-cyber-border focus:border-cyan-400 rounded-xl p-3 text-xs sm:text-sm text-white font-rajdhani font-semibold focus:outline-none resize-none"></textarea>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button id="btn-send-mod-tts" type="button" class="flex-1 py-2.5 px-4 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-chakra font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_16px_rgba(6,182,212,0.35)] cursor-pointer">
+                  <i data-lucide="volume-2" class="w-4 h-4"></i>
+                  <span>HABLAR EN EL STREAM (TTS MODS)</span>
+                </button>
+                <button id="btn-hide-mod-tts" type="button" class="px-3.5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 text-xs font-chakra font-bold uppercase transition-all flex items-center justify-center gap-1 cursor-pointer" title="Detener voz y ocultar tarjeta">
+                  <i data-lucide="square" class="w-4 h-4"></i>
+                  <span>Callar</span>
+                </button>
+              </div>
+
+              <!-- Mensajes rápidos para MODS -->
+              <div class="pt-2 border-t border-cyber-border/50 flex items-center gap-1.5 flex-wrap">
+                <span class="text-[10px] font-mono text-gray-400 shrink-0">Avisos rápidos:</span>
+                <button type="button" onclick="setQuickModTtsMessage('Chicos, revisen el chat interno de MODS por favor.')" class="px-2.5 py-1 rounded-lg bg-cyber-dark hover:bg-cyan-500/20 border border-cyber-border text-gray-300 hover:text-cyan-300 text-[11px] font-rajdhani font-semibold transition-all cursor-pointer">
+                  📩 Revisar Chat MODS
+                </button>
+                <button type="button" onclick="setQuickModTtsMessage('Atención en el stream, tenemos un aviso importante de moderación.')" class="px-2.5 py-1 rounded-lg bg-cyber-dark hover:bg-cyan-500/20 border border-cyber-border text-gray-300 hover:text-cyan-300 text-[11px] font-rajdhani font-semibold transition-all cursor-pointer">
+                  🚨 Aviso Importante
+                </button>
+                <button type="button" onclick="setQuickModTtsMessage('Recuerden mantener el respeto en el chat de la transmisión.')" class="px-2.5 py-1 rounded-lg bg-cyber-dark hover:bg-cyan-500/20 border border-cyber-border text-gray-300 hover:text-cyan-300 text-[11px] font-rajdhani font-semibold transition-all cursor-pointer">
+                  🛡️ Reglas del Chat
+                </button>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+      </div>
+
+    </div>
+
   </main>
 
   <!-- ============================================================
@@ -2141,6 +2350,6 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/admin.js?v=20261119a"></script>
+  <script src="/js/admin.js?v=20261119b"></script>
 </body>
 </html>

@@ -28,6 +28,7 @@ const FIGHTS_FILE = path.join(DATA_DIR, 'fights.json');
 const MULTICAM_FILE = path.join(DATA_DIR, 'multicam.json');
 const BANNED_IPS_FILE = path.join(DATA_DIR, 'banned_ips.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const MODS_CHAT_FILE = path.join(DATA_DIR, 'mods_chat.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
 // ============================================================
@@ -311,6 +312,11 @@ let liveState = {
     targetTime: '22:00',
     targetTimestamp: null,
     updatedAt: null
+  },
+  modAlert: {
+    isActive: false,
+    triggeredBy: '',
+    triggeredAt: null
   }
 };
 
@@ -676,11 +682,44 @@ function saveUsers(usersList, persistDb = true) {
   }
 }
 
+// Gestión y persistencia del Chat Interno entre Admin (Nivel 1) y MODS
+let modsChatHistory = [];
+
+function loadModsChat() {
+  try {
+    if (fs.existsSync(MODS_CHAT_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(MODS_CHAT_FILE, 'utf-8'));
+      if (Array.isArray(parsed)) {
+        return parsed.slice(-200);
+      }
+    }
+  } catch (err) {
+    console.error('Error al cargar mods_chat:', err);
+  }
+  return [];
+}
+
+function saveModsChat(chatList, persistDb = true) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const trimmed = Array.isArray(chatList) ? chatList.slice(-200) : [];
+    fs.writeFileSync(MODS_CHAT_FILE, JSON.stringify(trimmed, null, 2), 'utf-8');
+    if (persistDb) {
+      saveToDb('mods_chat', trimmed);
+    }
+    return true;
+  } catch (err) {
+    console.error('Error al guardar mods_chat:', err);
+    return false;
+  }
+}
+
 // Inicialización de datos
 let savedSettings = loadSettings();
 let presenters = loadPresenters();
 let fights = loadFights();
 users = loadUsers();
+modsChatHistory = loadModsChat();
 loadMulticamSettings();
 loadBannedIps();
 
@@ -1028,6 +1067,16 @@ async function syncDataFromDatabase() {
     } else if (users.length > 0) {
       await saveToDb('users', users);
       await syncUsersTableInDb(users);
+    }
+
+    // 7. Sincronizar Historial de Chat Interno (Admin <-> MODS)
+    if (dbData.mods_chat && Array.isArray(dbData.mods_chat)) {
+      modsChatHistory = dbData.mods_chat.slice(-200);
+      saveModsChat(modsChatHistory, false);
+      io.emit('mods-chat-history', modsChatHistory);
+      changed = true;
+    } else if (modsChatHistory.length > 0) {
+      await saveToDb('mods_chat', modsChatHistory);
     }
 
     if (changed) {
@@ -1638,6 +1687,7 @@ io.on('connection', async (socket) => {
   if (currentUser) {
     socket.emit('auth-user', currentUser);
     socket.emit('users-updated', users.map(sanitizeUser));
+    socket.emit('mods-chat-history', modsChatHistory);
   }
 
   // Mute Maestro Global (Silenciar o activar todo el audio de la app en OBS)
@@ -1908,6 +1958,148 @@ io.on('connection', async (socket) => {
     if (!isAuthorized()) return;
     liveState.chatOverlay.isVisible = false;
     io.emit('state-update', liveState);
+  });
+
+  // ============================================================
+  // 5.e. APARTADO DE MODS: CHAT INTERNO ADMIN <-> MODS, ALERTA EN STREAM Y TTS ESPECIAL DE MODS
+  // ============================================================
+  socket.on('send-mods-chat', (data, callback) => {
+    const authUser = getAuthenticatedUserFromSocket(socket);
+    if (!authUser) return;
+    const text = data && typeof data.text === 'string' ? data.text.trim() : '';
+    if (!text) return;
+
+    const msg = {
+      id: `modmsg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      userId: authUser.id,
+      username: authUser.username,
+      displayName: authUser.displayName || authUser.username,
+      level: authUser.level, // 'nivel_1' | 'mods'
+      text: text.slice(0, 800),
+      timestamp: Date.now()
+    };
+
+    modsChatHistory.push(msg);
+    if (modsChatHistory.length > 200) {
+      modsChatHistory = modsChatHistory.slice(-200);
+    }
+    saveModsChat(modsChatHistory);
+    io.emit('mods-chat-message', msg);
+
+    if (typeof callback === 'function') {
+      callback({ ok: true, success: true, message: msg });
+    }
+  });
+
+  socket.on('clear-mods-chat', (callback) => {
+    const authUser = getAuthenticatedUserFromSocket(socket);
+    if (!authUser) return;
+    modsChatHistory = [];
+    saveModsChat(modsChatHistory);
+    io.emit('mods-chat-history', []);
+    if (typeof callback === 'function') {
+      callback({ ok: true, success: true });
+    }
+  });
+
+  // Activar alerta visual en esquina inferior izquierda del stream (con sonido de 1 segundo al recibirla)
+  socket.on('activate-mod-alert', (data, callback) => {
+    const cb = typeof data === 'function' ? data : callback;
+    const authUser = getAuthenticatedUserFromSocket(socket);
+    if (!authUser) return;
+
+    liveState.modAlert = {
+      isActive: true,
+      triggeredBy: authUser.displayName || authUser.username || 'MODS',
+      triggeredAt: Date.now()
+    };
+
+    io.emit('state-update', liveState);
+    io.emit('mod-alert-triggered', liveState.modAlert);
+
+    if (typeof cb === 'function') {
+      cb({ ok: true, success: true, modAlert: liveState.modAlert });
+    }
+  });
+
+  // Desactivar alerta (Solo cuando el MOD la desactiva o el Admin entra al apartado de MODS)
+  socket.on('deactivate-mod-alert', (data, callback) => {
+    const cb = typeof data === 'function' ? data : callback;
+    const authUser = getAuthenticatedUserFromSocket(socket);
+    if (!authUser) return;
+
+    if (liveState.modAlert.isActive) {
+      liveState.modAlert.isActive = false;
+      io.emit('state-update', liveState);
+      io.emit('mod-alert-cleared', {
+        clearedBy: authUser.displayName || authUser.username,
+        reason: (data && typeof data === 'object' && data.reason) || 'manual-mod'
+      });
+    }
+
+    if (typeof cb === 'function') {
+      cb({ ok: true, success: true, modAlert: liveState.modAlert });
+    }
+  });
+
+  // Cuando el Admin (Usuario Nivel 1) entra al apartado de MODS, se desactiva automáticamente la alerta si estaba activa
+  socket.on('admin-entered-mods', (data, callback) => {
+    const cb = typeof data === 'function' ? data : callback;
+    const authUser = getAuthenticatedUserFromSocket(socket);
+    if (!authUser || authUser.level !== 'nivel_1') return;
+
+    if (liveState.modAlert && liveState.modAlert.isActive) {
+      liveState.modAlert.isActive = false;
+      io.emit('state-update', liveState);
+      io.emit('mod-alert-cleared', {
+        clearedBy: authUser.displayName || authUser.username,
+        reason: 'admin-entered-mods'
+      });
+    }
+
+    if (typeof cb === 'function') {
+      cb({ ok: true, success: true, modAlert: liveState.modAlert });
+    }
+  });
+
+  // TTS Especial de MODS para hablar en el stream
+  socket.on('trigger-mod-tts', (data, callback) => {
+    const cb = typeof data === 'function' ? data : callback;
+    const authUser = getAuthenticatedUserFromSocket(socket);
+    if (!authUser) return;
+    const rawText = data && typeof data.text === 'string' ? data.text.trim() : '';
+    if (!rawText) return;
+
+    const payload = {
+      isModSpecial: true,
+      user: authUser.displayName || authUser.username || 'MODS',
+      username: authUser.username || 'mods',
+      level: authUser.level,
+      text: rawText,
+      introStyle: (data && data.introStyle) || 'mod_equipo',
+      prefix: 'MODS TTS',
+      tts: true,
+      ttsRate: liveState.chatOverlay.ttsRate || 0.93,
+      ttsPitch: liveState.chatOverlay.ttsPitch || 0.82,
+      ttsVoiceName: liveState.chatOverlay.ttsVoiceName || '',
+      timestamp: Date.now()
+    };
+
+    liveState.chatOverlay.isVisible = true;
+    liveState.chatOverlay.lastMessage = payload;
+    io.emit('state-update', liveState);
+    io.emit('mod-tts-announcement', payload);
+
+    if (typeof cb === 'function') {
+      cb({ ok: true, success: true, payload });
+    }
+  });
+
+  socket.on('hide-mod-tts', () => {
+    if (!isAuthorized()) return;
+    liveState.chatOverlay.isVisible = false;
+    io.emit('state-update', liveState);
+    io.emit('stop-mod-tts');
   });
 
   socket.on('toggle-chat-tts', (payload) => {

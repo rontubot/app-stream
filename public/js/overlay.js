@@ -664,6 +664,11 @@ socket.on('state-update', (state) => {
     syncAllOverlayAudioState();
   }
 
+  // Alerta de MODS en esquina inferior izquierda
+  if (state.modAlert) {
+    updateModAlertVisualState(state.modAlert);
+  }
+
   // Banco de Animaciones: Escena Multicam / Videollamada en Vivo
   if (state.multicam && state.multicam.isActive) {
     showMulticamOverlay();
@@ -765,12 +770,85 @@ socket.on('hud-alert', (data) => {
 // OVERLAY INFERIOR DINÁMICO (RECUADRO DE CHAT Y ANUNCIOS CON TTS)
 // ============================================================
 const streamBottomChat = document.getElementById('stream-bottom-chat');
+const chatHudIcon = document.getElementById('chat-hud-icon');
+const chatHudTitle = document.getElementById('chat-hud-title');
+const chatAvatarIcon = document.getElementById('chat-avatar-icon');
 const chatHudPrefixBadge = document.getElementById('chat-hud-prefix-badge');
 const chatHudTtsIndicator = document.getElementById('chat-hud-tts-indicator');
 const chatTtsStatusLabel = document.getElementById('chat-tts-status-label');
 const chatHudUsername = document.getElementById('chat-hud-username');
 const chatHudMessage = document.getElementById('chat-hud-message');
 const chatHudTime = document.getElementById('chat-hud-time');
+
+// Alerta de MODS en esquina inferior izquierda
+const obsCornerModAlert = document.getElementById('obs-corner-mod-alert');
+const obsModAlertSub = document.getElementById('obs-mod-alert-sub');
+
+function updateModAlertVisualState(modAlert) {
+  if (!obsCornerModAlert) return;
+  if (modAlert && modAlert.isActive) {
+    obsCornerModAlert.classList.add('is-active');
+    if (obsModAlertSub) {
+      obsModAlertSub.textContent = modAlert.triggeredBy
+        ? `Alerta de ${modAlert.triggeredBy}`
+        : 'Revisar apartado MODS';
+    }
+  } else {
+    obsCornerModAlert.classList.remove('is-active');
+  }
+}
+
+// Sonido de notificación de 1 segundo exacto al recibir la alerta de MODS
+function playModAlertOneSecondSound() {
+  if (isMasterMuted || (typeof multicamSettingsCurrent !== 'undefined' && multicamSettingsCurrent.audioMutedOverall) || isOverlayEmbeddedPreview) {
+    return;
+  }
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    // Doble timbre de campana cristalina que dura exactamente ~0.95 segundos (1er segundo)
+    const freqs = [
+      { f: 880, start: 0, dur: 0.42 },
+      { f: 1174.66, start: 0.14, dur: 0.42 },
+      { f: 1318.51, start: 0.30, dur: 0.65 }
+    ];
+
+    freqs.forEach(({ f, start, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now + start);
+
+      gain.gain.setValueAtTime(0.001, now + start);
+      gain.gain.exponentialRampToValueAtTime(0.28, now + start + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + start + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.02);
+    });
+
+    setTimeout(() => {
+      try { ctx.close(); } catch (e) {}
+    }, 1050);
+  } catch (err) {
+    console.warn('[Overlay ModAlert] Error reproduciendo sonido de 1s:', err);
+  }
+}
+
+socket.on('mod-alert-triggered', (modAlert) => {
+  updateModAlertVisualState(modAlert || { isActive: true });
+  playModAlertOneSecondSound();
+});
+
+socket.on('mod-alert-cleared', () => {
+  updateModAlertVisualState({ isActive: false });
+});
 
 let chatDismissTimeout = null;
 let isMasterMuted = false;
@@ -1106,6 +1184,11 @@ socket.on('chat-announcement', (payload) => {
 
   if (chatDismissTimeout) clearTimeout(chatDismissTimeout);
 
+  streamBottomChat.classList.remove('is-mod-special');
+  if (chatHudIcon) chatHudIcon.textContent = '📢';
+  if (chatHudTitle) chatHudTitle.textContent = 'ANUNCIO DESTACADO';
+  if (chatAvatarIcon) chatAvatarIcon.textContent = '💬';
+
   if (chatHudUsername) chatHudUsername.textContent = payload.user || '@espectador';
   if (chatHudMessage) chatHudMessage.textContent = payload.text || '';
   if (chatHudPrefixBadge) chatHudPrefixBadge.textContent = payload.prefix || '!anuncio';
@@ -1131,6 +1214,67 @@ socket.on('chat-announcement', (payload) => {
   chatDismissTimeout = setTimeout(() => {
     streamBottomChat.classList.remove('is-active');
   }, 12000);
+});
+
+// Recibir TTS Especial exclusivo de MODS (hablar en el stream)
+socket.on('mod-tts-announcement', (payload) => {
+  if (!streamBottomChat || !payload) return;
+
+  if (chatDismissTimeout) clearTimeout(chatDismissTimeout);
+
+  streamBottomChat.classList.add('is-mod-special');
+  if (chatHudIcon) chatHudIcon.textContent = '🛡️';
+  if (chatHudTitle) chatHudTitle.textContent = 'COMUNICADO DE MODERACIÓN';
+  if (chatAvatarIcon) chatAvatarIcon.textContent = '🛡️';
+
+  if (chatHudUsername) chatHudUsername.textContent = payload.user || '🛡️ MODS';
+  if (chatHudMessage) chatHudMessage.textContent = payload.text || '';
+  if (chatHudPrefixBadge) chatHudPrefixBadge.textContent = payload.prefix || 'MODS TTS';
+  if (chatHudTime) {
+    const now = new Date();
+    chatHudTime.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  }
+
+  streamBottomChat.classList.add('is-active');
+
+  // Formatear locución especial para MODS y leerla siempre por TTS
+  const cleanUser = (payload.user || 'Moderación').replace(/^@/, '').replace(/_/g, ' ').trim();
+  const cleanText = (payload.text || '')
+    .replace(/https?:\/\/\S+/gi, 'un enlace web')
+    .replace(/([a-zA-ZáéíóúÁÉÍÓÚñÑ])\1{3,}/g, '$1$1')
+    .replace(/([?!.,;:]){2,}/g, '$1')
+    .trim();
+
+  let rawPhrase = `Atención equipo, moderación informa: ${cleanText}`;
+  if (payload.introStyle === 'mod_user') {
+    rawPhrase = `Equipo, comunicado de ${cleanUser}: ${cleanText}`;
+  } else if (payload.introStyle === 'direct') {
+    rawPhrase = cleanText;
+  }
+
+  playTTS('', '', {
+    rawPhrase,
+    ttsRate: typeof payload.ttsRate === 'number' ? payload.ttsRate : (currentChatOverlayState.ttsRate || 0.93),
+    ttsPitch: typeof payload.ttsPitch === 'number' ? payload.ttsPitch : (currentChatOverlayState.ttsPitch || 0.82),
+    ttsVoiceName: payload.ttsVoiceName || currentChatOverlayState.ttsVoiceName || ''
+  });
+
+  chatDismissTimeout = setTimeout(() => {
+    streamBottomChat.classList.remove('is-active');
+    streamBottomChat.classList.remove('is-mod-special');
+  }, 14000);
+});
+
+socket.on('stop-mod-tts', () => {
+  if (chatDismissTimeout) clearTimeout(chatDismissTimeout);
+  if (streamBottomChat) {
+    streamBottomChat.classList.remove('is-active');
+    streamBottomChat.classList.remove('is-mod-special');
+  }
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
+  stopCornerAudioVectorAnimation();
 });
 
 
