@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 let Pool;
 try {
   Pool = require('pg').Pool;
@@ -26,7 +27,146 @@ const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const FIGHTS_FILE = path.join(DATA_DIR, 'fights.json');
 const MULTICAM_FILE = path.join(DATA_DIR, 'multicam.json');
 const BANNED_IPS_FILE = path.join(DATA_DIR, 'banned_ips.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+
+// ============================================================
+// SISTEMA DE SEGURIDAD, SESIONES Y BASE DE DATOS DE USUARIOS
+// Niveles soportados: 'nivel_1' (Usuario Nivel 1 / Admin) y 'mods' (MODS)
+// ============================================================
+const SESSION_COOKIE_NAME = 'bv_session';
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.DATABASE_URL || 'birraverde-stream-control-secret-2026';
+let users = [];
+
+function hashPassword(plainPassword, salt = null) {
+  const actualSalt = salt || crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync(String(plainPassword), actualSalt, 64).toString('hex');
+  return `${actualSalt}:${derived}`;
+}
+
+function verifyPassword(plainPassword, storedHash) {
+  if (!plainPassword || !storedHash || typeof storedHash !== 'string' || !storedHash.includes(':')) {
+    return false;
+  }
+  const [salt, keyHex] = storedHash.split(':');
+  if (!salt || !keyHex) return false;
+  try {
+    const derived = crypto.scryptSync(String(plainPassword), salt, 64);
+    const keyBuf = Buffer.from(keyHex, 'hex');
+    if (derived.length !== keyBuf.length) return false;
+    return crypto.timingSafeEqual(derived, keyBuf);
+  } catch (e) {
+    return false;
+  }
+}
+
+function sanitizeUser(u) {
+  if (!u) return null;
+  return {
+    id: u.id,
+    username: u.username,
+    displayName: u.displayName || u.username,
+    level: u.level === 'nivel_1' ? 'nivel_1' : 'mods',
+    levelLabel: u.level === 'nivel_1' ? 'Usuario Nivel 1' : 'MODS',
+    createdAt: u.createdAt || null,
+    updatedAt: u.updatedAt || null
+  };
+}
+
+function createSessionToken(user) {
+  const payload = {
+    uid: user.id,
+    usr: user.username,
+    lvl: user.level,
+    exp: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 días
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(payload), 'utf-8').toString('base64url');
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(payloadB64).digest('base64url');
+  return `${payloadB64}.${sig}`;
+}
+
+function verifySessionToken(token) {
+  if (!token || typeof token !== 'string' || !token.includes('.')) return null;
+  const [payloadB64, sig] = token.split('.');
+  if (!payloadB64 || !sig) return null;
+  try {
+    const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(payloadB64).digest('base64url');
+    const sigBuf = Buffer.from(sig);
+    const expBuf = Buffer.from(expectedSig);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      return null;
+    }
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf-8'));
+    if (!payload || !payload.exp || Date.now() > payload.exp) {
+      return null;
+    }
+    // Buscar usuario activo en base de datos en memoria
+    const found = users.find(u => u.id === payload.uid || u.username.toLowerCase() === String(payload.usr || '').toLowerCase());
+    if (!found) return null;
+    return sanitizeUser(found);
+  } catch (e) {
+    return null;
+  }
+}
+
+function parseCookies(cookieHeader) {
+  const list = {};
+  if (!cookieHeader || typeof cookieHeader !== 'string') return list;
+  cookieHeader.split(';').forEach(cookie => {
+    const parts = cookie.split('=');
+    const name = parts.shift().trim();
+    const val = parts.join('=').trim();
+    if (name) {
+      try {
+        list[name] = decodeURIComponent(val);
+      } catch (e) {
+        list[name] = val;
+      }
+    }
+  });
+  return list;
+}
+
+function getAuthenticatedUserFromReq(req) {
+  const cookies = parseCookies(req.headers.cookie);
+  let token = cookies[SESSION_COOKIE_NAME];
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.slice(7).trim();
+  }
+  return verifySessionToken(token);
+}
+
+function getAuthenticatedUserFromSocket(socket) {
+  const cookies = parseCookies(socket.handshake?.headers?.cookie);
+  let token = cookies[SESSION_COOKIE_NAME];
+  if (!token && socket.handshake?.auth?.token) {
+    token = socket.handshake.auth.token;
+  }
+  return verifySessionToken(token);
+}
+
+async function requireAuth(req, res, next) {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  const user = getAuthenticatedUserFromReq(req);
+  if (!user) {
+    return res.status(401).json({ error: 'No autorizado. Debes iniciar sesión.' });
+  }
+  req.user = user;
+  next();
+}
+
+async function requireNivel1(req, res, next) {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  const user = getAuthenticatedUserFromReq(req);
+  if (!user) {
+    return res.status(401).json({ error: 'No autorizado. Debes iniciar sesión.' });
+  }
+  if (user.level !== 'nivel_1') {
+    return res.status(403).json({ error: 'Acceso denegado. Se requiere nivel Usuario Nivel 1 (Admin).' });
+  }
+  req.user = user;
+  next();
+}
 
 // ============================================================
 // CONEXIÓN SQL (POSTGRESQL) PARA PERSISTENCIA DEFINITIVA
@@ -57,7 +197,27 @@ app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Ruta de Login Pública
+app.get('/login', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  const user = getAuthenticatedUserFromReq(req);
+  if (user) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Protección estricta del Dominio Principal (/, /admin, /host, /index.html) ANTES de express.static
+app.get(['/', '/admin', '/host', '/index.html'], async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  const user = getAuthenticatedUserFromReq(req);
+  if (!user) {
+    return res.redirect('/login');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Respaldo dinámico desde PostgreSQL si el contenedor de Railway se reinició o hubo un nuevo deploy/push
 app.get('/uploads/:filename', async (req, res) => {
@@ -465,12 +625,89 @@ function saveBannedIps(persistDb = true) {
   }
 }
 
+// Gestión y persistencia de Usuarios (Base de datos SQL + JSON local)
+function loadUsers() {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Error al cargar usuarios:', err);
+  }
+  return [];
+}
+
+async function syncUsersTableInDb(usersList) {
+  if (!dbPool || !isDbReady || !Array.isArray(usersList)) return;
+  try {
+    for (const u of usersList) {
+      await dbPool.query(
+        `INSERT INTO app_users (id, username, display_name, level, password_hash, updated_at)
+         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+         ON CONFLICT (id) DO UPDATE
+         SET username = EXCLUDED.username,
+             display_name = EXCLUDED.display_name,
+             level = EXCLUDED.level,
+             password_hash = EXCLUDED.password_hash,
+             updated_at = CURRENT_TIMESTAMP`,
+        [u.id, u.username, u.displayName || u.username, u.level || 'mods', u.passwordHash]
+      );
+    }
+  } catch (err) {
+    console.error('Error sincronizando tabla app_users en PostgreSQL:', err.message);
+  }
+}
+
+function saveUsers(usersList, persistDb = true) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(USERS_FILE, JSON.stringify(usersList, null, 2), 'utf-8');
+    if (persistDb) {
+      saveToDb('users', usersList);
+      syncUsersTableInDb(usersList);
+    }
+    return true;
+  } catch (err) {
+    console.error('Error al guardar usuarios:', err);
+    return false;
+  }
+}
+
 // Inicialización de datos
 let savedSettings = loadSettings();
 let presenters = loadPresenters();
 let fights = loadFights();
+users = loadUsers();
 loadMulticamSettings();
 loadBannedIps();
+
+// Si no hay usuarios por primera vez, creamos los dos niveles base: Usuario Nivel 1 (admin) y MODS (mods)
+if (users.length === 0) {
+  users = [
+    {
+      id: 'user-nivel-1',
+      username: 'admin',
+      displayName: 'Admin Principal (Nivel 1)',
+      level: 'nivel_1',
+      passwordHash: hashPassword('birraverde2026'),
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    },
+    {
+      id: 'user-mods',
+      username: 'mods',
+      displayName: 'Equipo Moderadores (MODS)',
+      level: 'mods',
+      passwordHash: hashPassword('mods2026'),
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }
+  ];
+  saveUsers(users, false);
+}
 
 // Si no hay combates por primera vez, creamos los por defecto para La Velada del Caos
 if (fights.length === 0) {
@@ -769,6 +1006,30 @@ async function syncDataFromDatabase() {
       await saveToDb('banned_ips', Array.from(bannedIps));
     }
 
+    // 6. Sincronizar Usuarios y Niveles (Usuario Nivel 1 y MODS)
+    const usersTableRes = await dbPool.query('SELECT id, username, display_name, level, password_hash, EXTRACT(EPOCH FROM updated_at) * 1000 AS updated_ms FROM app_users ORDER BY id ASC').catch(() => null);
+    if (usersTableRes && usersTableRes.rows && usersTableRes.rows.length > 0) {
+      users = usersTableRes.rows.map(r => ({
+        id: r.id,
+        username: r.username,
+        displayName: r.display_name,
+        level: r.level === 'nivel_1' ? 'nivel_1' : 'mods',
+        passwordHash: r.password_hash,
+        updatedAt: Math.round(Number(r.updated_ms) || Date.now())
+      }));
+      saveUsers(users, false);
+      await saveToDb('users', users);
+      changed = true;
+    } else if (dbData.users && Array.isArray(dbData.users) && dbData.users.length > 0) {
+      users = dbData.users;
+      saveUsers(users, false);
+      await syncUsersTableInDb(users);
+      changed = true;
+    } else if (users.length > 0) {
+      await saveToDb('users', users);
+      await syncUsersTableInDb(users);
+    }
+
     if (changed) {
       console.log('🔄 Estado sincronizado con éxito desde PostgreSQL');
     }
@@ -823,7 +1084,18 @@ async function initDatabase() {
         );
       `);
 
-      console.log('🐘 PostgreSQL conectado exitosamente y tablas app_storage / uploaded_files listas');
+      await dbPool.query(`
+        CREATE TABLE IF NOT EXISTS app_users (
+          id VARCHAR(100) PRIMARY KEY,
+          username VARCHAR(100) UNIQUE NOT NULL,
+          display_name VARCHAR(150) NOT NULL,
+          level VARCHAR(50) NOT NULL,
+          password_hash TEXT NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      console.log('🐘 PostgreSQL conectado exitosamente y tablas app_storage / uploaded_files / app_users listas');
       isDbReady = true;
       await syncUploadedFilesWithDatabase();
       await syncDataFromDatabase();
@@ -901,6 +1173,152 @@ function triggerHideSlot(slot) {
   io.emit('state-update', liveState);
 }
 
+// ============================================================
+// RUTAS API DE AUTENTICACIÓN Y GESTIÓN DE USUARIOS (NIVEL 1 Y MODS)
+// ============================================================
+app.post('/api/auth/login', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  const { username, password } = req.body || {};
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: 'Ingresa tu usuario y contraseña.' });
+  }
+
+  const cleanUser = String(username).trim().toLowerCase();
+  const found = users.find(u => String(u.username || '').toLowerCase() === cleanUser);
+  if (!found || !verifyPassword(password, found.passwordHash)) {
+    return res.status(401).json({ success: false, error: 'Usuario o contraseña incorrectos.' });
+  }
+
+  const token = createSessionToken(found);
+  const maxAgeSec = 30 * 24 * 60 * 60;
+  res.setHeader(
+    'Set-Cookie',
+    `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSec}`
+  );
+
+  res.json({
+    success: true,
+    user: sanitizeUser(found)
+  });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.setHeader(
+    'Set-Cookie',
+    `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
+  );
+  res.json({ success: true });
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  const user = getAuthenticatedUserFromReq(req);
+  if (!user) {
+    return res.status(401).json({ authenticated: false });
+  }
+  res.json({ authenticated: true, user });
+});
+
+// CRUD de Usuarios en Base de Datos (Solo Usuario Nivel 1 puede crear/editar/borrar usuarios)
+app.get('/api/users', requireAuth, (req, res) => {
+  res.json(users.map(sanitizeUser));
+});
+
+app.post('/api/users', requireNivel1, async (req, res) => {
+  const { username, displayName, level, password } = req.body || {};
+  const cleanUsername = String(username || '').trim();
+  if (!cleanUsername || !password) {
+    return res.status(400).json({ error: 'El nombre de usuario y la contraseña están requeridos.' });
+  }
+
+  if (users.some(u => u.username.toLowerCase() === cleanUsername.toLowerCase())) {
+    return res.status(400).json({ error: 'Ya existe un usuario con ese nombre.' });
+  }
+
+  const validLevel = level === 'nivel_1' ? 'nivel_1' : 'mods';
+  const newUser = {
+    id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    username: cleanUsername,
+    displayName: String(displayName || cleanUsername).trim(),
+    level: validLevel,
+    passwordHash: hashPassword(password),
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  users.push(newUser);
+  saveUsers(users);
+  io.emit('users-updated', users.map(sanitizeUser));
+  res.status(201).json({ success: true, user: sanitizeUser(newUser) });
+});
+
+app.put('/api/users/:id', requireNivel1, async (req, res) => {
+  const { id } = req.params;
+  const idx = users.findIndex(u => u.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Usuario no encontrado.' });
+  }
+
+  const { username, displayName, level, password } = req.body || {};
+  const current = users[idx];
+
+  if (username && String(username).trim()) {
+    const cleanUsername = String(username).trim();
+    const duplicate = users.find(u => u.id !== id && u.username.toLowerCase() === cleanUsername.toLowerCase());
+    if (duplicate) {
+      return res.status(400).json({ error: 'Ese nombre de usuario ya está en uso.' });
+    }
+    current.username = cleanUsername;
+  }
+
+  if (typeof displayName === 'string' && displayName.trim()) {
+    current.displayName = displayName.trim();
+  }
+
+  if (level === 'nivel_1' || level === 'mods') {
+    // Evitar dejar el sistema sin ningún Usuario Nivel 1
+    if (current.level === 'nivel_1' && level !== 'nivel_1') {
+      const nivel1Count = users.filter(u => u.level === 'nivel_1').length;
+      if (nivel1Count <= 1) {
+        return res.status(400).json({ error: 'Debe existir al menos un Usuario Nivel 1 (Admin).' });
+      }
+    }
+    current.level = level;
+  }
+
+  if (password && String(password).trim().length > 0) {
+    current.passwordHash = hashPassword(String(password).trim());
+  }
+
+  current.updatedAt = Date.now();
+  saveUsers(users);
+  io.emit('users-updated', users.map(sanitizeUser));
+  res.json({ success: true, user: sanitizeUser(current) });
+});
+
+app.delete('/api/users/:id', requireNivel1, async (req, res) => {
+  const { id } = req.params;
+  const target = users.find(u => u.id === id);
+  if (!target) {
+    return res.status(404).json({ error: 'Usuario no encontrado.' });
+  }
+
+  if (target.level === 'nivel_1') {
+    const nivel1Count = users.filter(u => u.level === 'nivel_1').length;
+    if (nivel1Count <= 1) {
+      return res.status(400).json({ error: 'No puedes eliminar al único Usuario Nivel 1 (Admin).' });
+    }
+  }
+
+  users = users.filter(u => u.id !== id);
+  saveUsers(users);
+  if (dbPool && isDbReady) {
+    dbPool.query('DELETE FROM app_users WHERE id = $1', [id]).catch(() => {});
+  }
+  io.emit('users-updated', users.map(sanitizeUser));
+  res.json({ success: true });
+});
+
 // Rutas API REST
 app.get('/api/state', async (req, res) => {
   if (dbInitPromise) await dbInitPromise.catch(() => {});
@@ -919,7 +1337,7 @@ app.get('/api/settings', async (req, res) => {
   });
 });
 
-app.post('/api/settings', (req, res) => {
+app.post('/api/settings', requireAuth, (req, res) => {
   const { scale, defaultAutoHide } = req.body;
   if (typeof scale === 'number') liveState.scale = scale;
   if (typeof defaultAutoHide === 'number') liveState.defaultAutoHide = defaultAutoHide;
@@ -928,7 +1346,7 @@ app.post('/api/settings', (req, res) => {
   res.json({ success: true, settings: { scale: liveState.scale, defaultAutoHide: liveState.defaultAutoHide } });
 });
 
-app.post('/api/event-countdown', (req, res) => {
+app.post('/api/event-countdown', requireAuth, (req, res) => {
   const data = req.body || {};
   if (typeof data.enabled === 'boolean') liveState.eventCountdown.enabled = data.enabled;
   if (typeof data.title === 'string') liveState.eventCountdown.title = data.title.trim();
@@ -945,7 +1363,7 @@ app.post('/api/event-countdown', (req, res) => {
   res.json({ success: true, eventCountdown: liveState.eventCountdown });
 });
 
-app.post('/api/presenters', (req, res) => {
+app.post('/api/presenters', requireAuth, (req, res) => {
   const newPres = { ...req.body, id: req.body.id || `pres-${Date.now()}` };
   presenters.push(newPres);
   savePresenters(presenters);
@@ -953,7 +1371,7 @@ app.post('/api/presenters', (req, res) => {
   res.status(201).json(newPres);
 });
 
-app.put('/api/presenters/:id', (req, res) => {
+app.put('/api/presenters/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const index = presenters.findIndex(p => p.id === id);
   if (index === -1) {
@@ -986,7 +1404,7 @@ app.put('/api/presenters/:id', (req, res) => {
   res.json(presenters[index]);
 });
 
-app.delete('/api/presenters/:id', (req, res) => {
+app.delete('/api/presenters/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   presenters = presenters.filter(p => p.id !== id);
   savePresenters(presenters);
@@ -1018,7 +1436,7 @@ app.get('/api/fights', async (req, res) => {
   res.json(fights);
 });
 
-app.post('/api/fights', (req, res) => {
+app.post('/api/fights', requireAuth, (req, res) => {
   const newFight = { ...req.body, id: req.body.id || `fight-${Date.now()}` };
   fights.push(newFight);
   saveFights(fights);
@@ -1026,7 +1444,7 @@ app.post('/api/fights', (req, res) => {
   res.status(201).json(newFight);
 });
 
-app.put('/api/fights/:id', (req, res) => {
+app.put('/api/fights/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const index = fights.findIndex(f => f.id === id);
   if (index === -1) {
@@ -1050,7 +1468,7 @@ app.put('/api/fights/:id', (req, res) => {
   res.json(fights[index]);
 });
 
-app.delete('/api/fights/:id', (req, res) => {
+app.delete('/api/fights/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   fights = fights.filter(f => f.id !== id);
   saveFights(fights);
@@ -1066,7 +1484,7 @@ app.delete('/api/fights/:id', (req, res) => {
 });
 
 // Endpoint de subida de imágenes (Eventos, Boxeadores, etc.) con persistencia en PostgreSQL
-app.post('/api/upload', async (req, res) => {
+app.post('/api/upload', requireAuth, async (req, res) => {
   try {
     const { dataUrl, filename } = req.body;
     if (!dataUrl) {
@@ -1149,7 +1567,7 @@ app.get('/api/db-status', async (req, res) => {
   res.json(dbInfo);
 });
 
-app.post('/api/multicam/settings', (req, res) => {
+app.post('/api/multicam/settings', requireAuth, (req, res) => {
   multicamSettings = { ...multicamSettings, ...req.body };
   saveMulticamSettings();
   io.emit('multicam-settings-updated', multicamSettings);
@@ -1181,7 +1599,7 @@ app.post('/api/multicam/upload-avatar', async (req, res) => {
   }
 });
 
-app.post('/api/master-mute', (req, res) => {
+app.post('/api/master-mute', requireAuth, (req, res) => {
   const nextMuted = (req.body && typeof req.body.muted === 'boolean')
     ? req.body.muted
     : !liveState.masterMuted;
@@ -1198,10 +1616,6 @@ app.post('/api/master-mute', (req, res) => {
   res.json({ success: true, muted: nextMuted });
 });
 
-app.get(['/', '/admin', '/host'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 // WebSockets en tiempo real
 io.on('connection', async (socket) => {
   if (dbInitPromise) {
@@ -1209,14 +1623,26 @@ io.on('connection', async (socket) => {
       await dbInitPromise;
     } catch (e) {}
   }
+
+  // Verificar si el socket pertenece a un usuario autenticado (Usuario Nivel 1 o MODS)
+  // El overlay (/overlay) y /guest pueden conectarse sin sesión, pero NO pueden ejecutar comandos de control del stream
+  const isAuthorized = () => !!getAuthenticatedUserFromSocket(socket);
+  const currentUser = getAuthenticatedUserFromSocket(socket);
+  socket.user = currentUser;
+
   socket.emit('state-update', liveState);
   socket.emit('presenters-updated', presenters);
   socket.emit('fights-updated', fights);
   socket.emit('multicam-settings-updated', multicamSettings);
   socket.emit('master-mute-changed', { muted: !!liveState.masterMuted });
+  if (currentUser) {
+    socket.emit('auth-user', currentUser);
+    socket.emit('users-updated', users.map(sanitizeUser));
+  }
 
   // Mute Maestro Global (Silenciar o activar todo el audio de la app en OBS)
   socket.on('toggle-master-mute', (payload, callback) => {
+    if (!isAuthorized()) return;
     const nextMuted = (payload && typeof payload.muted === 'boolean')
       ? payload.muted
       : !liveState.masterMuted;
@@ -1237,6 +1663,7 @@ io.on('connection', async (socket) => {
 
   // 1. Preparar un slot (Queue / Preview sin mostrarlo en stream)
   socket.on('prepare-slot', (data) => {
+    if (!isAuthorized()) return;
     let target = data.presenter;
     if (!target && data.id) {
       target = presenters.find(p => p.id === data.id);
@@ -1249,6 +1676,7 @@ io.on('connection', async (socket) => {
 
   // 2. Lanzar a en vivo lo que ya está preparado
   socket.on('launch-prepared', (data) => {
+    if (!isAuthorized()) return;
     const slot = data.slot || 'both';
     const autoHide = (data.autoHideSeconds !== undefined) ? data.autoHideSeconds : liveState.defaultAutoHide;
 
@@ -1266,6 +1694,7 @@ io.on('connection', async (socket) => {
 
   // 3. Lanzar directo
   socket.on('show-slot', (data) => {
+    if (!isAuthorized()) return;
     let target = data.presenter;
     if (!target && data.id) {
       target = presenters.find(p => p.id === data.id);
@@ -1277,6 +1706,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('show-both', (data) => {
+    if (!isAuthorized()) return;
     const autoHide = (data.autoHideSeconds !== undefined) ? data.autoHideSeconds : liveState.defaultAutoHide;
     if (data.leftPresenter) {
       triggerShowSlot('left', data.leftPresenter, autoHide);
@@ -1288,15 +1718,18 @@ io.on('connection', async (socket) => {
 
   // 4. Ocultar overlays
   socket.on('hide-slot', (slot) => {
+    if (!isAuthorized()) return;
     triggerHideSlot(slot || 'left');
   });
 
   socket.on('hide-all', () => {
+    if (!isAuthorized()) return;
     triggerHideSlot('all');
   });
 
   // 5. Escenas de pantalla completa (Ya volvemos, Empezando, Finalizado)
   socket.on('show-scene', (data) => {
+    if (!isAuthorized()) return;
     liveState.scene = {
       isActive: true,
       type: data.type || 'brb',
@@ -1308,12 +1741,14 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('hide-scene', () => {
+    if (!isAuthorized()) return;
     liveState.scene.isActive = false;
     io.emit('state-update', liveState);
   });
 
   // 5.b. Banco de Animaciones - Tabla VS Boxeo (La Velada del Caos)
   socket.on('show-vs', (data) => {
+    if (!isAuthorized()) return;
     let targetFight = data.fight;
     if (!targetFight && data.id) {
       targetFight = fights.find(f => f.id === data.id);
@@ -1333,12 +1768,14 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('hide-vs', () => {
+    if (!isAuthorized()) return;
     liveState.vs.isActive = false;
     io.emit('state-update', liveState);
   });
 
   // 5.b.2. Banco de Animaciones - Escena Multicam / Videollamada en Vivo
   socket.on('show-multicam', (data) => {
+    if (!isAuthorized()) return;
     if (data && data.scene) {
       multicamSettings.activeScene = data.scene;
       saveMulticamSettings();
@@ -1353,6 +1790,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('hide-multicam', () => {
+    if (!isAuthorized()) return;
     liveState.multicam = {
       isActive: false,
       shownAt: null
@@ -1363,6 +1801,7 @@ io.on('connection', async (socket) => {
 
   // 5.c. Overlay Superior Dinámico BirraVerde (HUD y Marquesina)
   socket.on('toggle-top-hud', (payload) => {
+    if (!isAuthorized()) return;
     if (payload && typeof payload.isVisible === 'boolean') {
       liveState.topHud.isVisible = payload.isVisible;
     } else {
@@ -1373,6 +1812,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('update-top-hud-text', (data) => {
+    if (!isAuthorized()) return;
     if (data && typeof data.text === 'string') {
       liveState.topHud.customText = data.text.trim();
       saveSettings();
@@ -1381,12 +1821,14 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('trigger-hud-alert', (alertData) => {
+    if (!isAuthorized()) return;
     // alertData: { type: 'follow'|'donation'|'comment', user, detail, amount }
     io.emit('hud-alert', alertData);
   });
 
   // 5.c.2. Contador de Próximo Evento en Pantallas de Espera
   socket.on('toggle-event-countdown', (payload, callback) => {
+    if (!isAuthorized()) return;
     if (payload && typeof payload.enabled === 'boolean') {
       liveState.eventCountdown.enabled = payload.enabled;
     } else {
@@ -1401,6 +1843,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('update-event-countdown', (data, callback) => {
+    if (!isAuthorized()) return;
     if (!data || typeof data !== 'object') return;
     if (typeof data.enabled === 'boolean') {
       liveState.eventCountdown.enabled = data.enabled;
@@ -1433,6 +1876,7 @@ io.on('connection', async (socket) => {
 
   // 5.d. Overlay Inferior de Chat Destacado y TTS
   socket.on('trigger-chat-announcement', (data) => {
+    if (!isAuthorized()) return;
     // data: { user: '@...', text: '...', tts: boolean }
     if (!data || !data.text) return;
 
@@ -1461,11 +1905,13 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('hide-chat-announcement', () => {
+    if (!isAuthorized()) return;
     liveState.chatOverlay.isVisible = false;
     io.emit('state-update', liveState);
   });
 
   socket.on('toggle-chat-tts', (payload) => {
+    if (!isAuthorized()) return;
     if (payload && typeof payload.enabled === 'boolean') {
       liveState.chatOverlay.ttsEnabled = payload.enabled;
     } else {
@@ -1476,6 +1922,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('update-chat-prefix', (data) => {
+    if (!isAuthorized()) return;
     if (data && typeof data.prefix === 'string' && data.prefix.trim()) {
       liveState.chatOverlay.commandPrefix = data.prefix.trim();
       saveSettings();
@@ -1484,6 +1931,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('update-chat-tts-config', (data) => {
+    if (!isAuthorized()) return;
     if (!data) return;
     if (typeof data.style === 'string') liveState.chatOverlay.ttsStyle = data.style;
     if (typeof data.rate === 'number') liveState.chatOverlay.ttsRate = data.rate;
@@ -1494,6 +1942,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('save-fight', (fightData, callback) => {
+    if (!isAuthorized()) return;
     if (!fightData) return;
 
     if (!fightData.id) {
@@ -1520,6 +1969,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('delete-fight', (id, callback) => {
+    if (!isAuthorized()) return;
     fights = fights.filter(f => f.id !== id);
     saveFights(fights);
 
@@ -1535,6 +1985,7 @@ io.on('connection', async (socket) => {
 
   // 6. Configuración: Escala y Auto-Hide (Persistencia total)
   socket.on('set-scale', (scalePercent) => {
+    if (!isAuthorized()) return;
     const s = Math.min(100, Math.max(40, Number(scalePercent) || 65));
     liveState.scale = s;
     saveSettings();
@@ -1542,6 +1993,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('set-autohide', (seconds) => {
+    if (!isAuthorized()) return;
     const sec = Math.max(0, parseInt(seconds, 10) || 0);
     liveState.defaultAutoHide = sec;
     saveSettings();
@@ -1550,6 +2002,7 @@ io.on('connection', async (socket) => {
 
   // 7. Guardar / Editar / Eliminar / Sincronizar Presentadores
   socket.on('save-presenter', (presData, callback) => {
+    if (!isAuthorized()) return;
     if (!presData) return;
 
     if (!presData.id) {
@@ -1596,6 +2049,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('delete-presenter', (id, callback) => {
+    if (!isAuthorized()) return;
     presenters = presenters.filter(p => p.id !== id);
     savePresenters(presenters);
 
@@ -1632,6 +2086,7 @@ io.on('connection', async (socket) => {
 
   // 8. Sincronización masiva (para respaldos o auto-recuperación de localStorage)
   socket.on('sync-all-presenters', (list, callback) => {
+    if (!isAuthorized()) return;
     if (Array.isArray(list) && list.length > 0) {
       // Merge preservando IDs únicos
       const map = new Map();
@@ -1645,6 +2100,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('import-backup', (backupData, callback) => {
+    if (!isAuthorized()) return;
     try {
       if (backupData.presenters && Array.isArray(backupData.presenters)) {
         presenters = backupData.presenters;
@@ -1792,6 +2248,7 @@ io.on('connection', async (socket) => {
 
   // Aprobar ingreso de un participante desde el Panel de Host
   socket.on('multicam-approve-join', ({ roomId = 'main', peerId, asHost = null }) => {
+    if (!isAuthorized()) return;
     if (!peerId || !multicamRooms[roomId] || !multicamRooms[roomId].waiting) return;
     const waitingPeer = multicamRooms[roomId].waiting[peerId];
     approvedPeerIds.add(peerId);
@@ -1811,6 +2268,7 @@ io.on('connection', async (socket) => {
 
   // Aprobar a todos los que están en sala de espera
   socket.on('multicam-approve-all-waiting', ({ roomId = 'main' } = {}) => {
+    if (!isAuthorized()) return;
     if (!multicamRooms[roomId] || !multicamRooms[roomId].waiting) return;
     const waitingList = Object.values(multicamRooms[roomId].waiting);
     multicamRooms[roomId].waiting = {};
@@ -1831,6 +2289,7 @@ io.on('connection', async (socket) => {
 
   // Rechazar ingreso de un participante desde el Panel de Host (con opción de banear IP)
   socket.on('multicam-reject-join', ({ roomId = 'main', peerId, banIp = false }) => {
+    if (!isAuthorized()) return;
     if (!peerId || !multicamRooms[roomId] || !multicamRooms[roomId].waiting) return;
     const waitingPeer = multicamRooms[roomId].waiting[peerId];
     approvedPeerIds.delete(peerId);
@@ -1978,6 +2437,7 @@ io.on('connection', async (socket) => {
 
   // Designar / Desmarcar Anfitrión (Host) desde panel o cliente
   socket.on('multicam-set-host', ({ roomId = 'main', peerId, isHost }) => {
+    if (!isAuthorized()) return;
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       const peer = multicamRooms[roomId].peers[peerId];
       peer.isHost = !!isHost;
@@ -1993,6 +2453,7 @@ io.on('connection', async (socket) => {
 
   // Cambio de Escena Multicam desde el panel de Host
   socket.on('multicam-change-scene', ({ scene }) => {
+    if (!isAuthorized()) return;
     if (scene) {
       multicamSettings.activeScene = scene;
       saveMulticamSettings();
@@ -2002,6 +2463,7 @@ io.on('connection', async (socket) => {
 
   // Guardar ajustes generales de multicam
   socket.on('multicam-save-settings', (newSettings) => {
+    if (!isAuthorized()) return;
     multicamSettings = { ...multicamSettings, ...newSettings };
     saveMulticamSettings();
     io.emit('multicam-settings-updated', multicamSettings);
@@ -2009,6 +2471,7 @@ io.on('connection', async (socket) => {
 
   // Ocultar o mostrar una cámara específica en el overlay
   socket.on('multicam-toggle-peer-visibility', ({ roomId = 'main', peerId, isHidden }) => {
+    if (!isAuthorized()) return;
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       multicamRooms[roomId].peers[peerId].isHidden = !!isHidden;
       const currentPeers = getRoomPeers(roomId);
@@ -2019,6 +2482,7 @@ io.on('connection', async (socket) => {
 
   // Asignar slot / posición a una cámara
   socket.on('multicam-assign-slot', ({ roomId = 'main', peerId, slot }) => {
+    if (!isAuthorized()) return;
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       multicamRooms[roomId].peers[peerId].slot = slot;
       const currentPeers = getRoomPeers(roomId);
@@ -2029,6 +2493,7 @@ io.on('connection', async (socket) => {
 
   // Expulsar participante de la sala
   socket.on('multicam-kick-peer', ({ roomId = 'main', peerId }) => {
+    if (!isAuthorized()) return;
     approvedPeerIds.delete(peerId);
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       const targetSocketId = multicamRooms[roomId].peers[peerId].socketId;
@@ -2042,6 +2507,7 @@ io.on('connection', async (socket) => {
 
   // Silenciar en Stream (en OBS queda mudo pero en la sala privada se sigue escuchando)
   socket.on('multicam-toggle-stream-mute', ({ roomId = 'main', peerId, isStreamMuted }) => {
+    if (!isAuthorized()) return;
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       multicamRooms[roomId].peers[peerId].isStreamMuted = !!isStreamMuted;
       const currentPeers = getRoomPeers(roomId);
@@ -2052,6 +2518,7 @@ io.on('connection', async (socket) => {
 
   // Forzar mute de micrófono al participante (en toda la sala)
   socket.on('multicam-force-mute-peer', ({ roomId = 'main', peerId }) => {
+    if (!isAuthorized()) return;
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       const targetSocketId = multicamRooms[roomId].peers[peerId].socketId;
       multicamRooms[roomId].peers[peerId].hasAudio = false;
@@ -2064,6 +2531,7 @@ io.on('connection', async (socket) => {
 
   // Banear participante por IP
   socket.on('multicam-ban-peer', ({ roomId = 'main', peerId, reason }) => {
+    if (!isAuthorized()) return;
     approvedPeerIds.delete(peerId);
     if (multicamRooms[roomId] && multicamRooms[roomId].peers[peerId]) {
       const peer = multicamRooms[roomId].peers[peerId];
@@ -2088,6 +2556,7 @@ io.on('connection', async (socket) => {
 
   // Desbanear IP
   socket.on('multicam-unban-ip', ({ ip }) => {
+    if (!isAuthorized()) return;
     if (ip && bannedIps.has(ip)) {
       bannedIps.delete(ip);
       saveBannedIps();

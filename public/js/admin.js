@@ -3417,6 +3417,289 @@ if (btnToggleMainEventForm && mainEventCdFormPanel) {
   });
 }
 
+// ============================================================
+// SISTEMA DE AUTENTICACIÓN, NIVELES DE USUARIO Y BASE DE DATOS
+// ============================================================
+const headerUserBadge = document.getElementById('header-user-badge');
+const headerUserIcon = document.getElementById('header-user-icon');
+const headerUserName = document.getElementById('header-user-name');
+const headerUserLevel = document.getElementById('header-user-level');
+const btnLogoutUser = document.getElementById('btn-logout-user');
+
+const cfgCurrentUserRoleBadge = document.getElementById('cfg-current-user-role-badge');
+const usersModsNotice = document.getElementById('users-mods-notice');
+const usersAdminControls = document.getElementById('users-admin-controls');
+const usersCountBadge = document.getElementById('users-count-badge');
+const usersListContainer = document.getElementById('users-list-container');
+
+const userFormTitle = document.getElementById('user-form-title');
+const btnUserFormReset = document.getElementById('btn-user-form-reset');
+const userDbForm = document.getElementById('user-db-form');
+const inputUserId = document.getElementById('input-user-id');
+const inputUserUsername = document.getElementById('input-user-username');
+const inputUserDisplay = document.getElementById('input-user-display');
+const selectUserLevel = document.getElementById('select-user-level');
+const labelUserPassword = document.getElementById('label-user-password');
+const inputUserPassword = document.getElementById('input-user-password');
+const hintUserPassword = document.getElementById('hint-user-password');
+const textSaveUserDb = document.getElementById('text-save-user-db');
+
+let currentAuthUser = null;
+let dbUsersList = [];
+
+function applyAuthUserUI(user) {
+  if (!user) return;
+  currentAuthUser = user;
+  const isNivel1 = user.level === 'nivel_1';
+
+  if (headerUserIcon) headerUserIcon.textContent = isNivel1 ? '👑' : '🛡️';
+  if (headerUserName) headerUserName.textContent = user.username || 'USUARIO';
+  if (headerUserLevel) {
+    headerUserLevel.textContent = isNivel1 ? 'NIVEL 1' : 'MODS';
+    headerUserLevel.className = isNivel1
+      ? 'px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[9px] font-mono uppercase'
+      : 'px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 text-[9px] font-mono uppercase';
+  }
+  if (headerUserBadge) {
+    headerUserBadge.className = isNivel1
+      ? 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-green/50 text-xs font-chakra font-bold'
+      : 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyan-400/50 text-xs font-chakra font-bold';
+  }
+
+  if (cfgCurrentUserRoleBadge) {
+    cfgCurrentUserRoleBadge.textContent = isNivel1
+      ? `SESIÓN: ${user.username.toUpperCase()} (USUARIO NIVEL 1)`
+      : `SESIÓN: ${user.username.toUpperCase()} (MODS)`;
+    cfgCurrentUserRoleBadge.className = isNivel1
+      ? 'px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/40 uppercase'
+      : 'px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-300 text-[10px] font-mono font-bold border border-cyan-400/40 uppercase';
+  }
+
+  if (isNivel1) {
+    if (usersAdminControls) usersAdminControls.classList.remove('hidden');
+    if (usersModsNotice) usersModsNotice.classList.add('hidden');
+    fetchDbUsersList();
+  } else {
+    if (usersAdminControls) usersAdminControls.classList.add('hidden');
+    if (usersModsNotice) usersModsNotice.classList.remove('hidden');
+  }
+}
+
+async function verifyCurrentSession() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (res.status === 401) {
+      window.location.href = '/login';
+      return;
+    }
+    const data = await res.json();
+    if (data && data.authenticated && data.user) {
+      applyAuthUserUI(data.user);
+    } else {
+      window.location.href = '/login';
+    }
+  } catch (e) {
+    console.warn('Error verificando sesión:', e);
+  }
+}
+
+async function fetchDbUsersList() {
+  try {
+    const res = await fetch('/api/users');
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list)) {
+        dbUsersList = list;
+        renderDbUsersList();
+      }
+    }
+  } catch (e) {
+    console.warn('Error cargando lista de usuarios:', e);
+  }
+}
+
+socket.on('auth-user', (user) => {
+  if (user) applyAuthUserUI(user);
+});
+
+socket.on('users-updated', (list) => {
+  if (Array.isArray(list)) {
+    dbUsersList = list;
+    renderDbUsersList();
+  }
+});
+
+if (btnLogoutUser) {
+  btnLogoutUser.addEventListener('click', async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    window.location.href = '/login';
+  });
+}
+
+function renderDbUsersList() {
+  if (!usersListContainer) return;
+  if (usersCountBadge) {
+    usersCountBadge.textContent = `${dbUsersList.length} ${dbUsersList.length === 1 ? 'usuario' : 'usuarios'}`;
+  }
+
+  if (dbUsersList.length === 0) {
+    usersListContainer.innerHTML = `<div class="text-xs text-gray-400 font-mono p-4 text-center">No hay usuarios cargados.</div>`;
+    return;
+  }
+
+  let html = '';
+  dbUsersList.forEach(u => {
+    const isNivel1 = u.level === 'nivel_1';
+    const isSelf = currentAuthUser && currentAuthUser.id === u.id;
+    html += `
+      <div class="bg-cyber-dark/90 border ${isNivel1 ? 'border-cyber-green/40' : 'border-cyan-400/40'} rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl ${isNivel1 ? 'bg-cyber-green/15 border border-cyber-green text-cyber-green' : 'bg-cyan-400/15 border border-cyan-400 text-cyan-300'} flex items-center justify-center text-base shrink-0">
+            ${isNivel1 ? '👑' : '🛡️'}
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-chakra font-bold text-white">${u.displayName || u.username}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${isNivel1 ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/40' : 'bg-cyan-400/20 text-cyan-300 border border-cyan-400/40'}">
+                ${isNivel1 ? 'USUARIO NIVEL 1' : 'MODS'}
+              </span>
+              ${isSelf ? `<span class="px-1.5 py-0.5 rounded bg-white/10 text-gray-300 text-[9px] font-mono">TÚ</span>` : ''}
+            </div>
+            <div class="text-xs font-mono text-gray-400 mt-0.5">
+              Usuario login: <strong class="text-gray-200">${u.username}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end shrink-0">
+          <button type="button" onclick="editDbUser('${u.id}')" class="px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-200 hover:text-cyber-green text-xs font-chakra font-bold transition-all flex items-center gap-1 cursor-pointer">
+            <i data-lucide="key" class="w-3.5 h-3.5"></i>
+            <span>Editar / Clave</span>
+          </button>
+          <button type="button" onclick="deleteDbUser('${u.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-600/15 border border-red-500/40 hover:bg-red-600 text-red-300 hover:text-white text-xs font-chakra font-bold transition-all flex items-center gap-1 cursor-pointer" title="Eliminar usuario">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  usersListContainer.innerHTML = html;
+  refreshIcons();
+}
+
+function resetUserDbForm() {
+  if (inputUserId) inputUserId.value = '';
+  if (inputUserUsername) inputUserUsername.value = '';
+  if (inputUserDisplay) inputUserDisplay.value = '';
+  if (selectUserLevel) selectUserLevel.value = 'mods';
+  if (inputUserPassword) {
+    inputUserPassword.value = '';
+    inputUserPassword.required = true;
+    inputUserPassword.placeholder = 'Ingresa la contraseña...';
+  }
+  if (userFormTitle) {
+    userFormTitle.innerHTML = `<i data-lucide="user-plus" class="w-4 h-4"></i><span>CREAR NUEVO USUARIO</span>`;
+  }
+  if (labelUserPassword) labelUserPassword.textContent = 'Contraseña *';
+  if (hintUserPassword) hintUserPassword.textContent = 'Se guarda encriptada en PostgreSQL.';
+  if (textSaveUserDb) textSaveUserDb.textContent = 'GUARDAR USUARIO EN BD';
+  refreshIcons();
+}
+
+if (btnUserFormReset) {
+  btnUserFormReset.addEventListener('click', resetUserDbForm);
+}
+
+window.editDbUser = function(userId) {
+  const target = dbUsersList.find(u => u.id === userId);
+  if (!target) return;
+
+  if (inputUserId) inputUserId.value = target.id;
+  if (inputUserUsername) inputUserUsername.value = target.username || '';
+  if (inputUserDisplay) inputUserDisplay.value = target.displayName || target.username || '';
+  if (selectUserLevel) selectUserLevel.value = target.level === 'nivel_1' ? 'nivel_1' : 'mods';
+  if (inputUserPassword) {
+    inputUserPassword.value = '';
+    inputUserPassword.required = false;
+    inputUserPassword.placeholder = 'Dejar vacío para mantener la actual...';
+  }
+  if (userFormTitle) {
+    userFormTitle.innerHTML = `<i data-lucide="edit-3" class="w-4 h-4"></i><span>EDITAR: ${target.username.toUpperCase()}</span>`;
+  }
+  if (labelUserPassword) labelUserPassword.textContent = 'Nueva Contraseña (Opcional)';
+  if (hintUserPassword) hintUserPassword.textContent = 'Escribe una nueva contraseña solo si deseas cambiarla.';
+  if (textSaveUserDb) textSaveUserDb.textContent = 'ACTUALIZAR USUARIO';
+  refreshIcons();
+  if (inputUserPassword) inputUserPassword.focus();
+};
+
+window.deleteDbUser = async function(userId) {
+  const target = dbUsersList.find(u => u.id === userId);
+  if (!target) return;
+  if (!confirm(`¿Eliminar al usuario "${target.username}" (${target.level === 'nivel_1' ? 'Usuario Nivel 1' : 'MODS'}) de la base de datos?`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(`❌ ${data.error || 'No se pudo eliminar el usuario'}`, 'error');
+      return;
+    }
+    showToast(`🗑️ Usuario "${target.username}" eliminado de la base de datos`);
+    fetchDbUsersList();
+  } catch (e) {
+    showToast('❌ Error de red al eliminar usuario', 'error');
+  }
+};
+
+if (userDbForm) {
+  userDbForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const editId = inputUserId ? inputUserId.value.trim() : '';
+    const username = inputUserUsername ? inputUserUsername.value.trim() : '';
+    const displayName = inputUserDisplay ? inputUserDisplay.value.trim() : '';
+    const level = selectUserLevel ? selectUserLevel.value : 'mods';
+    const password = inputUserPassword ? inputUserPassword.value : '';
+
+    if (!username) {
+      showToast('⚠️ El nombre de usuario es obligatorio', 'error');
+      return;
+    }
+    if (!editId && !password) {
+      showToast('⚠️ Ingresa una contraseña para el nuevo usuario', 'error');
+      return;
+    }
+
+    try {
+      const url = editId ? `/api/users/${editId}` : '/api/users';
+      const method = editId ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, displayName, level, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(`❌ ${data.error || 'Error guardando usuario'}`, 'error');
+        return;
+      }
+
+      showToast(editId ? `✅ Usuario "${username}" actualizado en la base de datos` : `✅ Usuario "${username}" creado con éxito`);
+      resetUserDbForm();
+      fetchDbUsersList();
+    } catch (err) {
+      showToast('❌ Error de conexión al guardar usuario', 'error');
+    }
+  });
+}
+
+verifyCurrentSession();
+
 // Inicialización
 if (multicamGuestLink) multicamGuestLink.value = window.location.origin + '/guest';
 if (multicamObsLink) multicamObsLink.value = window.location.origin + '/overlay';

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Acceso de Seguridad - BirraVerde Stream Control</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            chakra: ['Chakra Petch', 'sans-serif'],
+            sans: ['Inter', 'sans-serif']
+          },
+          colors: {
+            cyber: {
+              black: '#070a0d',
+              dark: '#0e141b',
+              card: '#141c24',
+              border: '#222f3d',
+              green: '#00ff66',
+              glow: '#00ff6640'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .cyber-bg-grid {
+      background-image:
+        linear-gradient(rgba(0, 255, 102, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 102, 0.06) 1px, transparent 1px);
+      background-size: 42px 42px;
+    }
+  </style>
+</head>
+<body class="bg-cyber-black text-gray-100 min-h-screen font-sans antialiased flex flex-col justify-between relative overflow-x-hidden selection:bg-cyber-green selection:text-black">
+
+  <!-- Fondo Cyber Animado -->
+  <div class="fixed inset-0 cyber-bg-grid pointer-events-none"></div>
+  <div class="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-cyber-green/10 rounded-full blur-[130px] pointer-events-none"></div>
+
+  <!-- Contenedor Central de Login -->
+  <main class="relative z-10 flex-1 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-cyber-dark/95 backdrop-blur-md border border-cyber-green/40 rounded-2xl p-6 sm:p-8 shadow-[0_0_50px_rgba(0,0,0,0.9),0_0_25px_rgba(0,255,102,0.15)] space-y-6 relative overflow-hidden">
+
+      <!-- Esquinas decorativas cyber -->
+      <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyber-green rounded-tl-lg"></div>
+      <div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyber-green rounded-tr-lg"></div>
+      <div class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyber-green rounded-bl-lg"></div>
+      <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyber-green rounded-br-lg"></div>
+
+      <!-- Cabecera y Logo -->
+      <div class="text-center space-y-3">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-cyber-green/10 border border-cyber-green flex items-center justify-center p-2.5 shadow-[0_0_20px_rgba(0,255,102,0.3)]">
+          <img src="/assets/isotipo.png" alt="BirraVerde" class="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(0,255,102,0.6)]">
+        </div>
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyber-green/15 border border-cyber-green/40 text-cyber-green text-[10px] font-mono font-bold uppercase mb-1.5">
+            <i data-lucide="shield-check" class="w-3 h-3"></i>
+            <span>CONTROL DE ACCESO</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-extrabold font-chakra tracking-wider text-white uppercase">
+            PANEL DE STREAM BIRRAVERDE
+          </h1>
+          <p class="text-xs text-gray-400 mt-1">
+            Inicia sesión con tu cuenta de <strong class="text-cyber-green">Usuario Nivel 1</strong> o <strong class="text-cyan-400">MODS</strong> para controlar la transmisión.
+          </p>
+        </div>
+      </div>
+
+      <!-- Alerta de Error -->
+      <div id="login-error-box" class="hidden bg-red-950/80 border border-red-500/70 rounded-xl p-3 text-xs text-red-200 font-chakra flex items-center gap-2.5">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400 shrink-0"></i>
+        <span id="login-error-text">Usuario o contraseña incorrectos.</span>
+      </div>
+
+      <!-- Formulario de Login -->
+      <form id="login-form" class="space-y-4">
+        <div class="space-y-1.5">
+          <label for="login-username" class="block text-xs font-chakra font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+            <i data-lucide="user" class="w-3.5 h-3.5 text-cyber-green"></i>
+            <span>Usuario</span>
+          </label>
+          <input
+            type="text"
+            id="login-username"
+            name="username"
+            required
+            autocomplete="username"
+            placeholder="Ej: admin o mods"
+            class="w-full bg-cyber-card border border-cyber-border focus:border-cyber-green rounded-xl px-4 py-2.5 text-sm text-white font-mono focus:outline-none transition-colors"
+          >
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="login-password" class="block text-xs font-chakra font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+            <i data-lucide="lock" class="w-3.5 h-3.5 text-cyber-green"></i>
+            <span>Contraseña</span>
+          </label>
+          <div class="relative">
+            <input
+              type="password"
+              id="login-password"
+              name="password"
+              required
+              autocomplete="current-password"
+              placeholder="••••••••••••"
+              class="w-full bg-cyber-card border border-cyber-border focus:border-cyber-green rounded-xl pl-4 pr-10 py-2.5 text-sm text-white font-mono focus:outline-none transition-colors"
+            >
+            <button
+              type="button"
+              id="btn-toggle-pass"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              title="Mostrar / ocultar contraseña"
+            >
+              <i data-lucide="eye" id="icon-toggle-pass" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          id="btn-login-submit"
+          class="w-full py-3 px-4 rounded-xl bg-cyber-green text-black font-chakra font-extrabold text-xs sm:text-sm uppercase tracking-wider hover:bg-emerald-400 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,255,102,0.35)] cursor-pointer"
+        >
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span id="text-login-submit">INGRESAR AL PANEL DE CONTROL</span>
+        </button>
+      </form>
+
+      <!-- Niveles de Acceso Info -->
+      <div class="pt-4 border-t border-cyber-border/70 grid grid-cols-2 gap-2.5 text-[11px]">
+        <div class="bg-cyber-card/70 border border-cyber-border rounded-lg p-2.5 flex items-center gap-2">
+          <span class="text-sm">👑</span>
+          <div>
+            <div class="font-chakra font-bold text-cyber-green uppercase">Usuario Nivel 1</div>
+            <div class="text-[10px] text-gray-400">Control Total & Usuarios</div>
+          </div>
+        </div>
+        <div class="bg-cyber-card/70 border border-cyber-border rounded-lg p-2.5 flex items-center gap-2">
+          <span class="text-sm">🛡️</span>
+          <div>
+            <div class="font-chakra font-bold text-cyan-400 uppercase">MODS</div>
+            <div class="text-[10px] text-gray-400">Moderación & Stream</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center text-[11px] text-gray-500 font-mono">
+        🎥 La fuente visual <span class="text-gray-400">/overlay</span> para OBS Studio opera libre de bloqueo.
+      </div>
+    </div>
+  </main>
+
+  <script>
+    if (window.lucide) window.lucide.createIcons();
+
+    const loginForm = document.getElementById('login-form');
+    const loginUsername = document.getElementById('login-username');
+    const loginPassword = document.getElementById('login-password');
+    const loginErrorBox = document.getElementById('login-error-box');
+    const loginErrorText = document.getElementById('login-error-text');
+    const btnLoginSubmit = document.getElementById('btn-login-submit');
+    const textLoginSubmit = document.getElementById('text-login-submit');
+    const btnTogglePass = document.getElementById('btn-toggle-pass');
+    const iconTogglePass = document.getElementById('icon-toggle-pass');
+
+    if (btnTogglePass && loginPassword) {
+      btnTogglePass.addEventListener('click', () => {
+        const isPass = loginPassword.type === 'password';
+        loginPassword.type = isPass ? 'text' : 'password';
+        if (iconTogglePass) {
+          iconTogglePass.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+          if (window.lucide) window.lucide.createIcons();
+        }
+      });
+    }
+
+    function showError(msg) {
+      if (!loginErrorBox || !loginErrorText) return;
+      loginErrorText.textContent = msg || 'Error al iniciar sesión.';
+      loginErrorBox.classList.remove('hidden');
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginErrorBox.classList.add('hidden');
+
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value;
+      if (!username || !password) {
+        showError('Ingresa tu usuario y contraseña.');
+        return;
+      }
+
+      btnLoginSubmit.disabled = true;
+      textLoginSubmit.textContent = 'VERIFICANDO CREDENCIALES...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          showError(data.error || 'Usuario o contraseña incorrectos.');
+          btnLoginSubmit.disabled = false;
+          textLoginSubmit.textContent = 'INGRESAR AL PANEL DE CONTROL';
+          return;
+        }
+
+        window.location.href = '/';
+      } catch (err) {
+        showError('Error de conexión con el servidor.');
+        btnLoginSubmit.disabled = false;
+        textLoginSubmit.textContent = 'INGRESAR AL PANEL DE CONTROL';
+      }
+    });
+  </script>
+</body>
+</html>

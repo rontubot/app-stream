@@ -147,6 +147,19 @@
           <i data-lucide="link" class="w-3.5 h-3.5 text-cyber-green group-hover:rotate-45 transition-transform"></i>
           <span>Copiar URL para OBS</span>
         </button>
+
+        <!-- Badge de Usuario Autenticado (Nivel 1 o MODS) y Botón Cerrar Sesión -->
+        <div class="flex items-center gap-1.5">
+          <div id="header-user-badge" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-green/40 text-xs font-chakra font-bold">
+            <span id="header-user-icon">👑</span>
+            <span id="header-user-name" class="text-white uppercase">ADMIN</span>
+            <span id="header-user-level" class="px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[9px] font-mono uppercase">NIVEL 1</span>
+          </div>
+          <button id="btn-logout-user" type="button" title="Cerrar sesión" class="px-2.5 py-1.5 rounded-lg bg-red-600/20 border border-red-500/40 hover:bg-red-600 hover:text-white text-red-400 text-xs font-chakra font-bold transition-all flex items-center gap-1 cursor-pointer">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Salir</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -1262,6 +1275,109 @@
       </section>
 
       <!-- ============================================================
+           MÓDULO DE SEGURIDAD: BASE DE DATOS DE USUARIOS (USUARIO NIVEL 1 Y MODS)
+           ============================================================ -->
+      <section id="users-db-section" class="bg-gradient-to-r from-cyber-dark to-[#0a131a] border border-cyan-400/40 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5 relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-cyber-border/70">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-cyan-400/10 border border-cyan-400 flex items-center justify-center p-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] shrink-0 text-cyan-400">
+              <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h2 class="text-base font-bold font-chakra uppercase tracking-wide text-white">
+                  BASE DE DATOS DE USUARIOS Y NIVELES DE ACCESO
+                </h2>
+                <span id="cfg-current-user-role-badge" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[10px] font-mono font-bold border border-cyber-green/40 uppercase">
+                  SESIÓN: USUARIO NIVEL 1
+                </span>
+              </div>
+              <p class="text-xs text-gray-400">
+                Administra las cuentas autorizadas para iniciar sesión en el dominio principal: <strong class="text-cyber-green">Usuario Nivel 1 (Admin)</strong> y <strong class="text-cyan-400">MODS</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aviso para cuando inicia sesión un usuario con nivel MODS -->
+        <div id="users-mods-notice" class="hidden bg-cyber-card/80 border border-cyan-400/40 rounded-xl p-4 text-xs text-gray-300 flex items-center gap-3">
+          <span class="text-xl">🛡️</span>
+          <div>
+            <p class="font-chakra font-bold text-cyan-300 uppercase">Has iniciado sesión con nivel MODS</p>
+            <p class="text-gray-400 mt-0.5">Tienes acceso autorizado al control del stream. La creación o modificación de cuentas de usuario y contraseñas está reservada para cuentas con nivel <strong class="text-cyber-green">Usuario Nivel 1</strong>.</p>
+          </div>
+        </div>
+
+        <!-- Panel exclusivo para Usuario Nivel 1 (Lista de Usuarios + Formulario Crear/Editar) -->
+        <div id="users-admin-controls" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <!-- Lista de Usuarios en la Base de Datos (7 cols) -->
+          <div class="lg:col-span-7 bg-cyber-card/80 border border-cyber-border rounded-xl p-4 space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-cyber-border/60">
+              <h3 class="text-xs sm:text-sm font-bold font-chakra uppercase tracking-wider text-white flex items-center gap-2">
+                <i data-lucide="users" class="w-4 h-4 text-cyan-400"></i>
+                <span>USUARIOS REGISTRADOS EN BASE DE DATOS</span>
+              </h3>
+              <span id="users-count-badge" class="text-[11px] font-mono text-gray-400">2 usuarios</span>
+            </div>
+
+            <div id="users-list-container" class="space-y-2.5">
+              <!-- Renderizado dinámico desde admin.js -->
+            </div>
+          </div>
+
+          <!-- Formulario Crear / Editar Usuario y Contraseña (5 cols) -->
+          <div class="lg:col-span-5 bg-cyber-card/80 border border-cyber-border rounded-xl p-4 space-y-3.5">
+            <div class="flex items-center justify-between pb-2 border-b border-cyber-border/60">
+              <h3 id="user-form-title" class="text-xs sm:text-sm font-bold font-chakra uppercase tracking-wider text-cyber-green flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                <span>CREAR NUEVO USUARIO</span>
+              </h3>
+              <button type="button" id="btn-user-form-reset" class="text-[11px] font-mono text-gray-400 hover:text-white underline cursor-pointer">
+                Limpiar
+              </button>
+            </div>
+
+            <form id="user-db-form" class="space-y-3">
+              <input type="hidden" id="input-user-id" value="">
+
+              <div class="space-y-1">
+                <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase">Nombre de Usuario (Login) *</label>
+                <input type="text" id="input-user-username" required placeholder="Ej: admin o mods" class="w-full bg-cyber-dark border border-cyber-border focus:border-cyber-green rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none">
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase">Nombre Visible / Etiqueta *</label>
+                <input type="text" id="input-user-display" required placeholder="Ej: Admin Principal o Moderador" class="w-full bg-cyber-dark border border-cyber-border focus:border-cyber-green rounded-lg px-3 py-2 text-xs text-white font-sans focus:outline-none">
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase">Nivel de Acceso *</label>
+                <select id="select-user-level" class="w-full bg-cyber-dark border border-cyber-border focus:border-cyber-green rounded-lg px-3 py-2 text-xs text-white font-chakra font-bold focus:outline-none">
+                  <option value="nivel_1">👑 Usuario Nivel 1 (Admin Total)</option>
+                  <option value="mods">🛡️ MODS (Moderadores)</option>
+                </select>
+              </div>
+
+              <div class="space-y-1">
+                <label id="label-user-password" class="text-[11px] font-chakra font-bold text-gray-300 uppercase">Contraseña *</label>
+                <input type="password" id="input-user-password" placeholder="Ingresa la contraseña..." class="w-full bg-cyber-dark border border-cyber-border focus:border-cyber-green rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none">
+                <p id="hint-user-password" class="text-[10px] text-gray-400 font-mono">
+                  Se guarda encriptada en PostgreSQL.
+                </p>
+              </div>
+
+              <div class="pt-2 flex items-center justify-end gap-2">
+                <button type="submit" id="btn-save-user-db" class="w-full py-2.5 px-4 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(0,255,102,0.3)] cursor-pointer">
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <span id="text-save-user-db">GUARDAR USUARIO EN BD</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
            MÓDULO 1: CONFIGURACIÓN DEL OVERLAY DINÁMICO (HUD SUPERIOR)
            ============================================================ -->
       <section class="bg-gradient-to-r from-cyber-dark to-[#09120c] border border-cyber-green/40 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5 relative overflow-hidden">
@@ -2038,6 +2154,6 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/admin.js?v=20261118d"></script>
+  <script src="/js/admin.js?v=20261119a"></script>
 </body>
 </html>
