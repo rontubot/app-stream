@@ -1034,102 +1034,102 @@ const DEFAULT_OFFICIAL_QUESTIONS = [
   {
     id: 'etapa3-q1',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 1 DE 10)',
-    question: '¿Quién es el autor de la frase: «Es mejor cambiar de opinión que persistir en una equivocada»?',
-    options: { A: 'Sócrates', B: 'Itachi Uchiha', C: 'Aristóteles', D: 'Madara Uchiha' },
-    correctOption: 'A',
-    explanation: 'Autor: Sócrates (en el diálogo Teeteto, de Platón).'
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 1 DE 10)',
+    question: '¿Quién dijo la frase: «Es mejor cambiar de opinión que persistir en una equivocada»?',
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
+    correctOption: 'B',
+    explanation: 'FILÓSOFO — Autor: Sócrates (en el diálogo Teeteto, de Platón).'
   },
   {
     id: 'etapa3-q2',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 2 DE 10)',
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 2 DE 10)',
     question: '¿Quién dijo la frase: «Quienes no conocen el verdadero dolor nunca podrán comprender la verdadera paz»?',
-    options: { A: 'Séneca', B: 'Nagato (Pain)', C: 'Madara Uchiha', D: 'Sócrates' },
-    correctOption: 'B',
-    explanation: 'Autor: Nagato (Pain), en Naruto Shippuden.'
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'NARUTO — Autor: Nagato (Pain), en Naruto Shippuden.'
   },
   {
     id: 'etapa3-q3',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 3 DE 10)',
-    question: '¿Quién es el autor de la frase: «Todos los hombres desean por naturaleza saber»?',
-    options: { A: 'Orochimaru', B: 'Platón', C: 'Aristóteles', D: 'Epicteto' },
-    correctOption: 'C',
-    explanation: 'Autor: Aristóteles, en el inicio de su obra Metafísica.'
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 3 DE 10)',
+    question: '¿Quién dijo la frase: «Todos los hombres desean por naturaleza saber»?',
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
+    correctOption: 'B',
+    explanation: 'FILÓSOFO — Autor: Aristóteles, en el inicio de su obra Metafísica.'
   },
   {
     id: 'etapa3-q4',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 4 DE 10)',
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 4 DE 10)',
     question: '¿Quién dijo la frase: «Cuando alguien protege algo verdaderamente importante, puede volverse tan fuerte como necesita ser»?',
-    options: { A: 'Haku', B: 'Naruto Uzumaki', C: 'Epicteto', D: 'Rock Lee' },
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
     correctOption: 'A',
-    explanation: 'Autor: Haku, en Naruto clásico.'
+    explanation: 'NARUTO — Autor: Haku, en Naruto clásico.'
   },
   {
     id: 'etapa3-q5',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 5 DE 10)',
-    question: '¿Quién pronunció la frase: «Despierta a la realidad: nada ocurre jamás como uno lo planea en este mundo»?',
-    options: { A: 'Séneca', B: 'Obito Uchiha', C: 'Madara Uchiha', D: 'Epicteto' },
-    correctOption: 'C',
-    explanation: 'Autor: Madara Uchiha, en Naruto Shippuden.'
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 5 DE 10)',
+    question: '¿Quién dijo la frase: «Despierta a la realidad: nada ocurre jamás como uno lo planea en este mundo»?',
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'NARUTO — Autor: Madara Uchiha, en Naruto Shippuden.'
   },
   {
     id: 'etapa3-q6',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 6 DE 10)',
-    question: '¿Quién es el autor de la frase: «Sufrimos más a menudo en la imaginación que en la realidad»?',
-    options: { A: 'Itachi Uchiha', B: 'Séneca', C: 'Sócrates', D: 'Kakashi Hatake' },
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 6 DE 10)',
+    question: '¿Quién dijo la frase: «Sufrimos más a menudo en la imaginación que en la realidad»?',
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
     correctOption: 'B',
-    explanation: 'Autor: Séneca, en Cartas a Lucilio.'
+    explanation: 'FILÓSOFO — Autor: Séneca, en Cartas a Lucilio.'
   },
   {
     id: 'etapa3-q7',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 7 DE 10)',
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 7 DE 10)',
     question: '¿Quién dijo la frase: «La gente se vuelve más fuerte porque tiene recuerdos que no puede olvidar»?',
-    options: { A: 'Jiraiya', B: 'Aristóteles', C: 'Tsunade', D: 'Haku' },
-    correctOption: 'C',
-    explanation: 'Autor: Tsunade, en Naruto Shippuden.'
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'NARUTO — Autor: Tsunade, en Naruto Shippuden.'
   },
   {
     id: 'etapa3-q8',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 8 DE 10)',
-    question: '¿Quién es el autor de la frase: «Una vida sin examen no merece ser vivida»?',
-    options: { A: 'Sócrates', B: 'Séneca', C: 'Madara Uchiha', D: 'Aristóteles' },
-    correctOption: 'A',
-    explanation: 'Autor: Sócrates, según Platón en la Apología de Sócrates.'
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 8 DE 10)',
+    question: '¿Quién dijo la frase: «Una vida sin examen no merece ser vivida»?',
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
+    correctOption: 'B',
+    explanation: 'FILÓSOFO — Autor: Sócrates, según Platón en la Apología de Sócrates.'
   },
   {
     id: 'etapa3-q9',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 9 DE 10)',
-    question: '¿Quién es el autor de la frase: «Algunas cosas dependen de nosotros y otras no»?',
-    options: { A: 'Nagato (Pain)', B: 'Séneca', C: 'Itachi Uchiha', D: 'Epicteto' },
-    correctOption: 'D',
-    explanation: 'Autor: Epicteto, en el inicio de su obra Manual (Enquiridión).'
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 9 DE 10)',
+    question: '¿Quién dijo la frase: «Algunas cosas dependen de nosotros y otras no»?',
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
+    correctOption: 'B',
+    explanation: 'FILÓSOFO — Autor: Epicteto, en el inicio de su obra Manual (Enquiridión).'
   },
   {
     id: 'etapa3-q10',
     stage: 'etapa3',
-    type: 'multiple',
-    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 10 DE 10)',
-    question: '¿Quién pronunció la frase: «La vida de las personas no termina cuando mueren; termina cuando pierden la fe»?',
-    options: { A: 'Sócrates', B: 'Itachi Uchiha', C: 'Jiraiya', D: 'Séneca' },
-    correctOption: 'B',
-    explanation: 'Autor: Itachi Uchiha, en Naruto Shippuden.'
+    type: 'boolean',
+    category: 'ETAPA 3 • ¿NARUTO O FILÓSOFO? (FRASE 10 DE 10)',
+    question: '¿Quién dijo la frase: «La vida de las personas no termina cuando mueren; termina cuando pierden la fe»?',
+    options: { A: 'NARUTO', B: 'FILÓSOFO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'NARUTO — Autor: Itachi Uchiha, en Naruto Shippuden.'
   }
 ];
 
@@ -1146,9 +1146,16 @@ function ensureOfficialQuestionsInList(list) {
   }
 
   DEFAULT_OFFICIAL_QUESTIONS.forEach(defQ => {
-    if (!existingMap.has(defQ.id)) {
+    const existing = existingMap.get(defQ.id);
+    if (!existing) {
       cleanList.push({ ...defQ });
       addedOrUpdated = true;
+    } else if (defQ.stage === 'etapa3' && (existing.type !== 'boolean' || existing.options?.A !== 'NARUTO' || existing.options?.B !== 'FILÓSOFO' || existing.question !== defQ.question)) {
+      const idx = cleanList.findIndex(item => item.id === defQ.id);
+      if (idx !== -1) {
+        cleanList[idx] = { ...defQ };
+        addedOrUpdated = true;
+      }
     }
   });
 

@@ -3197,6 +3197,105 @@ body.quiz-hud-active .slot-wrapper {
   letter-spacing: 2px;
 }
 
+/* ============================================================
+   ADAPTACIÓN RESPONSIVE PARA RESOLUCIONES MENORES (720p / TABLET / MÓVIL)
+   ============================================================ */
+@media (max-width: 1560px) {
+  .quiz-question-hex-border {
+    width: 92vw;
+  }
+  .quiz-option-wrapper {
+    width: 44vw;
+  }
+  .quiz-question-text {
+    font-size: 26px;
+  }
+  .quiz-question-text.is-long-text {
+    font-size: 22px;
+  }
+  .quiz-opt-letter,
+  .quiz-opt-text {
+    font-size: 21px;
+  }
+}
 
+@media (max-width: 1100px) {
+  .millionaire-quiz-hud {
+    bottom: 24px;
+  }
+  .quiz-question-hex {
+    min-height: 76px;
+    padding: 12px 38px;
+  }
+  .quiz-question-text {
+    font-size: 20px;
+  }
+  .quiz-question-text.is-long-text {
+    font-size: 17px;
+  }
+  .quiz-options-row {
+    gap: 16px;
+  }
+  .quiz-option-hex {
+    min-height: 52px;
+    padding: 8px 24px;
+  }
+  .quiz-opt-letter,
+  .quiz-opt-text {
+    font-size: 17px;
+  }
+  .millionaire-quiz-hud.is-boolean-mode .quiz-row-1 .quiz-opt-text {
+    font-size: 20px;
+  }
+  .stream-bottom-chat {
+    max-width: 92vw;
+  }
+}
 
+@media (max-width: 768px) {
+  .millionaire-quiz-hud {
+    bottom: 14px;
+  }
+  .quiz-header-badge {
+    padding: 5px 14px;
+  }
+  .quiz-category-text {
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  .quiz-question-hex-border {
+    width: 95vw;
+  }
+  .quiz-question-hex {
+    min-height: 62px;
+    padding: 10px 26px;
+  }
+  .quiz-question-text,
+  .quiz-question-text.is-long-text {
+    font-size: 15px;
+  }
+  .quiz-options-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .quiz-option-wrapper {
+    width: 92vw;
+    max-width: 92vw;
+  }
+  .quiz-option-hex {
+    min-height: 44px;
+    padding: 6px 22px;
+  }
+  .quiz-opt-letter,
+  .quiz-opt-text {
+    font-size: 15px;
+  }
+  .millionaire-quiz-hud.is-boolean-mode .quiz-row-1 .quiz-option-hex {
+    min-height: 50px;
+    padding: 8px 24px;
+  }
+  .millionaire-quiz-hud.is-boolean-mode .quiz-row-1 .quiz-opt-text {
+    font-size: 17px;
+  }
+}
 

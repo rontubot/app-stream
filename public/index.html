@@ -38,6 +38,10 @@
     }
   </script>
   <style>
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
     /* 16:9 Ratio perfecto responsive para monitor OBS */
     .preview-box-ratio {
       width: 100%;
@@ -60,36 +64,48 @@
     ::-webkit-scrollbar-track { background: #070a0d; }
     ::-webkit-scrollbar-thumb { background: #222f3d; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #00ff66; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-cyber-black text-gray-100 min-h-screen font-sans antialiased selection:bg-cyber-green selection:text-black">
+<body class="bg-cyber-black text-gray-100 min-h-screen font-sans antialiased selection:bg-cyber-green selection:text-black overflow-x-hidden">
 
   <!-- ============================================================
        HEADER SUPERIOR RESPONSIVE
        ============================================================ -->
   <header class="border-b border-cyber-border bg-cyber-dark/95 backdrop-blur sticky top-0 z-40 px-3 sm:px-6 py-2.5">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-      <!-- Isotipo (Izquierda) -->
-      <div class="flex items-center justify-between w-full md:w-auto gap-3">
-        <div class="w-9 h-9 rounded-lg bg-cyber-green/10 border border-cyber-green flex items-center justify-center p-1 shadow-[0_0_12px_rgba(0,255,102,0.35)] shrink-0 overflow-hidden" title="BirraVerde Stream Control">
-          <img src="/assets/isotipo.png" alt="BirraVerde" class="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(0,255,102,0.5)]">
+    <div class="max-w-7xl mx-auto flex flex-col xl:flex-row items-center justify-between gap-2.5 xl:gap-4">
+      <!-- Fila Superior en Móvil/Tablet: Isotipo + Controles de Estado/Audio/Usuario -->
+      <div class="flex items-center justify-between w-full xl:w-auto gap-2 flex-wrap sm:flex-nowrap">
+        <div class="flex items-center gap-2.5 shrink-0">
+          <div class="w-9 h-9 rounded-lg bg-cyber-green/10 border border-cyber-green flex items-center justify-center p-1 shadow-[0_0_12px_rgba(0,255,102,0.35)] shrink-0 overflow-hidden" title="BirraVerde Stream Control">
+            <img src="/assets/isotipo.png" alt="BirraVerde" class="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(0,255,102,0.5)]">
+          </div>
+
+          <!-- Estado en móvil (para ahorrar espacio) -->
+          <div class="sm:hidden flex items-center gap-1.5 px-2 py-1 rounded-full bg-cyber-card border border-cyber-border text-[11px] font-mono">
+            <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="socket-dot-mobile"></span>
+          </div>
         </div>
 
-        <!-- Estado en móvil (para ahorrar espacio) -->
-        <div class="md:hidden flex items-center gap-1.5 px-2 py-1 rounded-full bg-cyber-card border border-cyber-border text-[11px] font-mono">
-          <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="socket-dot-mobile"></span>
+        <!-- Controles de Audio y Usuario visibles en la barra superior en pantallas < xl -->
+        <div class="flex xl:hidden items-center gap-1.5 sm:gap-2 flex-wrap justify-end ml-auto">
+          <button type="button" onclick="document.getElementById('btn-master-mute')?.click()" class="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-green/50 text-cyber-green text-[11px] font-chakra font-bold uppercase tracking-wide">
+            <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+            <span class="hidden xs:inline">AUDIO OBS</span>
+          </button>
         </div>
       </div>
 
       <!-- Barra de Navegación de Pestañas (Navbar) -->
-      <nav class="flex items-center gap-1.5 bg-cyber-black/70 p-1 rounded-xl border border-cyber-border/80 w-full md:w-auto justify-center">
-        <button id="nav-tab-main" type="button" class="nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)]">
-          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+      <nav class="flex flex-wrap items-center justify-center gap-1.5 bg-cyber-black/70 p-1.5 rounded-xl border border-cyber-border/80 w-full xl:w-auto max-w-full">
+        <button id="nav-tab-main" type="button" class="nav-tab active flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] whitespace-nowrap shrink-0">
+          <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"></i>
           <span>CONTROL PRINCIPAL</span>
         </button>
 
-        <button id="nav-tab-animations" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
-          <i data-lucide="layers" class="w-4 h-4 text-cyber-green"></i>
+        <button id="nav-tab-animations" type="button" class="nav-tab flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="layers" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyber-green shrink-0"></i>
           <span>ESCENAS</span>
           <span id="nav-badge-waiting" class="hidden px-1.5 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-mono font-extrabold animate-bounce shadow-[0_0_10px_rgba(251,191,36,0.8)]">🔔 1 EN ESPERA</span>
           <span id="nav-badge-vs" class="hidden px-1.5 py-0.5 rounded-full bg-cyber-green text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(0,255,102,0.5)]">VS VIVO</span>
@@ -97,47 +113,47 @@
           <span id="nav-badge-quiz" class="hidden px-1.5 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(251,191,36,0.6)]">TRIVIA OBS</span>
         </button>
 
-        <button id="nav-tab-announcements" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
-          <i data-lucide="megaphone" class="w-4 h-4 text-cyber-green"></i>
+        <button id="nav-tab-announcements" type="button" class="nav-tab flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="megaphone" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyber-green shrink-0"></i>
           <span>ANUNCIOS</span>
           <span id="nav-badge-event-cd" class="hidden px-1.5 py-0.5 rounded-full bg-cyber-green text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(0,255,102,0.5)]">ACTIVO</span>
         </button>
 
-        <button id="nav-tab-mods" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
-          <i data-lucide="shield" class="w-4 h-4 text-cyber-green"></i>
+        <button id="nav-tab-mods" type="button" class="nav-tab flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="shield" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyber-green shrink-0"></i>
           <span>MODS</span>
           <span id="nav-badge-mods-alert" class="hidden px-1.5 py-0.5 rounded-full bg-cyber-green text-black text-[9px] font-mono font-extrabold animate-bounce shadow-[0_0_10px_rgba(0,255,102,0.9)]">🔔 ALERTA</span>
           <span id="nav-badge-mods-unread" class="hidden px-1.5 py-0.5 rounded-full bg-cyan-400 text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(6,182,212,0.7)]">0</span>
         </button>
 
-        <button id="nav-tab-config" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
-          <i data-lucide="settings" class="w-4 h-4 text-cyber-green"></i>
+        <button id="nav-tab-config" type="button" class="nav-tab flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="settings" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyber-green shrink-0"></i>
           <span>CONFIGURACIÓN</span>
         </button>
       </nav>
 
       <!-- Estado de Conexión, Audio y Usuario -->
-      <div class="flex items-center gap-2.5 w-full md:w-auto justify-end">
+      <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-between sm:justify-end">
         <!-- Socket Status (En Línea) -->
-        <div id="socket-badge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-card border border-cyber-border text-xs font-mono">
+        <div id="socket-badge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-card border border-cyber-border text-xs font-mono shrink-0">
           <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse" id="socket-dot"></span>
           <span id="socket-status" class="text-gray-300">Conectando...</span>
         </div>
 
         <!-- Botón Mute Maestro Global (Esquina Superior Derecha) -->
-        <button id="btn-master-mute" type="button" title="Silenciar o reactivar todo el audio de la plataforma en OBS (TTS + Videollamadas)" class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-green/50 hover:border-cyber-green text-cyber-green text-xs font-chakra font-bold uppercase tracking-wide transition-all shadow-[0_0_12px_rgba(0,255,102,0.15)]">
-          <i id="icon-master-mute" data-lucide="volume-2" class="w-4 h-4"></i>
-          <span id="text-master-mute">AUDIO OBS: ON</span>
+        <button id="btn-master-mute" type="button" title="Silenciar o reactivar todo el audio de la plataforma en OBS (TTS + Videollamadas)" class="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-cyber-card border border-cyber-green/50 hover:border-cyber-green text-cyber-green text-xs font-chakra font-bold uppercase tracking-wide transition-all shadow-[0_0_12px_rgba(0,255,102,0.15)] shrink-0">
+          <i id="icon-master-mute" data-lucide="volume-2" class="w-4 h-4 shrink-0"></i>
+          <span id="text-master-mute" class="truncate">AUDIO OBS: ON</span>
         </button>
 
         <!-- Badge de Usuario Autenticado (Nivel 1 o MODS) y Botón Cerrar Sesión -->
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 ml-auto sm:ml-0">
           <div id="header-user-badge" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-green/40 text-xs font-chakra font-bold">
             <span id="header-user-icon">👑</span>
-            <span id="header-user-name" class="text-white uppercase">ADMIN</span>
-            <span id="header-user-level" class="px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[9px] font-mono uppercase">NIVEL 1</span>
+            <span id="header-user-name" class="text-white uppercase truncate max-w-[90px] sm:max-w-none">ADMIN</span>
+            <span id="header-user-level" class="px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[9px] font-mono uppercase shrink-0">NIVEL 1</span>
           </div>
-          <button id="btn-logout-user" type="button" title="Cerrar sesión" class="px-2.5 py-1.5 rounded-lg bg-red-600/20 border border-red-500/40 hover:bg-red-600 hover:text-white text-red-400 text-xs font-chakra font-bold transition-all flex items-center gap-1 cursor-pointer">
+          <button id="btn-logout-user" type="button" title="Cerrar sesión" class="px-2.5 py-1.5 rounded-lg bg-red-600/20 border border-red-500/40 hover:bg-red-600 hover:text-white text-red-400 text-xs font-chakra font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0">
             <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">Salir</span>
           </button>
@@ -704,31 +720,31 @@
 
           <!-- Barra de Selección Rápida y Lanzamiento -->
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-cyber-card/70 p-3 rounded-xl border border-cyber-border">
-            <div class="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div class="flex-1 min-w-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <div class="flex items-center gap-1.5 text-xs font-chakra font-bold text-gray-300 shrink-0">
                 <i data-lucide="swords" class="w-4 h-4 text-cyber-green"></i> Combate Activo:
               </div>
-              <select id="select-fight-active" class="flex-1 bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-2 text-white font-rajdhani text-sm font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green cursor-pointer">
+              <select id="select-fight-active" class="flex-1 min-w-0 w-full bg-cyber-dark border border-cyber-border hover:border-cyber-green rounded-lg px-3 py-2 text-white font-rajdhani text-sm font-bold uppercase tracking-wider focus:outline-none focus:border-cyber-green cursor-pointer">
                 <!-- Se llena dinámicamente -->
               </select>
             </div>
 
-            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              <button id="btn-launch-vs" class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(0,255,102,0.3)]">
-                <i data-lucide="play" class="w-3.5 h-3.5 fill-black"></i>
-                <span>LANZAR VS A PANTALLA</span>
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
+              <button id="btn-launch-vs" class="px-4 py-2 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs uppercase hover:bg-emerald-400 transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(0,255,102,0.3)]">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-black shrink-0"></i>
+                <span class="truncate">LANZAR VS A PANTALLA</span>
               </button>
               <button id="btn-hide-vs" class="px-3.5 py-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5">
-                <i data-lucide="square" class="w-3 h-3 fill-current"></i>
+                <i data-lucide="square" class="w-3 h-3 fill-current shrink-0"></i>
                 <span>QUITAR VS</span>
               </button>
               <button id="btn-open-create-fight" class="px-3 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5" title="Crear nuevo combate">
-                <i data-lucide="plus" class="w-3.5 h-3.5 text-cyber-green"></i>
-                <span class="hidden md:inline">NUEVO COMBATE</span>
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-cyber-green shrink-0"></i>
+                <span>NUEVO COMBATE</span>
               </button>
               <button id="btn-open-edit-fight" class="px-3 py-2 rounded-lg bg-cyber-card border border-cyber-border hover:border-gray-500 text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5" title="Editar combate seleccionado">
-                <i data-lucide="edit-3" class="w-3.5 h-3.5 text-yellow-400"></i>
-                <span class="hidden md:inline">EDITAR</span>
+                <i data-lucide="edit-3" class="w-3.5 h-3.5 text-yellow-400 shrink-0"></i>
+                <span>EDITAR</span>
               </button>
             </div>
           </div>
@@ -785,11 +801,11 @@
 
           <!-- Barra de Control Rápido: Modo y Lanzamiento al Stream -->
           <div class="bg-black/50 border border-cyber-border/80 rounded-xl p-3.5 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-inner">
-            <div class="flex items-center gap-3 flex-1">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
               <label class="text-xs font-chakra font-bold text-gray-300 uppercase shrink-0 flex items-center gap-1.5">
                 <i data-lucide="layout" class="w-3.5 h-3.5 text-cyan-400"></i> Modo Activo:
               </label>
-              <select id="select-multicam-scene-quick" class="flex-1 bg-cyber-dark border border-cyber-border hover:border-cyan-400 rounded-lg px-3 py-2 text-white font-rajdhani text-sm font-bold uppercase tracking-wider focus:outline-none focus:border-cyan-400 cursor-pointer">
+              <select id="select-multicam-scene-quick" class="flex-1 min-w-0 w-full bg-cyber-dark border border-cyber-border hover:border-cyan-400 rounded-lg px-3 py-2 text-white font-rajdhani text-sm font-bold uppercase tracking-wider focus:outline-none focus:border-cyan-400 cursor-pointer">
                 <option value="pip-corner-tr">Esquina Sup. Der. (Stream Transparente)</option>
                 <option value="pip-corner-br">Esquina Inf. Der. (Stream Transparente)</option>
                 <option value="pip-corner-tl">Esquina Sup. Izq. (Stream Transparente)</option>
@@ -799,17 +815,17 @@
               </select>
             </div>
 
-            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div class="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
               <button id="btn-launch-multicam-scene" type="button" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg bg-cyan-400 text-black font-chakra font-extrabold text-xs uppercase hover:brightness-110 transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-                <i data-lucide="play" class="w-3.5 h-3.5 fill-black"></i>
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-black shrink-0"></i>
                 <span>LANZAR CÁMARAS AL STREAM</span>
               </button>
               <button id="btn-hide-multicam-scene" type="button" class="px-3.5 py-2.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5">
-                <i data-lucide="square" class="w-3 h-3 fill-current"></i>
+                <i data-lucide="square" class="w-3 h-3 fill-current shrink-0"></i>
                 <span>QUITAR CÁMARAS</span>
               </button>
               <a href="/guest" target="_blank" class="px-3.5 py-2.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyan-400 text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5" title="Abrir sala de invitados en nueva pestaña">
-                <i data-lucide="external-link" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <i data-lucide="external-link" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
                 <span>ABRIR SALA INVITADO</span>
               </a>
             </div>
@@ -951,8 +967,8 @@
                   <p class="text-[10px] text-gray-400">Ajusta la escala en tiempo real para cualquiera de las 6 escenas</p>
                 </div>
               </div>
-              <div class="flex items-center gap-3 w-full sm:w-auto">
-                <input type="range" id="range-multicam-scale" min="0.5" max="1.5" step="0.05" value="1.0" class="w-full sm:w-48 h-2 bg-cyber-dark rounded-lg appearance-none cursor-pointer accent-cyan-400">
+              <div class="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full sm:w-auto">
+                <input type="range" id="range-multicam-scale" min="0.5" max="1.5" step="0.05" value="1.0" class="flex-1 min-w-[120px] sm:w-48 h-2 bg-cyber-dark rounded-lg appearance-none cursor-pointer accent-cyan-400">
                 <span id="label-multicam-scale-val" class="px-2.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 font-mono text-xs font-bold border border-cyan-400/40 min-w-[55px] text-center">100%</span>
                 <div class="flex items-center gap-1 shrink-0">
                   <button type="button" class="btn-preset-scale px-2 py-1 rounded bg-cyber-card border border-cyber-border hover:border-cyan-400 text-[10px] font-mono font-bold text-gray-300 hover:text-white transition-all" data-scale="0.75">75%</button>
@@ -1029,9 +1045,13 @@
                   <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-400/20 text-cyan-400 border border-cyan-400/40">1920x1080</span>
                 </div>
 
-                <!-- Mini Preview con fondo en cuadrícula transparente -->
-                <div class="relative w-full aspect-video rounded-xl border border-cyber-border overflow-hidden bg-[radial-gradient(#1a2634_1px,transparent_1px)] [background-size:12px_12px] bg-cyber-black">
-                  <iframe id="multicam-preview-iframe" src="/multicam?preview=1" class="w-full h-full border-0 pointer-events-none scale-100"></iframe>
+                <!-- Mini Preview con fondo en cuadrícula transparente escalado a 1920x1080 -->
+                <div class="relative w-full rounded-xl border border-cyber-border overflow-hidden bg-[radial-gradient(#1a2634_1px,transparent_1px)] [background-size:12px_12px] bg-cyber-black">
+                  <div class="preview-box-ratio">
+                    <div id="multicam-preview-container" class="preview-inner">
+                      <iframe id="multicam-preview-iframe" src="/multicam?preview=1" class="w-full h-full border-0 pointer-events-none"></iframe>
+                    </div>
+                  </div>
                 </div>
 
                 <p class="text-[11px] text-gray-400">
@@ -1097,12 +1117,12 @@
 
           <!-- BARRA DE CONTROL EN VIVO PARA OBS (MOSTRAR/OCULTAR HUD + MOSTRAR RESPUESTA CORRECTA) -->
           <div class="bg-black/60 border border-amber-400/40 rounded-xl p-4 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 shadow-inner">
-            <div class="flex items-center gap-3">
+            <div class="flex items-start sm:items-center gap-3 min-w-0">
               <div class="w-9 h-9 rounded-lg bg-amber-400/10 border border-amber-400/40 flex items-center justify-center text-amber-300 shrink-0">
                 <i data-lucide="tv" class="w-4 h-4"></i>
               </div>
-              <div>
-                <div class="text-xs font-chakra font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+              <div class="min-w-0">
+                <div class="text-xs font-chakra font-extrabold text-white uppercase tracking-wider flex flex-wrap items-center gap-2">
                   <span>CONTROL DIRECTO DEL HUD EN OBS (/OVERLAY)</span>
                   <span id="quiz-correct-status-pill" class="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700 text-[10px] font-mono">
                     RESPUESTA: OCULTA
@@ -1115,28 +1135,28 @@
             </div>
 
             <!-- Botones Maestros de Control en Vivo -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center gap-2.5">
               <!-- 1. Mostrar en OBS Normal -->
               <button id="btn-quiz-show-hud" type="button" class="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.35)] cursor-pointer">
-                <i data-lucide="eye" class="w-4 h-4"></i>
+                <i data-lucide="eye" class="w-4 h-4 shrink-0"></i>
                 <span id="text-btn-quiz-show-hud">MOSTRAR HUD EN OBS (NORMAL)</span>
               </button>
 
               <!-- 2. Mostrar / Ocultar Respuesta Correcta -->
               <button id="btn-quiz-reveal-correct" type="button" class="px-4 py-2.5 rounded-xl bg-cyber-green hover:bg-emerald-400 text-black font-chakra font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_18px_rgba(0,255,102,0.4)] cursor-pointer">
-                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
                 <span id="text-btn-quiz-reveal-correct">MOSTRAR RESPUESTA CORRECTA</span>
               </button>
 
               <!-- 3. Ocultar Respuesta (Volver a Normal sin quitar el HUD) -->
               <button id="btn-quiz-reset-normal" type="button" class="hidden px-3.5 py-2.5 rounded-xl bg-cyber-card border border-amber-400/50 hover:bg-amber-400/20 text-amber-300 font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Ocultar el resaltado verde y volver la pregunta a estado normal">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 shrink-0"></i>
                 <span>VOLVER A NORMAL</span>
               </button>
 
               <!-- 4. Ocultar HUD de OBS -->
               <button id="btn-quiz-hide-hud" type="button" class="px-4 py-2.5 rounded-xl bg-red-600/85 hover:bg-red-600 text-white font-chakra font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                <i data-lucide="eye-off" class="w-4 h-4"></i>
+                <i data-lucide="eye-off" class="w-4 h-4 shrink-0"></i>
                 <span>OCULTAR HUD</span>
               </button>
             </div>
@@ -1155,7 +1175,7 @@
                   </h3>
                   <p class="text-[11px] text-gray-400">Escribe la pregunta, completa las opciones A, B, C, D y marca cuál es la correcta.</p>
                 </div>
-                <button id="btn-quiz-new-clear" type="button" class="px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-amber-400 text-gray-300 hover:text-amber-300 text-xs font-chakra font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+                <button id="btn-quiz-new-clear" type="button" class="px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-amber-400 text-gray-300 hover:text-amber-300 text-xs font-chakra font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0">
                   <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-amber-400"></i>
                   <span>Nueva / Limpiar</span>
                 </button>
@@ -1165,20 +1185,20 @@
 
               <!-- Selector de Tipo de Pregunta: 4 Opciones (A, B, C, D) vs Verdadero o Falso -->
               <div class="bg-cyber-card/70 border border-cyber-border rounded-xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 min-w-0">
                   <i data-lucide="sliders" class="w-4 h-4 text-amber-400 shrink-0"></i>
                   <div>
                     <span class="text-xs font-chakra font-bold text-white uppercase">Modo / Tipo de Pregunta:</span>
                     <p class="text-[10px] text-gray-400">Elige entre Selección Múltiple (4 opciones) o Verdadero y Falso (2 opciones)</p>
                   </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 shrink-0">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 shrink-0 w-full sm:w-auto">
                   <button type="button" id="btn-quiz-type-multiple" class="px-3 py-2 rounded-lg bg-amber-400 text-black font-chakra font-extrabold text-xs uppercase transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(251,191,36,0.3)] cursor-pointer">
-                    <i data-lucide="grid" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="grid" class="w-3.5 h-3.5 shrink-0"></i>
                     <span>4 Opciones (A,B,C,D)</span>
                   </button>
                   <button type="button" id="btn-quiz-type-boolean" class="px-3 py-2 rounded-lg bg-cyber-dark border border-cyber-border hover:border-cyan-400 text-gray-300 font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                    <i data-lucide="check-square" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    <i data-lucide="check-square" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
                     <span>Verdadero o Falso</span>
                   </button>
                 </div>
@@ -1249,11 +1269,11 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <!-- OPCIÓN A -->
                   <div id="quiz-editor-card-A" class="quiz-editor-opt-card bg-[#091526] border-2 border-cyber-green rounded-xl p-3 space-y-2 transition-all">
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
                       <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
                         <span>◆</span> <span id="quiz-label-opt-A">OPCIÓN A:</span>
                       </span>
-                      <div class="flex items-center gap-1.5">
+                      <div class="flex items-center gap-1.5 flex-wrap">
                         <button type="button" data-lock-opt="A" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción A en color naranja en OBS antes de revelar">
                           Marcar
                         </button>
@@ -1267,11 +1287,11 @@
 
                   <!-- OPCIÓN B -->
                   <div id="quiz-editor-card-B" class="quiz-editor-opt-card bg-[#091526] border border-cyber-border rounded-xl p-3 space-y-2 transition-all">
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
                       <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
                         <span>◆</span> <span id="quiz-label-opt-B">OPCIÓN B:</span>
                       </span>
-                      <div class="flex items-center gap-1.5">
+                      <div class="flex items-center gap-1.5 flex-wrap">
                         <button type="button" data-lock-opt="B" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción B en color naranja en OBS antes de revelar">
                           Marcar
                         </button>
@@ -1285,11 +1305,11 @@
 
                   <!-- OPCIÓN C -->
                   <div id="quiz-editor-card-C" class="quiz-editor-opt-card bg-[#091526] border border-cyber-border rounded-xl p-3 space-y-2 transition-all">
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
                       <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
                         <span>◆</span> <span>OPCIÓN C:</span>
                       </span>
-                      <div class="flex items-center gap-1.5">
+                      <div class="flex items-center gap-1.5 flex-wrap">
                         <button type="button" data-lock-opt="C" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción C en color naranja en OBS antes de revelar">
                           Marcar
                         </button>
@@ -1303,11 +1323,11 @@
 
                   <!-- OPCIÓN D -->
                   <div id="quiz-editor-card-D" class="quiz-editor-opt-card bg-[#091526] border border-cyber-border rounded-xl p-3 space-y-2 transition-all">
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
                       <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
                         <span>◆</span> <span>OPCIÓN D:</span>
                       </span>
-                      <div class="flex items-center gap-1.5">
+                      <div class="flex items-center gap-1.5 flex-wrap">
                         <button type="button" data-lock-opt="D" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción D en color naranja en OBS antes de revelar">
                           Marcar
                         </button>
@@ -1323,7 +1343,7 @@
 
               <!-- Explicación / Nota de Referencia para el Host -->
               <div class="space-y-1">
-                <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase flex items-center justify-between">
+                <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase flex flex-wrap items-center justify-between gap-1">
                   <span class="flex items-center gap-1.5">
                     <i data-lucide="book-open" class="w-3.5 h-3.5 text-cyber-green"></i>
                     <span>Explicación / Justificación (Guía de lectura para el Host)</span>
@@ -1334,20 +1354,20 @@
               </div>
 
               <!-- Botones Inferiores del Editor -->
-              <div class="pt-3 border-t border-cyber-border/70 flex flex-wrap items-center justify-between gap-2.5">
-                <button id="btn-quiz-save-bank" type="button" class="px-4 py-2.5 rounded-xl bg-cyber-card border border-amber-400/50 hover:bg-amber-400/15 text-amber-300 font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer">
-                  <i data-lucide="save" class="w-4 h-4"></i>
+              <div class="pt-3 border-t border-cyber-border/70 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-between gap-2.5">
+                <button id="btn-quiz-save-bank" type="button" class="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-cyber-card border border-amber-400/50 hover:bg-amber-400/15 text-amber-300 font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i data-lucide="save" class="w-4 h-4 shrink-0"></i>
                   <span>Guardar en Banco</span>
                 </button>
 
-                <div class="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
-                  <button id="btn-quiz-update-only" type="button" class="px-3.5 py-2.5 rounded-xl bg-cyber-card border border-cyber-border hover:border-sky-400 text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer" title="Actualizar los textos sin cambiar si el HUD está visible u oculto">
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 sm:flex-initial justify-end">
+                  <button id="btn-quiz-update-only" type="button" class="w-full sm:w-auto justify-center px-3.5 py-2.5 rounded-xl bg-cyber-card border border-cyber-border hover:border-sky-400 text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer" title="Actualizar los textos sin cambiar si el HUD está visible u oculto">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400 shrink-0"></i>
                     <span>Actualizar Datos</span>
                   </button>
 
-                  <button id="btn-quiz-launch-normal" type="button" class="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-xs uppercase transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.35)] cursor-pointer">
-                    <i data-lucide="play" class="w-4 h-4 fill-black"></i>
+                  <button id="btn-quiz-launch-normal" type="button" class="w-full sm:w-auto justify-center px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-xs uppercase transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.35)] cursor-pointer">
+                    <i data-lucide="play" class="w-4 h-4 fill-black shrink-0"></i>
                     <span>LANZAR PREGUNTA A OBS (NORMAL)</span>
                   </button>
                 </div>
@@ -1359,9 +1379,9 @@
 
               <!-- Tarjeta de Vista Previa Rápida del HUD en OBS -->
               <div class="bg-cyber-black/70 border border-sky-500/40 rounded-xl p-4 space-y-3 shadow-inner">
-                <div class="flex items-center justify-between pb-2 border-b border-cyber-border">
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-cyber-border">
                   <span class="text-xs font-chakra font-bold text-sky-400 uppercase flex items-center gap-1.5">
-                    <i data-lucide="monitor" class="w-4 h-4"></i>
+                    <i data-lucide="monitor" class="w-4 h-4 shrink-0"></i>
                     <span>VISTA PREVIA DE PREGUNTA ACTIVA EN OBS</span>
                   </span>
                   <span id="quiz-preview-correct-badge" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/40 text-[10px] font-mono font-bold">
@@ -1374,10 +1394,10 @@
                   <div class="text-[10px] font-chakra font-bold text-amber-300 text-center uppercase tracking-wider truncate" id="quiz-mini-preview-cat">
                     ¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE
                   </div>
-                  <div class="bg-[#0b192e] border border-sky-400/60 rounded-lg px-3 py-2 text-center text-xs sm:text-sm font-rajdhani font-extrabold text-white uppercase" id="quiz-mini-preview-q">
+                  <div class="bg-[#0b192e] border border-sky-400/60 rounded-lg px-3 py-2 text-center text-xs sm:text-sm font-rajdhani font-extrabold text-white uppercase break-words" id="quiz-mini-preview-q">
                     ¿EN QUÉ PLATAFORMA SE TRANSMITE OFICIALMENTE LA VELADA DEL CAOS?
                   </div>
-                  <div class="grid grid-cols-2 gap-2 text-xs font-rajdhani font-bold">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-rajdhani font-bold">
                     <div id="quiz-mini-opt-A" class="px-2.5 py-1.5 rounded-lg bg-[#0c1a30] border border-sky-500/40 text-gray-200 truncate">
                       <span class="text-amber-400 font-chakra font-extrabold mr-1">◆ A:</span>
                       <span id="quiz-mini-text-A">En el canal oficial de BirraVerde en Kick</span>
@@ -2172,7 +2192,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         <!-- COLUMNA IZQUIERDA (7 COLS): CHAT ACTIVO ADMIN ↔ MODS -->
-        <section class="lg:col-span-7 bg-cyber-card border border-cyber-border rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col h-[580px]">
+        <section class="lg:col-span-7 bg-cyber-card border border-cyber-border rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col h-[460px] sm:h-[580px]">
           <!-- Header del Chat -->
           <div class="flex items-center justify-between pb-3.5 mb-3 border-b border-cyber-border shrink-0">
             <div class="flex items-center gap-2.5">
@@ -2204,10 +2224,10 @@
           </div>
 
           <!-- Formulario de Envío -->
-          <form id="mods-chat-form" class="pt-3.5 mt-2 border-t border-cyber-border flex items-center gap-2.5 shrink-0">
-            <input type="text" id="input-mods-chat-text" maxlength="500" placeholder="Escribe un mensaje para el chat Admin ↔ MODS..." autocomplete="off" class="flex-1 bg-cyber-dark border border-cyber-border focus:border-cyan-400 rounded-xl px-4 py-2.5 text-sm text-white font-medium focus:outline-none transition-colors">
-            <button id="btn-send-mods-chat" type="submit" class="px-5 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-chakra font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.35)] shrink-0 cursor-pointer">
-              <i data-lucide="send" class="w-4 h-4"></i>
+          <form id="mods-chat-form" class="pt-3.5 mt-2 border-t border-cyber-border flex items-center gap-2 shrink-0">
+            <input type="text" id="input-mods-chat-text" maxlength="500" placeholder="Escribe un mensaje para el chat Admin ↔ MODS..." autocomplete="off" class="flex-1 min-w-0 bg-cyber-dark border border-cyber-border focus:border-cyan-400 rounded-xl px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm text-white font-medium focus:outline-none transition-colors">
+            <button id="btn-send-mods-chat" type="submit" class="px-3.5 sm:px-5 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-chakra font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all flex items-center gap-1.5 sm:gap-2 shadow-[0_0_15px_rgba(6,182,212,0.35)] shrink-0 cursor-pointer">
+              <i data-lucide="send" class="w-4 h-4 shrink-0"></i>
               <span>ENVIAR</span>
             </button>
           </form>
@@ -2666,18 +2686,18 @@
         </div>
 
         <!-- Footer Botones -->
-        <div class="pt-3 border-t border-cyber-border flex items-center justify-between gap-3">
+        <div class="pt-3 border-t border-cyber-border flex flex-wrap items-center justify-between gap-2.5">
           <button type="button" id="btn-cancel-fight-modal" class="px-4 py-2 rounded-lg bg-cyber-card border border-cyber-border text-gray-300 hover:text-white font-chakra text-xs sm:text-sm font-semibold transition-colors">
             Cancelar
           </button>
           
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button type="submit" id="btn-save-fight" class="px-4 py-2 rounded-lg bg-cyber-card border border-cyber-green text-cyber-green hover:bg-cyber-green/10 font-chakra font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5">
-              <i data-lucide="save" class="w-4 h-4"></i>
+              <i data-lucide="save" class="w-4 h-4 shrink-0"></i>
               <span>GUARDAR COMBATE</span>
             </button>
             <button type="button" id="btn-save-and-launch-fight" class="px-5 py-2 rounded-lg bg-cyber-green text-black font-chakra font-extrabold text-xs sm:text-sm hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,255,102,0.3)]">
-              <i data-lucide="play" class="w-4 h-4 fill-black"></i>
+              <i data-lucide="play" class="w-4 h-4 fill-black shrink-0"></i>
               <span>GUARDAR Y LANZAR AHORA</span>
             </button>
           </div>
@@ -2804,6 +2824,6 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/admin.js?v=20261123b"></script>
+  <script src="/js/admin.js?v=20261123d"></script>
 </body>
 </html>

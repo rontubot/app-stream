@@ -1957,23 +1957,25 @@ function updateMillionaireQuizHud(quizState) {
   }
 
   // Etiqueta de estado
+  const optAText = opts.A || 'VERDADERO';
+  const optBText = opts.B || 'FALSO';
   if (quizObsStatusTag) {
     if (showCorrect) {
       if (isBoolean) {
-        const boolLabel = correctOpt === 'A' ? (opts.A || 'VERDADERO') : (opts.B || 'FALSO');
+        const boolLabel = correctOpt === 'A' ? optAText : optBText;
         quizObsStatusTag.textContent = `✓ RESPUESTA CORRECTA: ${boolLabel}`;
       } else {
         quizObsStatusTag.textContent = `✓ RESPUESTA CORRECTA: OPCIÓN ${correctOpt}`;
       }
     } else if (selectedOpt) {
       if (isBoolean) {
-        const selLabel = selectedOpt === 'A' ? (opts.A || 'VERDADERO') : (opts.B || 'FALSO');
+        const selLabel = selectedOpt === 'A' ? optAText : optBText;
         quizObsStatusTag.textContent = `OPCIÓN MARCADA: ${selLabel}`;
       } else {
         quizObsStatusTag.textContent = `OPCIÓN MARCADA: ${selectedOpt}`;
       }
     } else {
-      quizObsStatusTag.textContent = isBoolean ? 'VERDADERO O FALSO' : 'PREGUNTA EN VIVO';
+      quizObsStatusTag.textContent = isBoolean ? `${optAText} O ${optBText}` : 'PREGUNTA EN VIVO';
     }
   }
 

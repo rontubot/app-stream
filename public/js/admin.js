@@ -383,11 +383,17 @@ function refreshIcons() {
 }
 
 function adjustPreviewScale() {
-  if (!previewContainer || !previewContainer.parentElement) return;
-  const parentWidth = previewContainer.parentElement.clientWidth;
-  if (!parentWidth) return;
-  const scale = parentWidth / 1920;
-  previewContainer.style.transform = `scale(${scale})`;
+  const containers = [
+    previewContainer,
+    document.getElementById('multicam-preview-container')
+  ];
+  containers.forEach((container) => {
+    if (!container || !container.parentElement) return;
+    const parentWidth = container.parentElement.clientWidth;
+    if (!parentWidth) return;
+    const scale = parentWidth / 1920;
+    container.style.transform = `scale(${scale})`;
+  });
 }
 window.addEventListener('resize', adjustPreviewScale);
 window.addEventListener('load', adjustPreviewScale);
@@ -560,12 +566,12 @@ socket.on('state-update', (state) => {
       if (!state.scene.title) scTitle = 'STREAM FINALIZADO';
     }
 
-    sceneActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)]';
-    sceneActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping';
+    sceneActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)] w-full sm:w-auto min-w-0 max-w-full';
+    sceneActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping shrink-0';
     sceneActiveText.textContent = `EN PANTALLA: ${scTitle}`;
   } else {
-    sceneActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
-    sceneActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+    sceneActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase w-full sm:w-auto min-w-0 max-w-full';
+    sceneActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0';
     sceneActiveText.textContent = 'SIN ESCENA (STREAM EN VIVO)';
   }
 
@@ -591,12 +597,12 @@ socket.on('state-update', (state) => {
       const f = state.vs.fight;
       const f1Name = f.fighter1?.name || 'P1';
       const f2Name = f.fighter2?.name || 'P2';
-      vsActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)]';
-      if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping';
+      vsActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)] min-w-0 max-w-full';
+      if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping shrink-0';
       if (vsActiveText) vsActiveText.textContent = `EN PANTALLA: ${f1Name} VS ${f2Name}`;
     } else {
-      vsActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
-      if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+      vsActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase min-w-0 max-w-full';
+      if (vsActiveDot) vsActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0';
       if (vsActiveText) vsActiveText.textContent = 'SIN COMBATE EN VIVO';
     }
   }
@@ -615,12 +621,12 @@ socket.on('state-update', (state) => {
 
   if (multicamActiveIndicator) {
     if (isMulticamLive) {
-      multicamActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-400/20 text-cyan-400 border border-cyan-400/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(6,182,212,0.3)]';
-      if (multicamActiveDot) multicamActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping';
+      multicamActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-400/20 text-cyan-400 border border-cyan-400/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(6,182,212,0.3)] min-w-0 max-w-full';
+      if (multicamActiveDot) multicamActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0';
       if (multicamActiveText) multicamActiveText.textContent = `CÁMARAS EN PANTALLA`;
     } else {
-      multicamActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
-      if (multicamActiveDot) multicamActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500';
+      multicamActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase min-w-0 max-w-full';
+      if (multicamActiveDot) multicamActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0';
       if (multicamActiveText) multicamActiveText.textContent = 'SIN CÁMARAS EN PANTALLA';
     }
   }
@@ -1685,8 +1691,8 @@ btnCopyUrlInside.addEventListener('click', () => {
 // ============================================================
 function switchMainTab(tab, options = {}) {
   const fromUserClick = !!(options && options.fromUserClick);
-  const inactiveBtnClass = 'nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer';
-  const activeBtnClass = 'nav-tab active flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer';
+  const inactiveBtnClass = 'nav-tab flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all cursor-pointer whitespace-nowrap shrink-0';
+  const activeBtnClass = 'nav-tab active flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-chakra font-bold transition-all bg-cyber-green text-black shadow-[0_0_12px_rgba(0,255,102,0.3)] cursor-pointer whitespace-nowrap shrink-0';
 
   // Ocultar todos los paneles
   if (tabPanelMain) tabPanelMain.classList.add('hidden');
@@ -1730,6 +1736,7 @@ function switchMainTab(tab, options = {}) {
     if (tab === 'multicam') {
       setTimeout(() => toggleMulticamModule(true), 50);
     }
+    setTimeout(adjustPreviewScale, 60);
     localStorage.setItem('birraverde_active_tab', 'scenes');
   } else {
     if (tabPanelMain) tabPanelMain.classList.remove('hidden');
@@ -1845,6 +1852,7 @@ function toggleMulticamModule(forceState) {
         cardSceneMulticam.classList.add('border-cyan-400', 'shadow-[0_0_20px_rgba(6,182,212,0.2)]');
       }
       setTimeout(() => {
+        adjustPreviewScale();
         sceneModuleMulticam.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 50);
     } else {
@@ -2433,7 +2441,7 @@ function renderAdminPeersList(peers) {
         </div>
 
         <!-- Fila Inferior: Botones de Control de Audio, Video y Moderación -->
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-cyber-border/60">
+        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 pt-2 border-t border-cyber-border/60">
           
           <!-- 0. Designar / Quitar Anfitrión (Host) -->
           <button type="button" onclick="toggleHostPeer('${peer.id}', ${!isHost})" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${isHost ? 'bg-cyan-500 text-black border-cyan-400 font-extrabold shadow-[0_0_10px_rgba(6,182,212,0.4)]' : 'bg-cyan-500/10 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/20'}" title="${isHost ? 'Quitar rol de anfitrión' : 'Asignar como Anfitrión (elimina su eco en OBS)'}">
@@ -2443,24 +2451,24 @@ function renderAdminPeersList(peers) {
 
           <!-- 1. Mute en Stream (OBS) pero en la llamada privada sí se escucha -->
           <button type="button" onclick="toggleStreamMute('${peer.id}', ${!isStreamMuted})" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${isStreamMuted ? 'bg-amber-500/20 border-amber-500 text-amber-300 hover:bg-amber-500/30' : 'bg-cyan-500/10 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20'}" title="${isStreamMuted ? 'Hacer sonar en Stream OBS' : 'Silenciar en Stream OBS (pero seguir oyendo en la sala privada)'}">
-            <i data-lucide="${isStreamMuted ? 'volume-x' : 'volume-2'}" class="w-3.5 h-3.5"></i>
+            <i data-lucide="${isStreamMuted ? 'volume-x' : 'volume-2'}" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="truncate">${isStreamMuted ? 'Mudo Stream' : 'Audio Stream'}</span>
           </button>
 
           <!-- 2. Silenciar Micrófono General (Mute en toda la llamada) -->
           <button type="button" onclick="forceMutePeer('${peer.id}', '${escapeHtml(peer.name)}')" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${peer.hasAudio ? 'bg-cyber-card border-cyber-border text-gray-300 hover:border-yellow-500 hover:text-yellow-400' : 'bg-cyber-red/20 border-cyber-red text-cyber-red'}" title="Silenciar micrófono de este participante en toda la llamada">
-            <i data-lucide="mic-off" class="w-3.5 h-3.5"></i>
+            <i data-lucide="mic-off" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="truncate">${peer.hasAudio ? 'Mute Mic' : 'Mic OFF'}</span>
           </button>
 
           <!-- 3. Toggle Cámara en OBS (Ocultar/Mostrar) -->
           <button type="button" onclick="togglePeerVisibility('${peer.id}', ${!isHidden})" class="px-2 py-1.5 rounded-lg border text-xs font-chakra font-bold flex items-center justify-center gap-1.5 transition-all ${isHidden ? 'bg-cyber-card border-cyber-border text-gray-400 hover:text-white' : 'bg-cyber-green/10 border-cyber-green text-cyber-green hover:bg-cyber-green hover:text-black'}" title="${isHidden ? 'Mostrar cámara en OBS' : 'Ocultar cámara en OBS'}">
-            <i data-lucide="${isHidden ? 'eye-off' : 'eye'}" class="w-3.5 h-3.5"></i>
+            <i data-lucide="${isHidden ? 'eye-off' : 'eye'}" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="truncate">${isHidden ? 'Oculta' : 'Visible'}</span>
           </button>
 
           <!-- 4. Acciones de Moderación: Expulsar y Banear IP -->
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1 col-span-2 sm:col-span-2 xl:col-span-1">
             <button type="button" onclick="kickMulticamPeer('${peer.id}', '${escapeHtml(peer.name)}')" class="flex-1 px-2 py-1.5 rounded-lg bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600 hover:text-white text-xs font-chakra font-bold flex items-center justify-center gap-1 transition-all" title="Expulsar de la llamada">
               <i data-lucide="door-open" class="w-3.5 h-3.5"></i>
               <span>Kick</span>
@@ -4322,7 +4330,7 @@ const btnQuizRestoreOfficial = document.getElementById('btn-quiz-restore-officia
 const btnQuizPrevQuestion = document.getElementById('btn-quiz-prev-question');
 const btnQuizNextQuestion = document.getElementById('btn-quiz-next-question');
 
-const LS_QUESTIONS_KEY = 'birraverde_quiz_questions_v2';
+const LS_QUESTIONS_KEY = 'birraverde_quiz_questions_v3';
 let questionsBank = [];
 let isQuizPanelOpen = false;
 let hasInitializedQuizEditor = false;
@@ -4383,6 +4391,9 @@ if (btnCollapseQuizPanel) {
 function setEditorQuizTypeUI(type, autoFillDefaults = false) {
   currentEditorQuizType = type === 'boolean' ? 'boolean' : 'multiple';
   const isBool = currentEditorQuizType === 'boolean';
+  const isEtapa3 = quizSelectStage && quizSelectStage.value === 'etapa3';
+  const defaultBoolA = isEtapa3 ? 'NARUTO' : 'VERDADERO';
+  const defaultBoolB = isEtapa3 ? 'FILÓSOFO' : 'FALSO';
 
   if (btnQuizTypeMultiple && btnQuizTypeBoolean) {
     if (isBool) {
@@ -4400,31 +4411,36 @@ function setEditorQuizTypeUI(type, autoFillDefaults = false) {
   if (quizSelectCorrectOptC) quizSelectCorrectOptC.disabled = isBool;
   if (quizSelectCorrectOptD) quizSelectCorrectOptD.disabled = isBool;
 
-  if (quizSelectCorrect) {
-    const optA = quizSelectCorrect.querySelector('option[value="A"]');
-    const optB = quizSelectCorrect.querySelector('option[value="B"]');
-    if (optA) optA.textContent = isBool ? '✓ A: VERDADERO (Correcta)' : '✓ OPCIÓN A (Correcta)';
-    if (optB) optB.textContent = isBool ? '✓ B: FALSO (Correcta)' : '✓ OPCIÓN B (Correcta)';
-  }
-
-  if (labelQuizOptionsHeading) {
-    labelQuizOptionsHeading.textContent = isBool
-      ? 'Modo Verdadero o Falso (Elige si la afirmación es VERDADERO o FALSO)'
-      : 'Las 4 Opciones a Escoger (Haz clic en "Elegir Correcta" en la ganadora)';
-  }
-
-  if (quizLabelOptA) quizLabelOptA.textContent = isBool ? 'OPCIÓN A (VERDADERO):' : 'OPCIÓN A:';
-  if (quizLabelOptB) quizLabelOptB.textContent = isBool ? 'OPCIÓN B (FALSO):' : 'OPCIÓN B:';
-
   if (isBool) {
-    if (autoFillDefaults || !quizInputOpts.A?.value.trim() || quizInputOpts.A?.value.trim() !== 'VERDADERO') {
-      if (quizInputOpts.A) quizInputOpts.A.value = 'VERDADERO';
-      if (quizInputOpts.B) quizInputOpts.B.value = 'FALSO';
+    if (autoFillDefaults || !quizInputOpts.A?.value.trim()) {
+      if (quizInputOpts.A) quizInputOpts.A.value = defaultBoolA;
+    }
+    if (autoFillDefaults || !quizInputOpts.B?.value.trim()) {
+      if (quizInputOpts.B) quizInputOpts.B.value = defaultBoolB;
     }
     if (currentEditorCorrectOption === 'C' || currentEditorCorrectOption === 'D') {
       setEditorCorrectOptionUI('A');
     }
   }
+
+  const labelA = isBool ? ((quizInputOpts.A && quizInputOpts.A.value.trim()) || defaultBoolA) : 'OPCIÓN A';
+  const labelB = isBool ? ((quizInputOpts.B && quizInputOpts.B.value.trim()) || defaultBoolB) : 'OPCIÓN B';
+
+  if (quizSelectCorrect) {
+    const optA = quizSelectCorrect.querySelector('option[value="A"]');
+    const optB = quizSelectCorrect.querySelector('option[value="B"]');
+    if (optA) optA.textContent = isBool ? `✓ A: ${labelA} (Correcta)` : '✓ OPCIÓN A (Correcta)';
+    if (optB) optB.textContent = isBool ? `✓ B: ${labelB} (Correcta)` : '✓ OPCIÓN B (Correcta)';
+  }
+
+  if (labelQuizOptionsHeading) {
+    labelQuizOptionsHeading.textContent = isBool
+      ? `Modo 2 Opciones (${labelA} o ${labelB})`
+      : 'Las 4 Opciones a Escoger (Haz clic en "Elegir Correcta" en la ganadora)';
+  }
+
+  if (quizLabelOptA) quizLabelOptA.textContent = isBool ? `OPCIÓN A (${labelA}):` : 'OPCIÓN A:';
+  if (quizLabelOptB) quizLabelOptB.textContent = isBool ? `OPCIÓN B (${labelB}):` : 'OPCIÓN B:';
 
   setEditorCorrectOptionUI(currentEditorCorrectOption);
 }
@@ -4432,7 +4448,12 @@ function setEditorQuizTypeUI(type, autoFillDefaults = false) {
 if (btnQuizTypeMultiple) {
   btnQuizTypeMultiple.addEventListener('click', () => {
     setEditorQuizTypeUI('multiple', false);
-    if (quizInputOpts.A && quizInputOpts.A.value === 'VERDADERO' && quizInputOpts.B && quizInputOpts.B.value === 'FALSO') {
+    if (
+      quizInputOpts.A &&
+      (quizInputOpts.A.value === 'VERDADERO' || quizInputOpts.A.value === 'NARUTO') &&
+      quizInputOpts.B &&
+      (quizInputOpts.B.value === 'FALSO' || quizInputOpts.B.value === 'FILÓSOFO')
+    ) {
       quizInputOpts.A.value = '';
       quizInputOpts.B.value = '';
     }
@@ -4441,10 +4462,15 @@ if (btnQuizTypeMultiple) {
 
 if (btnQuizTypeBoolean) {
   btnQuizTypeBoolean.addEventListener('click', () => {
+    const isEtapa3 = quizSelectStage && quizSelectStage.value === 'etapa3';
+    if (!isEtapa3 && quizSelectStage && quizSelectStage.value === 'etapa1') {
+      quizSelectStage.value = 'etapa2';
+    }
     setEditorQuizTypeUI('boolean', true);
-    if (quizSelectStage) quizSelectStage.value = 'etapa2';
     if (quizInputCategory && (!quizInputCategory.value.trim() || quizInputCategory.value.includes('SELECCIÓN MÚLTIPLE'))) {
-      quizInputCategory.value = 'ETAPA 2 • VERDADERO O FALSO';
+      quizInputCategory.value = (quizSelectStage && quizSelectStage.value === 'etapa3')
+        ? 'ETAPA 3 • ¿NARUTO O FILÓSOFO?'
+        : 'ETAPA 2 • VERDADERO O FALSO';
     }
   });
 }
@@ -4519,12 +4545,17 @@ if (btnQuizClearLocked) {
 function collectQuizEditorPayload() {
   const isBool = currentEditorQuizType === 'boolean';
   const stage = (quizSelectStage ? quizSelectStage.value : (isBool ? 'etapa2' : 'etapa1'));
-  const category = (quizInputCategory ? quizInputCategory.value.trim() : '') || (isBool ? 'ETAPA 2 • VERDADERO O FALSO' : 'ETAPA 1 • SELECCIÓN MÚLTIPLE');
+  const defaultBoolA = stage === 'etapa3' ? 'NARUTO' : 'VERDADERO';
+  const defaultBoolB = stage === 'etapa3' ? 'FILÓSOFO' : 'FALSO';
+  const defaultCat = stage === 'etapa3'
+    ? 'ETAPA 3 • ¿NARUTO O FILÓSOFO?'
+    : (isBool ? 'ETAPA 2 • VERDADERO O FALSO' : 'ETAPA 1 • SELECCIÓN MÚLTIPLE');
+  const category = (quizInputCategory ? quizInputCategory.value.trim() : '') || defaultCat;
   const question = (quizInputQuestion ? quizInputQuestion.value.trim() : '');
   const explanation = (quizInputExplanation ? quizInputExplanation.value.trim() : '');
   const options = {
-    A: isBool ? ((quizInputOpts.A ? quizInputOpts.A.value.trim() : '') || 'VERDADERO') : (quizInputOpts.A ? quizInputOpts.A.value.trim() : ''),
-    B: isBool ? ((quizInputOpts.B ? quizInputOpts.B.value.trim() : '') || 'FALSO') : (quizInputOpts.B ? quizInputOpts.B.value.trim() : ''),
+    A: isBool ? ((quizInputOpts.A ? quizInputOpts.A.value.trim() : '') || defaultBoolA) : (quizInputOpts.A ? quizInputOpts.A.value.trim() : ''),
+    B: isBool ? ((quizInputOpts.B ? quizInputOpts.B.value.trim() : '') || defaultBoolB) : (quizInputOpts.B ? quizInputOpts.B.value.trim() : ''),
     C: isBool ? '' : (quizInputOpts.C ? quizInputOpts.C.value.trim() : ''),
     D: isBool ? '' : (quizInputOpts.D ? quizInputOpts.D.value.trim() : '')
   };
@@ -4546,13 +4577,16 @@ function collectQuizEditorPayload() {
 function loadQuestionIntoQuizEditor(q) {
   if (!q) return;
   const qType = q.type === 'boolean' ? 'boolean' : 'multiple';
+  const qStage = q.stage || (qType === 'boolean' ? 'etapa2' : 'etapa1');
+  const defaultBoolA = qStage === 'etapa3' ? 'NARUTO' : 'VERDADERO';
+  const defaultBoolB = qStage === 'etapa3' ? 'FILÓSOFO' : 'FALSO';
   if (quizFormId) quizFormId.value = q.id || q.questionId || '';
-  if (quizSelectStage) quizSelectStage.value = q.stage || (qType === 'boolean' ? 'etapa2' : 'etapa1');
-  if (quizInputCategory) quizInputCategory.value = q.category || (qType === 'boolean' ? 'ETAPA 2 • VERDADERO O FALSO' : 'ETAPA 1 • SELECCIÓN MÚLTIPLE');
+  if (quizSelectStage) quizSelectStage.value = qStage;
+  if (quizInputCategory) quizInputCategory.value = q.category || (qStage === 'etapa3' ? 'ETAPA 3 • ¿NARUTO O FILÓSOFO?' : (qType === 'boolean' ? 'ETAPA 2 • VERDADERO O FALSO' : 'ETAPA 1 • SELECCIÓN MÚLTIPLE'));
   if (quizInputQuestion) quizInputQuestion.value = q.question || '';
   if (quizInputExplanation) quizInputExplanation.value = q.explanation || '';
-  if (quizInputOpts.A) quizInputOpts.A.value = (q.options && q.options.A) || (qType === 'boolean' ? 'VERDADERO' : '');
-  if (quizInputOpts.B) quizInputOpts.B.value = (q.options && q.options.B) || (qType === 'boolean' ? 'FALSO' : '');
+  if (quizInputOpts.A) quizInputOpts.A.value = (q.options && q.options.A) || (qType === 'boolean' ? defaultBoolA : '');
+  if (quizInputOpts.B) quizInputOpts.B.value = (q.options && q.options.B) || (qType === 'boolean' ? defaultBoolB : '');
   if (quizInputOpts.C) quizInputOpts.C.value = (q.options && q.options.C) || '';
   if (quizInputOpts.D) quizInputOpts.D.value = (q.options && q.options.D) || '';
   setEditorQuizTypeUI(qType, false);
@@ -4568,12 +4602,14 @@ if (btnQuizNewClear) {
       quizInputQuestion.focus();
     }
     if (quizInputExplanation) quizInputExplanation.value = '';
+    const isEtapa3 = quizSelectStage && quizSelectStage.value === 'etapa3';
     if (currentEditorQuizType === 'boolean') {
-      if (quizInputCategory) quizInputCategory.value = 'ETAPA 2 • VERDADERO O FALSO';
-      if (quizInputOpts.A) quizInputOpts.A.value = 'VERDADERO';
-      if (quizInputOpts.B) quizInputOpts.B.value = 'FALSO';
+      if (quizInputCategory) quizInputCategory.value = isEtapa3 ? 'ETAPA 3 • ¿NARUTO O FILÓSOFO?' : 'ETAPA 2 • VERDADERO O FALSO';
+      if (quizInputOpts.A) quizInputOpts.A.value = isEtapa3 ? 'NARUTO' : 'VERDADERO';
+      if (quizInputOpts.B) quizInputOpts.B.value = isEtapa3 ? 'FILÓSOFO' : 'FALSO';
       if (quizInputOpts.C) quizInputOpts.C.value = '';
       if (quizInputOpts.D) quizInputOpts.D.value = '';
+      setEditorQuizTypeUI('boolean', false);
     } else {
       if (quizInputCategory) quizInputCategory.value = 'ETAPA 1 • SELECCIÓN MÚLTIPLE';
       ['A', 'B', 'C', 'D'].forEach((k) => {
@@ -4602,7 +4638,7 @@ function handleLaunchQuizHudNormal() {
 
   socket.emit('quiz-show-hud', payload, () => {
     const corrLabel = payload.type === 'boolean'
-      ? (payload.correctOption === 'A' ? 'VERDADERO' : 'FALSO')
+      ? (payload.correctOption === 'A' ? (payload.options.A || 'VERDADERO') : (payload.options.B || 'FALSO'))
       : `Opción ${payload.correctOption}`;
     showToast(`🎬 Pregunta mostrada en OBS en modo normal (Correcta preparada: ${corrLabel})`);
   });
@@ -4642,7 +4678,7 @@ if (btnQuizRevealCorrect) {
       }, () => {
         socket.emit('quiz-toggle-correct', { showCorrect: true, ensureVisible: true });
         const corrLabel = payload.type === 'boolean'
-          ? (payload.correctOption === 'A' ? 'VERDADERO' : 'FALSO')
+          ? (payload.correctOption === 'A' ? (payload.options.A || 'VERDADERO') : (payload.options.B || 'FALSO'))
           : `Opción ${payload.correctOption}`;
         showToast(`✅ ¡Respuesta Correcta (${corrLabel}) revelada en OBS!`);
       });
@@ -4786,8 +4822,10 @@ function syncQuizAdminUI(quiz) {
   const isBool = quiz.type === 'boolean';
   const correctOpt = ['A', 'B', 'C', 'D'].includes(quiz.correctOption) ? quiz.correctOption : 'A';
   const selectedOpt = ['A', 'B', 'C', 'D'].includes(quiz.selectedOption) ? quiz.selectedOption : null;
+  const boolLabelA = (quiz.options && quiz.options.A) || (quiz.stage === 'etapa3' ? 'NARUTO' : 'VERDADERO');
+  const boolLabelB = (quiz.options && quiz.options.B) || (quiz.stage === 'etapa3' ? 'FILÓSOFO' : 'FALSO');
   const correctDisplayLabel = isBool
-    ? (correctOpt === 'A' ? 'VERDADERO' : 'FALSO')
+    ? (correctOpt === 'A' ? boolLabelA : boolLabelB)
     : `OPCIÓN ${correctOpt}`;
 
   // Navbar badge
@@ -4811,8 +4849,8 @@ function syncQuizAdminUI(quiz) {
   if (quizActiveIndicator) {
     if (isVisible) {
       quizActiveIndicator.className = showCorrect
-        ? 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)]'
-        : 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(251,191,36,0.3)]';
+        ? 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)] min-w-0 max-w-full'
+        : 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(251,191,36,0.3)] min-w-0 max-w-full';
       if (quizActiveDot) {
         quizActiveDot.className = showCorrect
           ? 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping shrink-0'
@@ -4824,7 +4862,7 @@ function syncQuizAdminUI(quiz) {
           : 'HUD EN PANTALLA OBS (MODO NORMAL)';
       }
     } else {
-      quizActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
+      quizActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase min-w-0 max-w-full';
       if (quizActiveDot) quizActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0';
       if (quizActiveText) quizActiveText.textContent = 'HUD OCULTO EN OBS';
     }
@@ -4906,8 +4944,8 @@ function syncQuizAdminUI(quiz) {
     const box = quizMiniOpts[letter];
     const txt = quizMiniTexts[letter];
     if (txt) {
-      if (isBool && letter === 'A') txt.textContent = 'VERDADERO';
-      else if (isBool && letter === 'B') txt.textContent = 'FALSO';
+      if (isBool && letter === 'A') txt.textContent = boolLabelA;
+      else if (isBool && letter === 'B') txt.textContent = boolLabelB;
       else txt.textContent = (quiz.options && quiz.options[letter]) || `Opción ${letter}`;
     }
     if (!box) return;
@@ -4986,13 +5024,13 @@ function renderQuestionsBankList() {
 
     const correctLetter = ['A', 'B', 'C', 'D'].includes(q.correctOption) ? q.correctOption : 'A';
     const correctText = isBool
-      ? (correctLetter === 'A' ? 'VERDADERO' : 'FALSO')
+      ? ((q.options && q.options[correctLetter]) || (correctLetter === 'A' ? 'VERDADERO' : 'FALSO'))
       : ((q.options && q.options[correctLetter]) || '');
 
     const stageBadge = q.stage === 'etapa2'
       ? `<span class="px-1.5 py-0.5 rounded bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 text-[9px] font-mono font-bold uppercase">ETAPA 2 • V/F</span>`
       : q.stage === 'etapa3'
-        ? `<span class="px-1.5 py-0.5 rounded bg-purple-400/20 text-purple-300 border border-purple-400/40 text-[9px] font-mono font-bold uppercase">ETAPA 3 • FRASE</span>`
+        ? `<span class="px-1.5 py-0.5 rounded bg-purple-400/20 text-purple-300 border border-purple-400/40 text-[9px] font-mono font-bold uppercase">ETAPA 3 • NARUTO O FILÓSOFO</span>`
         : `<span class="px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[9px] font-mono font-bold uppercase">ETAPA 1 • 4 OPC</span>`;
 
     item.innerHTML = `
