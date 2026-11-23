@@ -3179,6 +3179,24 @@ body.quiz-hud-active .slot-wrapper {
   filter: saturate(0.6);
 }
 
+/* ============================================================
+   MODO VERDADERO O FALSO (2 OPCIONES: A = VERDADERO, B = FALSO)
+   ============================================================ */
+.millionaire-quiz-hud.is-boolean-mode .quiz-row-2 {
+  display: none !important;
+}
+
+.millionaire-quiz-hud.is-boolean-mode .quiz-row-1 .quiz-option-hex {
+  min-height: 76px;
+  padding: 14px 42px;
+}
+
+.millionaire-quiz-hud.is-boolean-mode .quiz-row-1 .quiz-opt-text {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
 
 
 

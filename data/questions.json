@@ -1,0 +1,452 @@
+[
+  {
+    "id": "etapa1-q1",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 1 DE 10)",
+    "question": "¿Cuántas puertas abre Rock Lee en su enfrentamiento contra Gaara en Naruto clásico?",
+    "options": {
+      "A": "Tres puertas",
+      "B": "Cuatro puertas",
+      "C": "Cinco puertas",
+      "D": "Seis puertas"
+    },
+    "correctOption": "C",
+    "explanation": "Rock Lee llega hasta la quinta de las ocho puertas internas para ejecutar el Loto Inverso. Esto ocurre durante el episodio 50 de Naruto clásico."
+  },
+  {
+    "id": "etapa1-q2",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 2 DE 10)",
+    "question": "¿Cómo se llama el plato de ramen favorito de Naruto en Ichiraku?",
+    "options": {
+      "A": "Shoyu Ramen",
+      "B": "Miso Chashu Ramen",
+      "C": "Tonkotsu Ramen",
+      "D": "Shio Ramen"
+    },
+    "correctOption": "B",
+    "explanation": "Su pedido favorito es un ramen de miso con abundante cerdo asado (chashu). En el episodio 497 de Shippuden se menciona como su plato favorito del menú de Ichiraku."
+  },
+  {
+    "id": "etapa1-q3",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 3 DE 10)",
+    "question": "¿Cómo se llama la persona que intenta matar a Gaara cuando era niño por última vez, antes de que Gaara cambie radicalmente su mentalidad?",
+    "options": {
+      "A": "Rasa",
+      "B": "Yashamaru",
+      "C": "Karura",
+      "D": "Temari"
+    },
+    "correctOption": "B",
+    "explanation": "Yashamaru era el tío materno de Gaara. Por órdenes del Cuarto Kazekage, intentó asesinarlo y le reveló que su madre supuestamente lo había odiado. Este acontecimiento marcó profundamente la infancia de Gaara."
+  },
+  {
+    "id": "etapa1-q4",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 4 DE 10)",
+    "question": "¿Quién es el contrincante de Sasuke Uchiha durante los preliminares del Examen Chūnin?",
+    "options": {
+      "A": "Dosu Kinuta",
+      "B": "Zaku Abumi",
+      "C": "Yoroi Akadō",
+      "D": "Kankurō"
+    },
+    "correctOption": "C",
+    "explanation": "Sasuke se enfrenta a Yoroi Akadō, un ninja infiltrado de la Aldea del Sonido que utiliza una habilidad para absorber el chakra de sus adversarios. Dosu y Zaku también pertenecen al grupo del Sonido, pero no son sus contrincantes en ese combate."
+  },
+  {
+    "id": "etapa1-q5",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 5 DE 10)",
+    "question": "¿Cuántas veces se enfrentan Naruto y Sasuke directamente en combate a lo largo de Naruto clásico y Naruto Shippuden?",
+    "options": {
+      "A": "Tres veces",
+      "B": "Cuatro veces",
+      "C": "Cinco veces",
+      "D": "Siete veces"
+    },
+    "correctOption": "C",
+    "explanation": "Contando sus cinco principales enfrentamientos directos: 1) Azotea del hospital (Naruto clásico), 2) Valle del Fin (Naruto clásico), 3) Reencuentro en el escondite de Orochimaru (Shippuden), 4) Enfrentamiento posterior a la Cumbre de los Cinco Kage (Shippuden), 5) Batalla final en el Valle del Fin (Shippuden)."
+  },
+  {
+    "id": "etapa1-q6",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 6 DE 10)",
+    "question": "¿Cómo se llama el Cuarto Raikage, hermano no consanguíneo de Killer B?",
+    "options": {
+      "A": "Darui",
+      "B": "A",
+      "C": "C",
+      "D": "Yugito Nii"
+    },
+    "correctOption": "B",
+    "explanation": "Su nombre es A. Es el Cuarto Raikage de Kumogakure y hermano adoptivo de Killer B; ambos fueron elegidos para formar el dúo conocido como los hermanos A y B."
+  },
+  {
+    "id": "etapa1-q7",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 7 DE 10)",
+    "question": "¿Cuál de las cinco grandes aldeas ninja es considerada la más pequeña y aislada?",
+    "options": {
+      "A": "Aldea Oculta de la Arena (Sunagakure)",
+      "B": "Aldea Oculta de la Niebla (Kirigakure)",
+      "C": "Aldea Oculta de la Roca (Iwagakure)",
+      "D": "Aldea Oculta de las Nubes (Kumogakure)"
+    },
+    "correctOption": "B",
+    "explanation": "Kirigakure (Aldea Oculta de la Niebla) está ubicada en el País del Agua, un territorio insular caracterizado por su aislamiento geográfico."
+  },
+  {
+    "id": "etapa1-q8",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 8 DE 10)",
+    "question": "¿Cuántas transformaciones diferentes presenta Naruto a lo largo de Naruto clásico y Naruto Shippuden?",
+    "options": {
+      "A": "8",
+      "B": "10",
+      "C": "13",
+      "D": "15"
+    },
+    "correctOption": "C",
+    "explanation": "Para llegar a 13 contamos las principales etapas de transformación: las manifestaciones del chakra del Nueve Colas, sus diferentes niveles de liberación, el Modo Sabio, el Modo Chakra del Nueve Colas, el Modo Kurama y el Modo Sabio de los Seis Caminos, entre otras variantes."
+  },
+  {
+    "id": "etapa1-q9",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 9 DE 10)",
+    "question": "En el mensaje cifrado que Jiraiya dejó escrito en la espalda de Fukasaku, Naruto reconoce que uno de los números es en realidad una letra por la forma de escribir de su maestro. ¿Cuál es ese número?",
+    "options": {
+      "A": "9",
+      "B": "7",
+      "C": "6",
+      "D": "4"
+    },
+    "correctOption": "A",
+    "explanation": "Naruto reconoce que el símbolo que todos interpretaban como el número 9 era en realidad el carácter japonés katakana タ (Ta), escrito con la particular caligrafía de Jiraiya. Esa pista permite descifrar el mensaje utilizando sus novelas Icha Icha."
+  },
+  {
+    "id": "etapa1-q10",
+    "stage": "etapa1",
+    "type": "multiple",
+    "category": "ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 10 DE 10)",
+    "question": "¿Cuál fue la primera vez que Jiraiya estuvo cerca de morir, antes de enfrentarse a Naruto en su transformación de cuatro colas?",
+    "options": {
+      "A": "Durante su enfrentamiento contra Orochimaru.",
+      "B": "Cuando Tsunade lo descubrió espiando en los baños termales.",
+      "C": "Durante una misión contra la Aldea de la Lluvia.",
+      "D": "Durante su enfrentamiento contra Hanzo."
+    },
+    "correctOption": "B",
+    "explanation": "Tsunade lo sorprendió espiando a unas mujeres mientras se bañaban y lo golpeó brutalmente, rompiéndole seis costillas, ambos brazos y provocándole daños en varios órganos internos (Episodio 53 de Naruto Shippuden)."
+  },
+  {
+    "id": "etapa2-q1",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 1 DE 10)",
+    "question": "El Primer Hokage era soltero.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "B",
+    "explanation": "FALSO: Hashirama Senju estaba casado con Mito Uzumaki, perteneciente al clan Uzumaki. Juntos establecieron un vínculo importante entre ambos clanes."
+  },
+  {
+    "id": "etapa2-q2",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 2 DE 10)",
+    "question": "A lo largo de la historia de Naruto y Naruto Shippuden existieron en total siete Hokages.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "A",
+    "explanation": "VERDADERO: Los siete Hokages de Konoha, en orden, son: 1. Hashirama Senju, 2. Tobirama Senju, 3. Hiruzen Sarutobi, 4. Minato Namikaze, 5. Tsunade, 6. Kakashi Hatake y 7. Naruto Uzumaki. Danzō fue candidato al puesto de Sexto Hokage, pero no llegó a ser reconocido como Hokage oficial en la sucesión definitiva."
+  },
+  {
+    "id": "etapa2-q3",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 3 DE 10)",
+    "question": "El Segundo Hokage fue quien creó el Examen Chūnin como una forma de fortalecer las relaciones entre las aldeas ninja.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "A",
+    "explanation": "VERDADERO: Tobirama Senju impulsó el sistema de exámenes conjuntos entre aldeas, que también funcionaba como una demostración de poder militar y político."
+  },
+  {
+    "id": "etapa2-q4",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 4 DE 10)",
+    "question": "Durante la Cuarta Gran Guerra Ninja, Kabuto no consiguió revivir a Jiraiya mediante el Edo Tensei porque su cuerpo se encontraba en las profundidades del océano, fuera de su alcance.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "A",
+    "explanation": "VERDADERO: Kabuto no pudo recuperar el cuerpo de Jiraiya porque se encontraba en las profundidades del océano, fuera de su alcance."
+  },
+  {
+    "id": "etapa2-q5",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 5 DE 10)",
+    "question": "Durante la batalla contra Hidan y Kakuzu, Kakashi consigue destruir uno de los corazones de Kakuzu utilizando el Raikiri.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "A",
+    "explanation": "VERDADERO: Kakashi destruye uno de los corazones de Kakuzu durante el enfrentamiento, aunque no consigue eliminarlo definitivamente."
+  },
+  {
+    "id": "etapa2-q6",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 6 DE 10)",
+    "question": "El Tercer Kazekage fue asesinado por Orochimaru y posteriormente convertido en una marioneta por Sasori.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "B",
+    "explanation": "FALSO: Fue Sasori quien asesinó al Tercer Kazekage y convirtió su cuerpo en una marioneta humana. Orochimaru no fue responsable de su desaparición."
+  },
+  {
+    "id": "etapa2-q7",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 7 DE 10)",
+    "question": "Yahiko fue el fundador original de Akatsuki, antes de que Nagato asumiera el liderazgo de la organización.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "A",
+    "explanation": "VERDADERO: Yahiko reunió a los primeros integrantes de Akatsuki con la intención de conseguir la paz en el País de la Lluvia. Después de su muerte, Nagato tomó otro rumbo y transformó la organización."
+  },
+  {
+    "id": "etapa2-q8",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 8 DE 10)",
+    "question": "Neji murió durante la Cuarta Gran Guerra Ninja intentando proteger únicamente a Naruto de los ataques del Diez Colas.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "B",
+    "explanation": "FALSO: Neji intervino para proteger tanto a Naruto como a Hinata. Recibió los ataques destinados a ambos y murió por las heridas."
+  },
+  {
+    "id": "etapa2-q9",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 9 DE 10)",
+    "question": "Danzo tenía diez Sharingan implantados en su brazo derecho, además de modificaciones realizadas con células del Primer Hokage.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "A",
+    "explanation": "VERDADERO: Su brazo fue modificado con diez ojos Sharingan y células de Hashirama Senju. Estas modificaciones le permitían utilizar habilidades extraordinarias, aunque consumían una enorme cantidad de chakra."
+  },
+  {
+    "id": "etapa2-q10",
+    "stage": "etapa2",
+    "type": "boolean",
+    "category": "ETAPA 2 • VERDADERO O FALSO (PREGUNTA 10 DE 10)",
+    "question": "Durante la Cuarta Gran Guerra Ninja, cuando Kabuto reencarnó a los antiguos miembros de Akatsuki, Nagato conservó el control de sus movimientos y pudo decidir por voluntad propia a quién atacar.",
+    "options": {
+      "A": "VERDADERO",
+      "B": "FALSO",
+      "C": "",
+      "D": ""
+    },
+    "correctOption": "B",
+    "explanation": "FALSO: Nagato estaba bajo el control de la técnica de reencarnación impura de Kabuto. Aunque conservaba su conciencia y podía hablar, no controlaba libremente sus acciones."
+  },
+  {
+    "id": "etapa3-q1",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 1 DE 10)",
+    "question": "¿Quién es el autor de la frase: «Es mejor cambiar de opinión que persistir en una equivocada»?",
+    "options": {
+      "A": "Sócrates",
+      "B": "Itachi Uchiha",
+      "C": "Aristóteles",
+      "D": "Madara Uchiha"
+    },
+    "correctOption": "A",
+    "explanation": "Autor: Sócrates (en el diálogo Teeteto, de Platón)."
+  },
+  {
+    "id": "etapa3-q2",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 2 DE 10)",
+    "question": "¿Quién dijo la frase: «Quienes no conocen el verdadero dolor nunca podrán comprender la verdadera paz»?",
+    "options": {
+      "A": "Séneca",
+      "B": "Nagato (Pain)",
+      "C": "Madara Uchiha",
+      "D": "Sócrates"
+    },
+    "correctOption": "B",
+    "explanation": "Autor: Nagato (Pain), en Naruto Shippuden."
+  },
+  {
+    "id": "etapa3-q3",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 3 DE 10)",
+    "question": "¿Quién es el autor de la frase: «Todos los hombres desean por naturaleza saber»?",
+    "options": {
+      "A": "Orochimaru",
+      "B": "Platón",
+      "C": "Aristóteles",
+      "D": "Epicteto"
+    },
+    "correctOption": "C",
+    "explanation": "Autor: Aristóteles, en el inicio de su obra Metafísica."
+  },
+  {
+    "id": "etapa3-q4",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 4 DE 10)",
+    "question": "¿Quién dijo la frase: «Cuando alguien protege algo verdaderamente importante, puede volverse tan fuerte como necesita ser»?",
+    "options": {
+      "A": "Haku",
+      "B": "Naruto Uzumaki",
+      "C": "Epicteto",
+      "D": "Rock Lee"
+    },
+    "correctOption": "A",
+    "explanation": "Autor: Haku, en Naruto clásico."
+  },
+  {
+    "id": "etapa3-q5",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 5 DE 10)",
+    "question": "¿Quién pronunció la frase: «Despierta a la realidad: nada ocurre jamás como uno lo planea en este mundo»?",
+    "options": {
+      "A": "Séneca",
+      "B": "Obito Uchiha",
+      "C": "Madara Uchiha",
+      "D": "Epicteto"
+    },
+    "correctOption": "C",
+    "explanation": "Autor: Madara Uchiha, en Naruto Shippuden."
+  },
+  {
+    "id": "etapa3-q6",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 6 DE 10)",
+    "question": "¿Quién es el autor de la frase: «Sufrimos más a menudo en la imaginación que en la realidad»?",
+    "options": {
+      "A": "Itachi Uchiha",
+      "B": "Séneca",
+      "C": "Sócrates",
+      "D": "Kakashi Hatake"
+    },
+    "correctOption": "B",
+    "explanation": "Autor: Séneca, en Cartas a Lucilio."
+  },
+  {
+    "id": "etapa3-q7",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 7 DE 10)",
+    "question": "¿Quién dijo la frase: «La gente se vuelve más fuerte porque tiene recuerdos que no puede olvidar»?",
+    "options": {
+      "A": "Jiraiya",
+      "B": "Aristóteles",
+      "C": "Tsunade",
+      "D": "Haku"
+    },
+    "correctOption": "C",
+    "explanation": "Autor: Tsunade, en Naruto Shippuden."
+  },
+  {
+    "id": "etapa3-q8",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 8 DE 10)",
+    "question": "¿Quién es el autor de la frase: «Una vida sin examen no merece ser vivida»?",
+    "options": {
+      "A": "Sócrates",
+      "B": "Séneca",
+      "C": "Madara Uchiha",
+      "D": "Aristóteles"
+    },
+    "correctOption": "A",
+    "explanation": "Autor: Sócrates, según Platón en la Apología de Sócrates."
+  },
+  {
+    "id": "etapa3-q9",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 9 DE 10)",
+    "question": "¿Quién es el autor de la frase: «Algunas cosas dependen de nosotros y otras no»?",
+    "options": {
+      "A": "Nagato (Pain)",
+      "B": "Séneca",
+      "C": "Itachi Uchiha",
+      "D": "Epicteto"
+    },
+    "correctOption": "D",
+    "explanation": "Autor: Epicteto, en el inicio de su obra Manual (Enquiridión)."
+  },
+  {
+    "id": "etapa3-q10",
+    "stage": "etapa3",
+    "type": "multiple",
+    "category": "ETAPA 3 • FRASES Y AUTORES (FRASE 10 DE 10)",
+    "question": "¿Quién pronunció la frase: «La vida de las personas no termina cuando mueren; termina cuando pierden la fe»?",
+    "options": {
+      "A": "Sócrates",
+      "B": "Itachi Uchiha",
+      "C": "Jiraiya",
+      "D": "Séneca"
+    },
+    "correctOption": "B",
+    "explanation": "Autor: Itachi Uchiha, en Naruto Shippuden."
+  }
+]

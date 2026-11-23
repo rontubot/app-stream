@@ -327,17 +327,20 @@ let liveState = {
   },
   quiz: {
     isVisible: false,
-    questionId: 'quiz-default-1',
-    category: '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE',
-    question: '¿EN QUÉ PLATAFORMA SE TRANSMITE OFICIALMENTE LA VELADA DEL CAOS?',
+    questionId: 'etapa1-q1',
+    stage: 'etapa1',
+    type: 'multiple', // 'multiple' (4 opciones A,B,C,D) | 'boolean' (Verdadero o Falso)
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 1 DE 10)',
+    question: '¿Cuántas puertas abre Rock Lee en su enfrentamiento contra Gaara en Naruto clásico?',
     options: {
-      A: 'En el canal oficial de BirraVerde en Kick',
-      B: 'Por televisión por cable tradicional',
-      C: 'Solo por radio AM',
-      D: 'En ninguna plataforma'
+      A: 'Tres puertas',
+      B: 'Cuatro puertas',
+      C: 'Cinco puertas',
+      D: 'Seis puertas'
     },
-    correctOption: 'A', // 'A' | 'B' | 'C' | 'D'
+    correctOption: 'C', // 'A' | 'B' | 'C' | 'D'
     selectedOption: null, // 'A' | 'B' | 'C' | 'D' | null
+    explanation: 'Rock Lee llega hasta la quinta de las ocho puertas internas para ejecutar el Loto Inverso. Esto ocurre durante el episodio 50 de Naruto clásico.',
     showCorrect: false,
     shownAt: null,
     updatedAt: null
@@ -474,8 +477,11 @@ function loadSettings() {
       if (data.quiz && typeof data.quiz === 'object') {
         if (typeof data.quiz.isVisible === 'boolean') liveState.quiz.isVisible = data.quiz.isVisible;
         if (typeof data.quiz.questionId === 'string') liveState.quiz.questionId = data.quiz.questionId;
+        if (typeof data.quiz.stage === 'string') liveState.quiz.stage = data.quiz.stage;
+        if (data.quiz.type === 'boolean' || data.quiz.type === 'multiple') liveState.quiz.type = data.quiz.type;
         if (typeof data.quiz.category === 'string') liveState.quiz.category = data.quiz.category;
         if (typeof data.quiz.question === 'string') liveState.quiz.question = data.quiz.question;
+        if (typeof data.quiz.explanation === 'string') liveState.quiz.explanation = data.quiz.explanation;
         if (data.quiz.options && typeof data.quiz.options === 'object') {
           liveState.quiz.options = {
             A: typeof data.quiz.options.A === 'string' ? data.quiz.options.A : liveState.quiz.options.A,
@@ -536,6 +542,8 @@ function getSettingsPayload() {
     quiz: {
       isVisible: !!liveState.quiz.isVisible,
       questionId: liveState.quiz.questionId || null,
+      stage: liveState.quiz.stage || 'etapa1',
+      type: liveState.quiz.type === 'boolean' ? 'boolean' : 'multiple',
       category: liveState.quiz.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE',
       question: liveState.quiz.question || '',
       options: {
@@ -546,6 +554,7 @@ function getSettingsPayload() {
       },
       correctOption: ['A', 'B', 'C', 'D'].includes(liveState.quiz.correctOption) ? liveState.quiz.correctOption : 'A',
       selectedOption: ['A', 'B', 'C', 'D'].includes(liveState.quiz.selectedOption) ? liveState.quiz.selectedOption : null,
+      explanation: liveState.quiz.explanation || '',
       showCorrect: !!liveState.quiz.showCorrect,
       shownAt: liveState.quiz.shownAt || null,
       updatedAt: liveState.quiz.updatedAt || null
@@ -811,6 +820,341 @@ function saveModsChat(chatList, persistDb = true) {
 }
 
 // Gestión y persistencia del Banco de Preguntas (Estilo ¿Quién Quiere Ser Millonario?)
+const DEFAULT_OFFICIAL_QUESTIONS = [
+  {
+    id: 'etapa1-q1',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 1 DE 10)',
+    question: '¿Cuántas puertas abre Rock Lee en su enfrentamiento contra Gaara en Naruto clásico?',
+    options: { A: 'Tres puertas', B: 'Cuatro puertas', C: 'Cinco puertas', D: 'Seis puertas' },
+    correctOption: 'C',
+    explanation: 'Rock Lee llega hasta la quinta de las ocho puertas internas para ejecutar el Loto Inverso. Esto ocurre durante el episodio 50 de Naruto clásico.'
+  },
+  {
+    id: 'etapa1-q2',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 2 DE 10)',
+    question: '¿Cómo se llama el plato de ramen favorito de Naruto en Ichiraku?',
+    options: { A: 'Shoyu Ramen', B: 'Miso Chashu Ramen', C: 'Tonkotsu Ramen', D: 'Shio Ramen' },
+    correctOption: 'B',
+    explanation: 'Su pedido favorito es un ramen de miso con abundante cerdo asado (chashu). En el episodio 497 de Shippuden se menciona como su plato favorito del menú de Ichiraku.'
+  },
+  {
+    id: 'etapa1-q3',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 3 DE 10)',
+    question: '¿Cómo se llama la persona que intenta matar a Gaara cuando era niño por última vez, antes de que Gaara cambie radicalmente su mentalidad?',
+    options: { A: 'Rasa', B: 'Yashamaru', C: 'Karura', D: 'Temari' },
+    correctOption: 'B',
+    explanation: 'Yashamaru era el tío materno de Gaara. Por órdenes del Cuarto Kazekage, intentó asesinarlo y le reveló que su madre supuestamente lo había odiado. Este acontecimiento marcó profundamente la infancia de Gaara.'
+  },
+  {
+    id: 'etapa1-q4',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 4 DE 10)',
+    question: '¿Quién es el contrincante de Sasuke Uchiha durante los preliminares del Examen Chūnin?',
+    options: { A: 'Dosu Kinuta', B: 'Zaku Abumi', C: 'Yoroi Akadō', D: 'Kankurō' },
+    correctOption: 'C',
+    explanation: 'Sasuke se enfrenta a Yoroi Akadō, un ninja infiltrado de la Aldea del Sonido que utiliza una habilidad para absorber el chakra de sus adversarios. Dosu y Zaku también pertenecen al grupo del Sonido, pero no son sus contrincantes en ese combate.'
+  },
+  {
+    id: 'etapa1-q5',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 5 DE 10)',
+    question: '¿Cuántas veces se enfrentan Naruto y Sasuke directamente en combate a lo largo de Naruto clásico y Naruto Shippuden?',
+    options: { A: 'Tres veces', B: 'Cuatro veces', C: 'Cinco veces', D: 'Siete veces' },
+    correctOption: 'C',
+    explanation: 'Contando sus cinco principales enfrentamientos directos: 1) Azotea del hospital (Naruto clásico), 2) Valle del Fin (Naruto clásico), 3) Reencuentro en el escondite de Orochimaru (Shippuden), 4) Enfrentamiento posterior a la Cumbre de los Cinco Kage (Shippuden), 5) Batalla final en el Valle del Fin (Shippuden).'
+  },
+  {
+    id: 'etapa1-q6',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 6 DE 10)',
+    question: '¿Cómo se llama el Cuarto Raikage, hermano no consanguíneo de Killer B?',
+    options: { A: 'Darui', B: 'A', C: 'C', D: 'Yugito Nii' },
+    correctOption: 'B',
+    explanation: 'Su nombre es A. Es el Cuarto Raikage de Kumogakure y hermano adoptivo de Killer B; ambos fueron elegidos para formar el dúo conocido como los hermanos A y B.'
+  },
+  {
+    id: 'etapa1-q7',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 7 DE 10)',
+    question: '¿Cuál de las cinco grandes aldeas ninja es considerada la más pequeña y aislada?',
+    options: {
+      A: 'Aldea Oculta de la Arena (Sunagakure)',
+      B: 'Aldea Oculta de la Niebla (Kirigakure)',
+      C: 'Aldea Oculta de la Roca (Iwagakure)',
+      D: 'Aldea Oculta de las Nubes (Kumogakure)'
+    },
+    correctOption: 'B',
+    explanation: 'Kirigakure (Aldea Oculta de la Niebla) está ubicada en el País del Agua, un territorio insular caracterizado por su aislamiento geográfico.'
+  },
+  {
+    id: 'etapa1-q8',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 8 DE 10)',
+    question: '¿Cuántas transformaciones diferentes presenta Naruto a lo largo de Naruto clásico y Naruto Shippuden?',
+    options: { A: '8', B: '10', C: '13', D: '15' },
+    correctOption: 'C',
+    explanation: 'Para llegar a 13 contamos las principales etapas de transformación: las manifestaciones del chakra del Nueve Colas, sus diferentes niveles de liberación, el Modo Sabio, el Modo Chakra del Nueve Colas, el Modo Kurama y el Modo Sabio de los Seis Caminos, entre otras variantes.'
+  },
+  {
+    id: 'etapa1-q9',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 9 DE 10)',
+    question: 'En el mensaje cifrado que Jiraiya dejó escrito en la espalda de Fukasaku, Naruto reconoce que uno de los números es en realidad una letra por la forma de escribir de su maestro. ¿Cuál es ese número?',
+    options: { A: '9', B: '7', C: '6', D: '4' },
+    correctOption: 'A',
+    explanation: 'Naruto reconoce que el símbolo que todos interpretaban como el número 9 era en realidad el carácter japonés katakana タ (Ta), escrito con la particular caligrafía de Jiraiya. Esa pista permite descifrar el mensaje utilizando sus novelas Icha Icha.'
+  },
+  {
+    id: 'etapa1-q10',
+    stage: 'etapa1',
+    type: 'multiple',
+    category: 'ETAPA 1 • SELECCIÓN MÚLTIPLE (PREGUNTA 10 DE 10)',
+    question: '¿Cuál fue la primera vez que Jiraiya estuvo cerca de morir, antes de enfrentarse a Naruto en su transformación de cuatro colas?',
+    options: {
+      A: 'Durante su enfrentamiento contra Orochimaru.',
+      B: 'Cuando Tsunade lo descubrió espiando en los baños termales.',
+      C: 'Durante una misión contra la Aldea de la Lluvia.',
+      D: 'Durante su enfrentamiento contra Hanzo.'
+    },
+    correctOption: 'B',
+    explanation: 'Tsunade lo sorprendió espiando a unas mujeres mientras se bañaban y lo golpeó brutalmente, rompiéndole seis costillas, ambos brazos y provocándole daños en varios órganos internos (Episodio 53 de Naruto Shippuden).'
+  },
+  {
+    id: 'etapa2-q1',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 1 DE 10)',
+    question: 'El Primer Hokage era soltero.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'B',
+    explanation: 'FALSO: Hashirama Senju estaba casado con Mito Uzumaki, perteneciente al clan Uzumaki. Juntos establecieron un vínculo importante entre ambos clanes.'
+  },
+  {
+    id: 'etapa2-q2',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 2 DE 10)',
+    question: 'A lo largo de la historia de Naruto y Naruto Shippuden existieron en total siete Hokages.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'VERDADERO: Los siete Hokages de Konoha, en orden, son: 1. Hashirama Senju, 2. Tobirama Senju, 3. Hiruzen Sarutobi, 4. Minato Namikaze, 5. Tsunade, 6. Kakashi Hatake y 7. Naruto Uzumaki. Danzō fue candidato al puesto de Sexto Hokage, pero no llegó a ser reconocido como Hokage oficial.'
+  },
+  {
+    id: 'etapa2-q3',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 3 DE 10)',
+    question: 'El Segundo Hokage fue quien creó el Examen Chūnin como una forma de fortalecer las relaciones entre las aldeas ninja.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'VERDADERO: Tobirama Senju impulsó el sistema de exámenes conjuntos entre aldeas, que también funcionaba como una demostración de poder militar y político.'
+  },
+  {
+    id: 'etapa2-q4',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 4 DE 10)',
+    question: 'Durante la Cuarta Gran Guerra Ninja, Kabuto no consiguió revivir a Jiraiya mediante el Edo Tensei porque su cuerpo se encontraba en las profundidades del océano, fuera de su alcance.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'VERDADERO: Kabuto no pudo recuperar el cuerpo de Jiraiya porque se encontraba en las profundidades del océano, fuera de su alcance.'
+  },
+  {
+    id: 'etapa2-q5',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 5 DE 10)',
+    question: 'Durante la batalla contra Hidan y Kakuzu, Kakashi consigue destruir uno de los corazones de Kakuzu utilizando el Raikiri.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'VERDADERO: Kakashi destruye uno de los corazones de Kakuzu durante el enfrentamiento, aunque no consigue eliminarlo definitivamente.'
+  },
+  {
+    id: 'etapa2-q6',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 6 DE 10)',
+    question: 'El Tercer Kazekage fue asesinado por Orochimaru y posteriormente convertido en una marioneta por Sasori.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'B',
+    explanation: 'FALSO: Fue Sasori quien asesinó al Tercer Kazekage y convirtió su cuerpo en una marioneta humana. Orochimaru no fue responsable de su desaparición.'
+  },
+  {
+    id: 'etapa2-q7',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 7 DE 10)',
+    question: 'Yahiko fue el fundador original de Akatsuki, antes de que Nagato asumiera el liderazgo de la organización.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'VERDADERO: Yahiko reunió a los primeros integrantes de Akatsuki con la intención de conseguir la paz en el País de la Lluvia. Después de su muerte, Nagato tomó otro rumbo y transformó la organización.'
+  },
+  {
+    id: 'etapa2-q8',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 8 DE 10)',
+    question: 'Neji murió durante la Cuarta Gran Guerra Ninja intentando proteger únicamente a Naruto de los ataques del Diez Colas.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'B',
+    explanation: 'FALSO: Neji intervino para proteger tanto a Naruto como a Hinata. Recibió los ataques destinados a ambos y murió por las heridas.'
+  },
+  {
+    id: 'etapa2-q9',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 9 DE 10)',
+    question: 'Danzo tenía diez Sharingan implantados en su brazo derecho, además de modificaciones realizadas con células del Primer Hokage.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'A',
+    explanation: 'VERDADERO: Su brazo fue modificado con diez ojos Sharingan y células de Hashirama Senju. Estas modificaciones le permitían utilizar habilidades extraordinarias, aunque consumían una enorme cantidad de chakra.'
+  },
+  {
+    id: 'etapa2-q10',
+    stage: 'etapa2',
+    type: 'boolean',
+    category: 'ETAPA 2 • VERDADERO O FALSO (PREGUNTA 10 DE 10)',
+    question: 'Durante la Cuarta Gran Guerra Ninja, cuando Kabuto reencarnó a los antiguos miembros de Akatsuki, Nagato conservó el control de sus movimientos y pudo decidir por voluntad propia a quién atacar.',
+    options: { A: 'VERDADERO', B: 'FALSO', C: '', D: '' },
+    correctOption: 'B',
+    explanation: 'FALSO: Nagato estaba bajo el control de la técnica de reencarnación impura de Kabuto. Aunque conservaba su conciencia y podía hablar, no controlaba libremente sus acciones.'
+  },
+  {
+    id: 'etapa3-q1',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 1 DE 10)',
+    question: '¿Quién es el autor de la frase: «Es mejor cambiar de opinión que persistir en una equivocada»?',
+    options: { A: 'Sócrates', B: 'Itachi Uchiha', C: 'Aristóteles', D: 'Madara Uchiha' },
+    correctOption: 'A',
+    explanation: 'Autor: Sócrates (en el diálogo Teeteto, de Platón).'
+  },
+  {
+    id: 'etapa3-q2',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 2 DE 10)',
+    question: '¿Quién dijo la frase: «Quienes no conocen el verdadero dolor nunca podrán comprender la verdadera paz»?',
+    options: { A: 'Séneca', B: 'Nagato (Pain)', C: 'Madara Uchiha', D: 'Sócrates' },
+    correctOption: 'B',
+    explanation: 'Autor: Nagato (Pain), en Naruto Shippuden.'
+  },
+  {
+    id: 'etapa3-q3',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 3 DE 10)',
+    question: '¿Quién es el autor de la frase: «Todos los hombres desean por naturaleza saber»?',
+    options: { A: 'Orochimaru', B: 'Platón', C: 'Aristóteles', D: 'Epicteto' },
+    correctOption: 'C',
+    explanation: 'Autor: Aristóteles, en el inicio de su obra Metafísica.'
+  },
+  {
+    id: 'etapa3-q4',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 4 DE 10)',
+    question: '¿Quién dijo la frase: «Cuando alguien protege algo verdaderamente importante, puede volverse tan fuerte como necesita ser»?',
+    options: { A: 'Haku', B: 'Naruto Uzumaki', C: 'Epicteto', D: 'Rock Lee' },
+    correctOption: 'A',
+    explanation: 'Autor: Haku, en Naruto clásico.'
+  },
+  {
+    id: 'etapa3-q5',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 5 DE 10)',
+    question: '¿Quién pronunció la frase: «Despierta a la realidad: nada ocurre jamás como uno lo planea en este mundo»?',
+    options: { A: 'Séneca', B: 'Obito Uchiha', C: 'Madara Uchiha', D: 'Epicteto' },
+    correctOption: 'C',
+    explanation: 'Autor: Madara Uchiha, en Naruto Shippuden.'
+  },
+  {
+    id: 'etapa3-q6',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 6 DE 10)',
+    question: '¿Quién es el autor de la frase: «Sufrimos más a menudo en la imaginación que en la realidad»?',
+    options: { A: 'Itachi Uchiha', B: 'Séneca', C: 'Sócrates', D: 'Kakashi Hatake' },
+    correctOption: 'B',
+    explanation: 'Autor: Séneca, en Cartas a Lucilio.'
+  },
+  {
+    id: 'etapa3-q7',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 7 DE 10)',
+    question: '¿Quién dijo la frase: «La gente se vuelve más fuerte porque tiene recuerdos que no puede olvidar»?',
+    options: { A: 'Jiraiya', B: 'Aristóteles', C: 'Tsunade', D: 'Haku' },
+    correctOption: 'C',
+    explanation: 'Autor: Tsunade, en Naruto Shippuden.'
+  },
+  {
+    id: 'etapa3-q8',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 8 DE 10)',
+    question: '¿Quién es el autor de la frase: «Una vida sin examen no merece ser vivida»?',
+    options: { A: 'Sócrates', B: 'Séneca', C: 'Madara Uchiha', D: 'Aristóteles' },
+    correctOption: 'A',
+    explanation: 'Autor: Sócrates, según Platón en la Apología de Sócrates.'
+  },
+  {
+    id: 'etapa3-q9',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 9 DE 10)',
+    question: '¿Quién es el autor de la frase: «Algunas cosas dependen de nosotros y otras no»?',
+    options: { A: 'Nagato (Pain)', B: 'Séneca', C: 'Itachi Uchiha', D: 'Epicteto' },
+    correctOption: 'D',
+    explanation: 'Autor: Epicteto, en el inicio de su obra Manual (Enquiridión).'
+  },
+  {
+    id: 'etapa3-q10',
+    stage: 'etapa3',
+    type: 'multiple',
+    category: 'ETAPA 3 • FRASES Y AUTORES (FRASE 10 DE 10)',
+    question: '¿Quién pronunció la frase: «La vida de las personas no termina cuando mueren; termina cuando pierden la fe»?',
+    options: { A: 'Sócrates', B: 'Itachi Uchiha', C: 'Jiraiya', D: 'Séneca' },
+    correctOption: 'B',
+    explanation: 'Autor: Itachi Uchiha, en Naruto Shippuden.'
+  }
+];
+
+function ensureOfficialQuestionsInList(list) {
+  const cleanList = Array.isArray(list)
+    ? list.filter(q => q && q.id !== 'quiz-default-1' && q.id !== 'quiz-default-2')
+    : [];
+  const existingMap = new Map();
+  cleanList.forEach(q => existingMap.set(q.id, q));
+
+  let addedOrUpdated = false;
+  if (Array.isArray(list) && list.some(q => q && (q.id === 'quiz-default-1' || q.id === 'quiz-default-2'))) {
+    addedOrUpdated = true;
+  }
+
+  DEFAULT_OFFICIAL_QUESTIONS.forEach(defQ => {
+    if (!existingMap.has(defQ.id)) {
+      cleanList.push({ ...defQ });
+      addedOrUpdated = true;
+    }
+  });
+
+  return { list: cleanList, changed: addedOrUpdated };
+}
+
 let questions = [];
 
 function loadQuestions() {
@@ -818,13 +1162,14 @@ function loadQuestions() {
     if (fs.existsSync(QUESTIONS_FILE)) {
       const parsed = JSON.parse(fs.readFileSync(QUESTIONS_FILE, 'utf-8'));
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        const merged = ensureOfficialQuestionsInList(parsed);
+        return merged.list;
       }
     }
   } catch (err) {
     console.error('Error al cargar questions:', err);
   }
-  return [];
+  return DEFAULT_OFFICIAL_QUESTIONS.map(q => ({ ...q }));
 }
 
 function saveQuestions(questionsList, persistDb = true) {
@@ -846,42 +1191,11 @@ let savedSettings = loadSettings();
 let presenters = loadPresenters();
 let fights = loadFights();
 questions = loadQuestions();
+saveQuestions(questions, false);
 users = loadUsers();
 modsChatHistory = loadModsChat();
 loadMulticamSettings();
 loadBannedIps();
-
-if (questions.length === 0) {
-  questions = [
-    {
-      id: 'quiz-default-1',
-      category: '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE',
-      question: '¿EN QUÉ PLATAFORMA SE TRANSMITE OFICIALMENTE LA VELADA DEL CAOS?',
-      options: {
-        A: 'En el canal oficial de BirraVerde en Kick',
-        B: 'Por televisión por cable tradicional',
-        C: 'Solo por radio AM',
-        D: 'En ninguna plataforma'
-      },
-      correctOption: 'A',
-      createdAt: Date.now()
-    },
-    {
-      id: 'quiz-default-2',
-      category: 'PREGUNTA DE BOXEO • LA VELADA DEL CAOS',
-      question: '¿CUÁNTOS ROUNDS TIENE UN COMBATE ESTELAR EN LA VELADA DEL CAOS?',
-      options: {
-        A: '12 Rounds de 5 minutos',
-        B: '3 Rounds de 3 minutos',
-        C: '1 solo Round de 10 minutos',
-        D: '5 Rounds sin límite de tiempo'
-      },
-      correctOption: 'B',
-      createdAt: Date.now()
-    }
-  ];
-  saveQuestions(questions, false);
-}
 
 // Si no hay usuarios por primera vez, creamos los dos niveles base: Usuario Nivel 1 (admin) y MODS (mods)
 if (users.length === 0) {
@@ -1251,8 +1565,12 @@ async function syncDataFromDatabase() {
 
     // 8. Sincronizar Banco de Preguntas (Estilo ¿Quién Quiere Ser Millonario?)
     if (dbData.questions && Array.isArray(dbData.questions) && dbData.questions.length > 0) {
-      questions = dbData.questions;
+      const merged = ensureOfficialQuestionsInList(dbData.questions);
+      questions = merged.list;
       saveQuestions(questions, false);
+      if (merged.changed) {
+        await saveToDb('questions', questions);
+      }
       io.emit('questions-updated', questions);
       changed = true;
     } else if (questions.length > 0) {
@@ -1720,17 +2038,21 @@ app.get('/api/questions', async (req, res) => {
 
 app.post('/api/questions', requireAuth, (req, res) => {
   const body = req.body || {};
+  const qType = body.type === 'boolean' ? 'boolean' : 'multiple';
   const newQ = {
     id: body.id || `quiz-${Date.now()}`,
+    stage: String(body.stage || (qType === 'boolean' ? 'etapa2' : 'etapa1')).trim(),
+    type: qType,
     category: String(body.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE').trim(),
     question: String(body.question || '').trim(),
     options: {
-      A: String(body.options?.A || '').trim(),
-      B: String(body.options?.B || '').trim(),
-      C: String(body.options?.C || '').trim(),
-      D: String(body.options?.D || '').trim()
+      A: qType === 'boolean' ? (String(body.options?.A || 'VERDADERO').trim() || 'VERDADERO') : String(body.options?.A || '').trim(),
+      B: qType === 'boolean' ? (String(body.options?.B || 'FALSO').trim() || 'FALSO') : String(body.options?.B || '').trim(),
+      C: qType === 'boolean' ? '' : String(body.options?.C || '').trim(),
+      D: qType === 'boolean' ? '' : String(body.options?.D || '').trim()
     },
     correctOption: ['A', 'B', 'C', 'D'].includes(body.correctOption) ? body.correctOption : 'A',
+    explanation: String(body.explanation || '').trim(),
     createdAt: Date.now()
   };
   questions.push(newQ);
@@ -1743,17 +2065,21 @@ app.put('/api/questions/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const body = req.body || {};
   const idx = questions.findIndex(q => q.id === id);
+  const qType = body.type === 'boolean' ? 'boolean' : 'multiple';
   const updatedQ = {
     id,
+    stage: String(body.stage || (qType === 'boolean' ? 'etapa2' : 'etapa1')).trim(),
+    type: qType,
     category: String(body.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE').trim(),
     question: String(body.question || '').trim(),
     options: {
-      A: String(body.options?.A || '').trim(),
-      B: String(body.options?.B || '').trim(),
-      C: String(body.options?.C || '').trim(),
-      D: String(body.options?.D || '').trim()
+      A: qType === 'boolean' ? (String(body.options?.A || 'VERDADERO').trim() || 'VERDADERO') : String(body.options?.A || '').trim(),
+      B: qType === 'boolean' ? (String(body.options?.B || 'FALSO').trim() || 'FALSO') : String(body.options?.B || '').trim(),
+      C: qType === 'boolean' ? '' : String(body.options?.C || '').trim(),
+      D: qType === 'boolean' ? '' : String(body.options?.D || '').trim()
     },
     correctOption: ['A', 'B', 'C', 'D'].includes(body.correctOption) ? body.correctOption : 'A',
+    explanation: String(body.explanation || '').trim(),
     updatedAt: Date.now()
   };
 
@@ -2108,8 +2434,11 @@ io.on('connection', async (socket) => {
     if (!isAuthorized()) return;
     if (data && typeof data === 'object') {
       if (typeof data.questionId === 'string') liveState.quiz.questionId = data.questionId;
+      if (typeof data.stage === 'string') liveState.quiz.stage = data.stage;
+      if (data.type === 'boolean' || data.type === 'multiple') liveState.quiz.type = data.type;
       if (typeof data.category === 'string') liveState.quiz.category = data.category.trim();
       if (typeof data.question === 'string') liveState.quiz.question = data.question.trim();
+      if (typeof data.explanation === 'string') liveState.quiz.explanation = data.explanation.trim();
       if (data.options && typeof data.options === 'object') {
         liveState.quiz.options = {
           A: typeof data.options.A === 'string' ? data.options.A.trim() : (liveState.quiz.options?.A || ''),
@@ -2117,6 +2446,10 @@ io.on('connection', async (socket) => {
           C: typeof data.options.C === 'string' ? data.options.C.trim() : (liveState.quiz.options?.C || ''),
           D: typeof data.options.D === 'string' ? data.options.D.trim() : (liveState.quiz.options?.D || '')
         };
+      }
+      if (liveState.quiz.type === 'boolean') {
+        liveState.quiz.options.A = liveState.quiz.options.A || 'VERDADERO';
+        liveState.quiz.options.B = liveState.quiz.options.B || 'FALSO';
       }
       if (['A', 'B', 'C', 'D'].includes(data.correctOption)) {
         liveState.quiz.correctOption = data.correctOption;
@@ -2153,8 +2486,11 @@ io.on('connection', async (socket) => {
     if (!isAuthorized()) return;
     if (data && typeof data === 'object') {
       if (typeof data.questionId === 'string') liveState.quiz.questionId = data.questionId;
+      if (typeof data.stage === 'string') liveState.quiz.stage = data.stage;
+      if (data.type === 'boolean' || data.type === 'multiple') liveState.quiz.type = data.type;
       if (typeof data.category === 'string') liveState.quiz.category = data.category.trim();
       if (typeof data.question === 'string') liveState.quiz.question = data.question.trim();
+      if (typeof data.explanation === 'string') liveState.quiz.explanation = data.explanation.trim();
       if (data.options && typeof data.options === 'object') {
         liveState.quiz.options = {
           A: typeof data.options.A === 'string' ? data.options.A.trim() : (liveState.quiz.options?.A || ''),
@@ -2162,6 +2498,10 @@ io.on('connection', async (socket) => {
           C: typeof data.options.C === 'string' ? data.options.C.trim() : (liveState.quiz.options?.C || ''),
           D: typeof data.options.D === 'string' ? data.options.D.trim() : (liveState.quiz.options?.D || '')
         };
+      }
+      if (liveState.quiz.type === 'boolean') {
+        liveState.quiz.options.A = liveState.quiz.options.A || 'VERDADERO';
+        liveState.quiz.options.B = liveState.quiz.options.B || 'FALSO';
       }
       if (['A', 'B', 'C', 'D'].includes(data.correctOption)) {
         liveState.quiz.correctOption = data.correctOption;
@@ -2218,17 +2558,21 @@ io.on('connection', async (socket) => {
 
   socket.on('save-question', (qData, callback) => {
     if (!isAuthorized() || !qData) return;
+    const qType = qData.type === 'boolean' ? 'boolean' : 'multiple';
     const cleanQ = {
       id: qData.id || `quiz-${Date.now()}`,
+      stage: String(qData.stage || (qType === 'boolean' ? 'etapa2' : 'etapa1')).trim(),
+      type: qType,
       category: String(qData.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE').trim(),
       question: String(qData.question || '').trim(),
       options: {
-        A: String(qData.options?.A || '').trim(),
-        B: String(qData.options?.B || '').trim(),
-        C: String(qData.options?.C || '').trim(),
-        D: String(qData.options?.D || '').trim()
+        A: qType === 'boolean' ? (String(qData.options?.A || 'VERDADERO').trim() || 'VERDADERO') : String(qData.options?.A || '').trim(),
+        B: qType === 'boolean' ? (String(qData.options?.B || 'FALSO').trim() || 'FALSO') : String(qData.options?.B || '').trim(),
+        C: qType === 'boolean' ? '' : String(qData.options?.C || '').trim(),
+        D: qType === 'boolean' ? '' : String(qData.options?.D || '').trim()
       },
       correctOption: ['A', 'B', 'C', 'D'].includes(qData.correctOption) ? qData.correctOption : 'A',
+      explanation: String(qData.explanation || '').trim(),
       updatedAt: Date.now()
     };
 
@@ -2242,6 +2586,15 @@ io.on('connection', async (socket) => {
     saveQuestions(questions);
     io.emit('questions-updated', questions);
     if (typeof callback === 'function') callback({ success: true, question: cleanQ });
+  });
+
+  socket.on('quiz-restore-official', (callback) => {
+    if (!isAuthorized()) return;
+    const merged = ensureOfficialQuestionsInList(questions);
+    questions = merged.list;
+    saveQuestions(questions);
+    io.emit('questions-updated', questions);
+    if (typeof callback === 'function') callback({ success: true, count: questions.length });
   });
 
   socket.on('delete-question', (id, callback) => {

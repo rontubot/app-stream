@@ -1163,14 +1163,48 @@
 
               <input type="hidden" id="quiz-form-id" value="">
 
-              <!-- Categoría / Encabezado Superior -->
+              <!-- Selector de Tipo de Pregunta: 4 Opciones (A, B, C, D) vs Verdadero o Falso -->
+              <div class="bg-cyber-card/70 border border-cyber-border rounded-xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="sliders" class="w-4 h-4 text-amber-400 shrink-0"></i>
+                  <div>
+                    <span class="text-xs font-chakra font-bold text-white uppercase">Modo / Tipo de Pregunta:</span>
+                    <p class="text-[10px] text-gray-400">Elige entre Selección Múltiple (4 opciones) o Verdadero y Falso (2 opciones)</p>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 shrink-0">
+                  <button type="button" id="btn-quiz-type-multiple" class="px-3 py-2 rounded-lg bg-amber-400 text-black font-chakra font-extrabold text-xs uppercase transition-all flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(251,191,36,0.3)] cursor-pointer">
+                    <i data-lucide="grid" class="w-3.5 h-3.5"></i>
+                    <span>4 Opciones (A,B,C,D)</span>
+                  </button>
+                  <button type="button" id="btn-quiz-type-boolean" class="px-3 py-2 rounded-lg bg-cyber-dark border border-cyber-border hover:border-cyan-400 text-gray-300 font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i data-lucide="check-square" class="w-3.5 h-3.5 text-cyan-400"></i>
+                    <span>Verdadero o Falso</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Categoría / Encabezado Superior y Etapa -->
               <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                <div class="sm:col-span-8 space-y-1">
+                <div class="sm:col-span-5 space-y-1">
                   <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase flex items-center gap-1.5">
                     <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
-                    <span>Encabezado / Ronda / Premio (Opcional)</span>
+                    <span>Encabezado / Ronda en OBS</span>
                   </label>
-                  <input type="text" id="quiz-input-category" value="¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE" placeholder="Ej: PREGUNTA POR $1.000.000 • BIRRAVERDE" class="w-full bg-cyber-card border border-cyber-border focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-amber-300 font-chakra font-bold uppercase tracking-wider focus:outline-none">
+                  <input type="text" id="quiz-input-category" value="ETAPA 1 • SELECCIÓN MÚLTIPLE" placeholder="Ej: ETAPA 1 • SELECCIÓN MÚLTIPLE" class="w-full bg-cyber-card border border-cyber-border focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-amber-300 font-chakra font-bold uppercase tracking-wider focus:outline-none">
+                </div>
+
+                <div class="sm:col-span-3 space-y-1">
+                  <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase flex items-center gap-1.5">
+                    <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-400"></i>
+                    <span>Etapa del Banco</span>
+                  </label>
+                  <select id="quiz-select-stage" class="w-full bg-cyber-card border border-cyber-border focus:border-sky-400 rounded-lg px-2.5 py-2 text-xs text-sky-300 font-chakra font-bold uppercase focus:outline-none cursor-pointer">
+                    <option value="etapa1">Etapa 1 (Selección)</option>
+                    <option value="etapa2">Etapa 2 (V / F)</option>
+                    <option value="etapa3">Etapa 3 (Frases)</option>
+                    <option value="custom">Personalizada</option>
+                  </select>
                 </div>
 
                 <!-- Selector Rápido de Respuesta Correcta -->
@@ -1182,8 +1216,8 @@
                   <select id="quiz-select-correct" class="w-full bg-cyber-card border-2 border-cyber-green/70 focus:border-cyber-green rounded-lg px-3 py-2 text-xs text-cyber-green font-chakra font-extrabold uppercase focus:outline-none cursor-pointer">
                     <option value="A">✓ OPCIÓN A (Correcta)</option>
                     <option value="B">✓ OPCIÓN B (Correcta)</option>
-                    <option value="C">✓ OPCIÓN C (Correcta)</option>
-                    <option value="D">✓ OPCIÓN D (Correcta)</option>
+                    <option value="C" id="quiz-select-correct-opt-C">✓ OPCIÓN C (Correcta)</option>
+                    <option value="D" id="quiz-select-correct-opt-D">✓ OPCIÓN D (Correcta)</option>
                   </select>
                 </div>
               </div>
@@ -1193,19 +1227,19 @@
                 <label class="text-xs font-chakra font-bold text-white uppercase flex items-center justify-between">
                   <span class="flex items-center gap-1.5">
                     <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
-                    <span>Pregunta que se verá en OBS *</span>
+                    <span>Pregunta o Afirmación que se verá en OBS *</span>
                   </span>
                   <span class="text-[10px] font-mono text-gray-400">Hexágono central</span>
                 </label>
-                <textarea id="quiz-input-question" rows="2" maxlength="220" placeholder="Escribe aquí la pregunta estilo ¿Quién Quiere Ser Millonario?..." class="w-full bg-[#071120] border-2 border-sky-500/40 focus:border-amber-400 rounded-xl px-4 py-2.5 text-sm sm:text-base text-white font-rajdhani font-extrabold uppercase tracking-wide focus:outline-none resize-none shadow-inner"></textarea>
+                <textarea id="quiz-input-question" rows="2" maxlength="260" placeholder="Escribe aquí la pregunta o afirmación estilo ¿Quién Quiere Ser Millonario?..." class="w-full bg-[#071120] border-2 border-sky-500/40 focus:border-amber-400 rounded-xl px-4 py-2.5 text-sm sm:text-base text-white font-rajdhani font-extrabold uppercase tracking-wide focus:outline-none resize-none shadow-inner"></textarea>
               </div>
 
-              <!-- Las 4 Opciones (Grid 2x2 idéntico al HUD de OBS) -->
+              <!-- Las Opciones (Grid 2x2 para 4 opciones o 2 columnas para Verdadero/Falso) -->
               <div class="space-y-2">
                 <div class="flex items-center justify-between">
                   <label class="text-xs font-chakra font-bold text-gray-200 uppercase flex items-center gap-1.5">
                     <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-amber-400"></i>
-                    <span>Las 4 Opciones a Escoger (Haz clic en "Es la Correcta" en la opción ganadora)</span>
+                    <span id="label-quiz-options-heading">Las 4 Opciones a Escoger (Haz clic en "Elegir Correcta" en la ganadora)</span>
                   </label>
                   <button id="btn-quiz-clear-locked" type="button" class="hidden text-[11px] font-mono text-amber-400 hover:underline cursor-pointer">
                     Quitar opción marcada en naranja
@@ -1217,7 +1251,7 @@
                   <div id="quiz-editor-card-A" class="quiz-editor-opt-card bg-[#091526] border-2 border-cyber-green rounded-xl p-3 space-y-2 transition-all">
                     <div class="flex items-center justify-between gap-2">
                       <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
-                        <span>◆</span> <span>OPCIÓN A:</span>
+                        <span>◆</span> <span id="quiz-label-opt-A">OPCIÓN A:</span>
                       </span>
                       <div class="flex items-center gap-1.5">
                         <button type="button" data-lock-opt="A" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción A en color naranja en OBS antes de revelar">
@@ -1235,7 +1269,7 @@
                   <div id="quiz-editor-card-B" class="quiz-editor-opt-card bg-[#091526] border border-cyber-border rounded-xl p-3 space-y-2 transition-all">
                     <div class="flex items-center justify-between gap-2">
                       <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
-                        <span>◆</span> <span>OPCIÓN B:</span>
+                        <span>◆</span> <span id="quiz-label-opt-B">OPCIÓN B:</span>
                       </span>
                       <div class="flex items-center gap-1.5">
                         <button type="button" data-lock-opt="B" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción B en color naranja en OBS antes de revelar">
@@ -1285,6 +1319,18 @@
                     <input type="text" id="quiz-input-opt-D" placeholder="Escribe la Opción D..." class="w-full bg-black/50 border border-cyber-border focus:border-amber-400 rounded-lg px-3 py-2 text-xs sm:text-sm text-white font-rajdhani font-bold focus:outline-none">
                   </div>
                 </div>
+              </div>
+
+              <!-- Explicación / Nota de Referencia para el Host -->
+              <div class="space-y-1">
+                <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase flex items-center justify-between">
+                  <span class="flex items-center gap-1.5">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 text-cyber-green"></i>
+                    <span>Explicación / Justificación (Guía de lectura para el Host)</span>
+                  </span>
+                  <span class="text-[10px] font-mono text-gray-500">Solo visible en tu panel</span>
+                </label>
+                <textarea id="quiz-input-explanation" rows="2" maxlength="500" placeholder="Explicación o contexto de la respuesta correcta para comentarla en vivo..." class="w-full bg-cyber-card/80 border border-cyber-border focus:border-cyber-green rounded-lg px-3 py-2 text-xs text-gray-200 font-sans focus:outline-none resize-none"></textarea>
               </div>
 
               <!-- Botones Inferiores del Editor -->
@@ -1349,20 +1395,58 @@
                       <span id="quiz-mini-text-D">En ninguna plataforma</span>
                     </div>
                   </div>
+                  <!-- Explicación visible para el Host en la Vista Previa -->
+                  <div id="quiz-mini-preview-explanation-box" class="mt-2 pt-2 border-t border-sky-500/30 text-[11px] text-emerald-300/95 font-sans leading-relaxed">
+                    <strong class="text-cyber-green font-chakra uppercase">💡 Explicación Host:</strong>
+                    <span id="quiz-mini-preview-explanation" class="text-gray-200">Rock Lee llega hasta la quinta de las ocho puertas internas para ejecutar el Loto Inverso.</span>
+                  </div>
                 </div>
               </div>
 
-              <!-- Banco de Preguntas Guardadas -->
+              <!-- Banco de Preguntas Guardadas (Con Filtros por Etapa y Navegación Rápida) -->
               <div class="bg-cyber-black/60 border border-cyber-border rounded-xl p-4 space-y-3 flex-1">
-                <div class="flex items-center justify-between pb-2 border-b border-cyber-border">
+                <div class="flex items-center justify-between gap-2 pb-2 border-b border-cyber-border">
                   <h3 class="text-xs font-chakra font-bold text-white uppercase flex items-center gap-1.5">
                     <i data-lucide="database" class="w-3.5 h-3.5 text-amber-400"></i>
-                    <span>BANCO DE PREGUNTAS PREPARADAS</span>
+                    <span>BANCO DE PREGUNTAS</span>
                   </h3>
-                  <span id="quiz-bank-count-badge" class="text-[11px] font-mono text-gray-400">0 guardadas</span>
+                  <div class="flex items-center gap-2">
+                    <span id="quiz-bank-count-badge" class="text-[11px] font-mono text-amber-300 font-bold">30 guardadas</span>
+                    <button type="button" id="btn-quiz-restore-official" class="px-2 py-0.5 rounded bg-cyber-card border border-cyber-border hover:border-amber-400 text-[10px] font-mono text-gray-300 hover:text-amber-300 transition-all cursor-pointer" title="Restaurar las 30 preguntas oficiales de las 3 etapas">
+                      Restaurar Set
+                    </button>
+                  </div>
                 </div>
 
-                <div id="quiz-bank-list" class="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                <!-- Filtros por Etapa (Etapa 1: Selección | Etapa 2: V/F | Etapa 3: Frases) -->
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <button type="button" data-stage-filter="all" class="btn-quiz-stage-filter px-2.5 py-1 rounded-lg bg-amber-400 text-black font-chakra font-extrabold text-[10px] uppercase transition-all cursor-pointer">
+                    Todas (30)
+                  </button>
+                  <button type="button" data-stage-filter="etapa1" class="btn-quiz-stage-filter px-2.5 py-1 rounded-lg bg-cyber-card border border-cyber-border hover:border-amber-400 text-gray-300 font-chakra font-bold text-[10px] uppercase transition-all cursor-pointer">
+                    Etapa 1: Selección (10)
+                  </button>
+                  <button type="button" data-stage-filter="etapa2" class="btn-quiz-stage-filter px-2.5 py-1 rounded-lg bg-cyber-card border border-cyber-border hover:border-cyan-400 text-gray-300 font-chakra font-bold text-[10px] uppercase transition-all cursor-pointer">
+                    Etapa 2: V o F (10)
+                  </button>
+                  <button type="button" data-stage-filter="etapa3" class="btn-quiz-stage-filter px-2.5 py-1 rounded-lg bg-cyber-card border border-cyber-border hover:border-purple-400 text-gray-300 font-chakra font-bold text-[10px] uppercase transition-all cursor-pointer">
+                    Etapa 3: Frases (10)
+                  </button>
+                </div>
+
+                <!-- Botones Anterior / Siguiente Pregunta para Avanzar en Vivo -->
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" id="btn-quiz-prev-question" class="py-1.5 px-3 rounded-lg bg-cyber-card border border-cyber-border hover:border-amber-400 text-gray-200 hover:text-amber-300 font-chakra font-bold text-[11px] uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                    <span>Pregunta Anterior</span>
+                  </button>
+                  <button type="button" id="btn-quiz-next-question" class="py-1.5 px-3 rounded-lg bg-amber-400/15 border border-amber-400/50 hover:bg-amber-400 hover:text-black text-amber-300 font-chakra font-extrabold text-[11px] uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                    <span>Siguiente Pregunta</span>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+
+                <div id="quiz-bank-list" class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                   <!-- Renderizado dinámico desde admin.js -->
                 </div>
               </div>
@@ -2720,6 +2804,6 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/admin.js?v=20261123a"></script>
+  <script src="/js/admin.js?v=20261123b"></script>
 </body>
 </html>

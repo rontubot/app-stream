@@ -1944,8 +1944,12 @@ function updateMillionaireQuizHud(quizState) {
 
   const isVisible = !!quizState.isVisible;
   const showCorrect = !!quizState.showCorrect;
+  const isBoolean = quizState.type === 'boolean';
   const correctOpt = ['A', 'B', 'C', 'D'].includes(quizState.correctOption) ? quizState.correctOption : 'A';
   const selectedOpt = ['A', 'B', 'C', 'D'].includes(quizState.selectedOption) ? quizState.selectedOption : null;
+  const opts = quizState.options || {};
+
+  millionaireQuizHud.classList.toggle('is-boolean-mode', isBoolean);
 
   // Categoría / Ronda superior
   if (quizObsCategoryText) {
@@ -1955,11 +1959,21 @@ function updateMillionaireQuizHud(quizState) {
   // Etiqueta de estado
   if (quizObsStatusTag) {
     if (showCorrect) {
-      quizObsStatusTag.textContent = `✓ RESPUESTA CORRECTA: OPCIÓN ${correctOpt}`;
+      if (isBoolean) {
+        const boolLabel = correctOpt === 'A' ? (opts.A || 'VERDADERO') : (opts.B || 'FALSO');
+        quizObsStatusTag.textContent = `✓ RESPUESTA CORRECTA: ${boolLabel}`;
+      } else {
+        quizObsStatusTag.textContent = `✓ RESPUESTA CORRECTA: OPCIÓN ${correctOpt}`;
+      }
     } else if (selectedOpt) {
-      quizObsStatusTag.textContent = `OPCIÓN MARCADA: ${selectedOpt}`;
+      if (isBoolean) {
+        const selLabel = selectedOpt === 'A' ? (opts.A || 'VERDADERO') : (opts.B || 'FALSO');
+        quizObsStatusTag.textContent = `OPCIÓN MARCADA: ${selLabel}`;
+      } else {
+        quizObsStatusTag.textContent = `OPCIÓN MARCADA: ${selectedOpt}`;
+      }
     } else {
-      quizObsStatusTag.textContent = 'PREGUNTA EN VIVO';
+      quizObsStatusTag.textContent = isBoolean ? 'VERDADERO O FALSO' : 'PREGUNTA EN VIVO';
     }
   }
 
@@ -1974,14 +1988,19 @@ function updateMillionaireQuizHud(quizState) {
     }
   }
 
-  // Actualizar las 4 opciones (A, B, C, D)
-  const opts = quizState.options || {};
+  // Actualizar las opciones (A, B, C, D)
   ['A', 'B', 'C', 'D'].forEach((letter) => {
     const item = quizOptionEls[letter];
     if (!item || !item.wrapper) return;
 
     if (item.text) {
-      item.text.textContent = opts[letter] || `Opción ${letter}`;
+      if (isBoolean && letter === 'A') {
+        item.text.textContent = opts.A || 'VERDADERO';
+      } else if (isBoolean && letter === 'B') {
+        item.text.textContent = opts.B || 'FALSO';
+      } else {
+        item.text.textContent = opts[letter] || `Opción ${letter}`;
+      }
     }
 
     // Limpiar clases de estado previas
