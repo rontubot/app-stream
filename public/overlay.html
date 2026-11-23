@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/favicon-192.png">
   <link rel="apple-touch-icon" href="/assets/favicon-192.png">
-  <link rel="stylesheet" href="/css/overlay.css?v=20261119c">
+  <link rel="stylesheet" href="/css/overlay.css?v=20261123a">
   <link rel="stylesheet" href="/css/multicam.css">
 </head>
 <body>
@@ -443,6 +443,107 @@
     </div>
 
     <!-- ============================================================
+         ESCENA / HUD DE PREGUNTAS ESTILO ¿QUIÉN QUIERE SER MILLONARIO?
+         ============================================================ -->
+    <div id="millionaire-quiz-hud" class="millionaire-quiz-hud" aria-hidden="true">
+      <div class="quiz-ambient-glow"></div>
+
+      <!-- Barra Superior: Categoría / Ronda y Estado -->
+      <div class="quiz-top-meta-row">
+        <div class="quiz-category-pill" id="quiz-obs-category-pill">
+          <img src="/assets/isotipo.png" alt="BV" class="quiz-brand-icon">
+          <span class="quiz-diamond-bullet">◆</span>
+          <span id="quiz-obs-category-text">¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE</span>
+          <span class="quiz-diamond-bullet">◆</span>
+          <span class="quiz-status-tag" id="quiz-obs-status-tag">PREGUNTA EN VIVO</span>
+        </div>
+      </div>
+
+      <!-- Contenedor Principal de la Pregunta (Hexágono con Líneas Laterales) -->
+      <div class="quiz-question-row">
+        <div class="quiz-wing-line quiz-wing-left"></div>
+        <div class="quiz-question-hex-border">
+          <div class="quiz-question-hex">
+            <div class="quiz-hex-shimmer"></div>
+            <div class="quiz-question-text" id="quiz-obs-question">
+              ¿EN QUÉ PLATAFORMA SE TRANSMITE OFICIALMENTE LA VELADA DEL CAOS?
+            </div>
+          </div>
+        </div>
+        <div class="quiz-wing-line quiz-wing-right"></div>
+      </div>
+
+      <!-- Grid 2x2 de las 4 Opciones (A, B, C, D) -->
+      <div class="quiz-options-grid">
+        <!-- Fila 1: Opción A y Opción B -->
+        <div class="quiz-options-row quiz-row-1">
+          <div class="quiz-row-line"></div>
+
+          <!-- OPCIÓN A -->
+          <div class="quiz-option-wrapper" id="quiz-obs-opt-A" data-opt="A">
+            <div class="quiz-option-hex-border">
+              <div class="quiz-option-hex">
+                <div class="quiz-opt-prefix">
+                  <span class="quiz-opt-diamond">◆</span>
+                  <span class="quiz-opt-letter">A:</span>
+                </div>
+                <div class="quiz-opt-text" id="quiz-obs-text-A">En el canal oficial de BirraVerde en Kick</div>
+                <div class="quiz-opt-badge" id="quiz-obs-badge-A">✓ CORRECTA</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- OPCIÓN B -->
+          <div class="quiz-option-wrapper" id="quiz-obs-opt-B" data-opt="B">
+            <div class="quiz-option-hex-border">
+              <div class="quiz-option-hex">
+                <div class="quiz-opt-prefix">
+                  <span class="quiz-opt-diamond">◆</span>
+                  <span class="quiz-opt-letter">B:</span>
+                </div>
+                <div class="quiz-opt-text" id="quiz-obs-text-B">Por televisión por cable tradicional</div>
+                <div class="quiz-opt-badge" id="quiz-obs-badge-B">✓ CORRECTA</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fila 2: Opción C y Opción D -->
+        <div class="quiz-options-row quiz-row-2">
+          <div class="quiz-row-line"></div>
+
+          <!-- OPCIÓN C -->
+          <div class="quiz-option-wrapper" id="quiz-obs-opt-C" data-opt="C">
+            <div class="quiz-option-hex-border">
+              <div class="quiz-option-hex">
+                <div class="quiz-opt-prefix">
+                  <span class="quiz-opt-diamond">◆</span>
+                  <span class="quiz-opt-letter">C:</span>
+                </div>
+                <div class="quiz-opt-text" id="quiz-obs-text-C">Solo por radio AM</div>
+                <div class="quiz-opt-badge" id="quiz-obs-badge-C">✓ CORRECTA</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- OPCIÓN D -->
+          <div class="quiz-option-wrapper" id="quiz-obs-opt-D" data-opt="D">
+            <div class="quiz-option-hex-border">
+              <div class="quiz-option-hex">
+                <div class="quiz-opt-prefix">
+                  <span class="quiz-opt-diamond">◆</span>
+                  <span class="quiz-opt-letter">D:</span>
+                </div>
+                <div class="quiz-opt-text" id="quiz-obs-text-D">En ninguna plataforma</div>
+                <div class="quiz-opt-badge" id="quiz-obs-badge-D">✓ CORRECTA</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
          OVERLAY INFERIOR DINÁMICO: RECUADRO DE CHAT CON FILTRO Y TTS
          ============================================================ -->
     <div id="stream-bottom-chat" class="stream-bottom-chat">
@@ -553,6 +654,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/overlay.js?v=20261119b"></script>
+  <script src="/js/overlay.js?v=20261123a"></script>
 </body>
 </html>

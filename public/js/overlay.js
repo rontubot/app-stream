@@ -675,6 +675,11 @@ socket.on('state-update', (state) => {
   } else {
     hideMulticamOverlay();
   }
+
+  // Banco de Animaciones: Sistema de Preguntas (Estilo ¿Quién Quiere Ser Millonario?)
+  if (state.quiz) {
+    updateMillionaireQuizHud(state.quiz);
+  }
 });
 
 // ============================================================
@@ -1857,3 +1862,161 @@ function renderMulticamCamCard(peer) {
     }
   }
 }
+
+// ============================================================
+// SISTEMA DE PREGUNTAS ESTILO ¿QUIÉN QUIERE SER MILLONARIO? (HUD OBS)
+// ============================================================
+const millionaireQuizHud = document.getElementById('millionaire-quiz-hud');
+const quizObsCategoryText = document.getElementById('quiz-obs-category-text');
+const quizObsStatusTag = document.getElementById('quiz-obs-status-tag');
+const quizObsQuestion = document.getElementById('quiz-obs-question');
+
+const quizOptionEls = {
+  A: {
+    wrapper: document.getElementById('quiz-obs-opt-A'),
+    text: document.getElementById('quiz-obs-text-A'),
+    badge: document.getElementById('quiz-obs-badge-A')
+  },
+  B: {
+    wrapper: document.getElementById('quiz-obs-opt-B'),
+    text: document.getElementById('quiz-obs-text-B'),
+    badge: document.getElementById('quiz-obs-badge-B')
+  },
+  C: {
+    wrapper: document.getElementById('quiz-obs-opt-C'),
+    text: document.getElementById('quiz-obs-text-C'),
+    badge: document.getElementById('quiz-obs-badge-C')
+  },
+  D: {
+    wrapper: document.getElementById('quiz-obs-opt-D'),
+    text: document.getElementById('quiz-obs-text-D'),
+    badge: document.getElementById('quiz-obs-badge-D')
+  }
+};
+
+let lastQuizCorrectRevealedState = false;
+
+function playMillionaireRevealSound() {
+  if (isMasterMuted || (typeof multicamSettingsCurrent !== 'undefined' && multicamSettingsCurrent.audioMutedOverall) || isOverlayEmbeddedPreview) {
+    return;
+  }
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    // Acorde triunfal estilo "¿Quién Quiere Ser Millonario?" al revelar la respuesta correcta
+    const notes = [
+      { f: 523.25, start: 0.0, dur: 0.22 }, // C5
+      { f: 659.25, start: 0.11, dur: 0.22 }, // E5
+      { f: 783.99, start: 0.22, dur: 0.25 }, // G5
+      { f: 1046.50, start: 0.34, dur: 0.65 } // C6
+    ];
+
+    notes.forEach(({ f, start, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, now + start);
+
+      gain.gain.setValueAtTime(0.001, now + start);
+      gain.gain.exponentialRampToValueAtTime(0.24, now + start + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + start + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.03);
+    });
+
+    setTimeout(() => {
+      try { ctx.close(); } catch (e) {}
+    }, 1150);
+  } catch (err) {
+    console.warn('[Overlay Quiz] Error reproduciendo sonido de revelación:', err);
+  }
+}
+
+function updateMillionaireQuizHud(quizState) {
+  if (!millionaireQuizHud || !quizState) return;
+
+  const isVisible = !!quizState.isVisible;
+  const showCorrect = !!quizState.showCorrect;
+  const correctOpt = ['A', 'B', 'C', 'D'].includes(quizState.correctOption) ? quizState.correctOption : 'A';
+  const selectedOpt = ['A', 'B', 'C', 'D'].includes(quizState.selectedOption) ? quizState.selectedOption : null;
+
+  // Categoría / Ronda superior
+  if (quizObsCategoryText) {
+    quizObsCategoryText.textContent = quizState.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE';
+  }
+
+  // Etiqueta de estado
+  if (quizObsStatusTag) {
+    if (showCorrect) {
+      quizObsStatusTag.textContent = `✓ RESPUESTA CORRECTA: OPCIÓN ${correctOpt}`;
+    } else if (selectedOpt) {
+      quizObsStatusTag.textContent = `OPCIÓN MARCADA: ${selectedOpt}`;
+    } else {
+      quizObsStatusTag.textContent = 'PREGUNTA EN VIVO';
+    }
+  }
+
+  // Texto de la Pregunta
+  if (quizObsQuestion) {
+    const qText = quizState.question || '¿PREGUNTA EN VIVO?';
+    quizObsQuestion.textContent = qText;
+    if (qText.length > 95) {
+      quizObsQuestion.classList.add('is-long-text');
+    } else {
+      quizObsQuestion.classList.remove('is-long-text');
+    }
+  }
+
+  // Actualizar las 4 opciones (A, B, C, D)
+  const opts = quizState.options || {};
+  ['A', 'B', 'C', 'D'].forEach((letter) => {
+    const item = quizOptionEls[letter];
+    if (!item || !item.wrapper) return;
+
+    if (item.text) {
+      item.text.textContent = opts[letter] || `Opción ${letter}`;
+    }
+
+    // Limpiar clases de estado previas
+    item.wrapper.classList.remove('is-selected', 'is-correct-revealed', 'is-wrong-revealed', 'is-dimmed');
+
+    if (showCorrect) {
+      if (letter === correctOpt) {
+        item.wrapper.classList.add('is-correct-revealed');
+        if (item.badge) item.badge.textContent = '✓ CORRECTA';
+      } else if (selectedOpt && letter === selectedOpt && selectedOpt !== correctOpt) {
+        item.wrapper.classList.add('is-wrong-revealed');
+      } else {
+        item.wrapper.classList.add('is-dimmed');
+      }
+    } else if (selectedOpt && letter === selectedOpt) {
+      item.wrapper.classList.add('is-selected');
+    }
+  });
+
+  if (showCorrect) {
+    millionaireQuizHud.classList.add('is-answer-revealed');
+    if (!lastQuizCorrectRevealedState && isVisible) {
+      playMillionaireRevealSound();
+    }
+  } else {
+    millionaireQuizHud.classList.remove('is-answer-revealed');
+  }
+  lastQuizCorrectRevealedState = showCorrect;
+
+  if (isVisible) {
+    millionaireQuizHud.classList.add('is-visible');
+    document.body.classList.add('quiz-hud-active');
+  } else {
+    millionaireQuizHud.classList.remove('is-visible');
+    document.body.classList.remove('quiz-hud-active');
+  }
+}
+

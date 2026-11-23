@@ -29,6 +29,7 @@ const MULTICAM_FILE = path.join(DATA_DIR, 'multicam.json');
 const BANNED_IPS_FILE = path.join(DATA_DIR, 'banned_ips.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const MODS_CHAT_FILE = path.join(DATA_DIR, 'mods_chat.json');
+const QUESTIONS_FILE = path.join(DATA_DIR, 'questions.json');
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 
 // ============================================================
@@ -323,6 +324,23 @@ let liveState = {
     activeTab: 'main',
     username: 'Admin',
     updatedAt: null
+  },
+  quiz: {
+    isVisible: false,
+    questionId: 'quiz-default-1',
+    category: '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE',
+    question: '¿EN QUÉ PLATAFORMA SE TRANSMITE OFICIALMENTE LA VELADA DEL CAOS?',
+    options: {
+      A: 'En el canal oficial de BirraVerde en Kick',
+      B: 'Por televisión por cable tradicional',
+      C: 'Solo por radio AM',
+      D: 'En ninguna plataforma'
+    },
+    correctOption: 'A', // 'A' | 'B' | 'C' | 'D'
+    selectedOption: null, // 'A' | 'B' | 'C' | 'D' | null
+    showCorrect: false,
+    shownAt: null,
+    updatedAt: null
   }
 };
 
@@ -453,6 +471,29 @@ function loadSettings() {
           liveState.eventCountdown.updatedAt = data.eventCountdown.updatedAt;
         }
       }
+      if (data.quiz && typeof data.quiz === 'object') {
+        if (typeof data.quiz.isVisible === 'boolean') liveState.quiz.isVisible = data.quiz.isVisible;
+        if (typeof data.quiz.questionId === 'string') liveState.quiz.questionId = data.quiz.questionId;
+        if (typeof data.quiz.category === 'string') liveState.quiz.category = data.quiz.category;
+        if (typeof data.quiz.question === 'string') liveState.quiz.question = data.quiz.question;
+        if (data.quiz.options && typeof data.quiz.options === 'object') {
+          liveState.quiz.options = {
+            A: typeof data.quiz.options.A === 'string' ? data.quiz.options.A : liveState.quiz.options.A,
+            B: typeof data.quiz.options.B === 'string' ? data.quiz.options.B : liveState.quiz.options.B,
+            C: typeof data.quiz.options.C === 'string' ? data.quiz.options.C : liveState.quiz.options.C,
+            D: typeof data.quiz.options.D === 'string' ? data.quiz.options.D : liveState.quiz.options.D
+          };
+        }
+        if (['A', 'B', 'C', 'D'].includes(data.quiz.correctOption)) {
+          liveState.quiz.correctOption = data.quiz.correctOption;
+        }
+        if (['A', 'B', 'C', 'D'].includes(data.quiz.selectedOption) || data.quiz.selectedOption === null) {
+          liveState.quiz.selectedOption = data.quiz.selectedOption;
+        }
+        if (typeof data.quiz.showCorrect === 'boolean') {
+          liveState.quiz.showCorrect = data.quiz.showCorrect;
+        }
+      }
       return data;
     }
   } catch (err) {
@@ -491,6 +532,23 @@ function getSettingsPayload() {
       targetTime: liveState.eventCountdown.targetTime || '',
       targetTimestamp: liveState.eventCountdown.targetTimestamp || null,
       updatedAt: liveState.eventCountdown.updatedAt || null
+    },
+    quiz: {
+      isVisible: !!liveState.quiz.isVisible,
+      questionId: liveState.quiz.questionId || null,
+      category: liveState.quiz.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE',
+      question: liveState.quiz.question || '',
+      options: {
+        A: (liveState.quiz.options && liveState.quiz.options.A) || '',
+        B: (liveState.quiz.options && liveState.quiz.options.B) || '',
+        C: (liveState.quiz.options && liveState.quiz.options.C) || '',
+        D: (liveState.quiz.options && liveState.quiz.options.D) || ''
+      },
+      correctOption: ['A', 'B', 'C', 'D'].includes(liveState.quiz.correctOption) ? liveState.quiz.correctOption : 'A',
+      selectedOption: ['A', 'B', 'C', 'D'].includes(liveState.quiz.selectedOption) ? liveState.quiz.selectedOption : null,
+      showCorrect: !!liveState.quiz.showCorrect,
+      shownAt: liveState.quiz.shownAt || null,
+      updatedAt: liveState.quiz.updatedAt || null
     }
   };
 }
@@ -752,14 +810,78 @@ function saveModsChat(chatList, persistDb = true) {
   }
 }
 
+// Gestión y persistencia del Banco de Preguntas (Estilo ¿Quién Quiere Ser Millonario?)
+let questions = [];
+
+function loadQuestions() {
+  try {
+    if (fs.existsSync(QUESTIONS_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(QUESTIONS_FILE, 'utf-8'));
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Error al cargar questions:', err);
+  }
+  return [];
+}
+
+function saveQuestions(questionsList, persistDb = true) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(QUESTIONS_FILE, JSON.stringify(questionsList, null, 2), 'utf-8');
+    if (persistDb) {
+      saveToDb('questions', questionsList);
+    }
+    return true;
+  } catch (err) {
+    console.error('Error al guardar questions:', err);
+    return false;
+  }
+}
+
 // Inicialización de datos
 let savedSettings = loadSettings();
 let presenters = loadPresenters();
 let fights = loadFights();
+questions = loadQuestions();
 users = loadUsers();
 modsChatHistory = loadModsChat();
 loadMulticamSettings();
 loadBannedIps();
+
+if (questions.length === 0) {
+  questions = [
+    {
+      id: 'quiz-default-1',
+      category: '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE',
+      question: '¿EN QUÉ PLATAFORMA SE TRANSMITE OFICIALMENTE LA VELADA DEL CAOS?',
+      options: {
+        A: 'En el canal oficial de BirraVerde en Kick',
+        B: 'Por televisión por cable tradicional',
+        C: 'Solo por radio AM',
+        D: 'En ninguna plataforma'
+      },
+      correctOption: 'A',
+      createdAt: Date.now()
+    },
+    {
+      id: 'quiz-default-2',
+      category: 'PREGUNTA DE BOXEO • LA VELADA DEL CAOS',
+      question: '¿CUÁNTOS ROUNDS TIENE UN COMBATE ESTELAR EN LA VELADA DEL CAOS?',
+      options: {
+        A: '12 Rounds de 5 minutos',
+        B: '3 Rounds de 3 minutos',
+        C: '1 solo Round de 10 minutos',
+        D: '5 Rounds sin límite de tiempo'
+      },
+      correctOption: 'B',
+      createdAt: Date.now()
+    }
+  ];
+  saveQuestions(questions, false);
+}
 
 // Si no hay usuarios por primera vez, creamos los dos niveles base: Usuario Nivel 1 (admin) y MODS (mods)
 if (users.length === 0) {
@@ -1049,6 +1171,16 @@ async function syncDataFromDatabase() {
       if (s.topHud) liveState.topHud = { ...liveState.topHud, ...s.topHud };
       if (s.chatOverlay) liveState.chatOverlay = { ...liveState.chatOverlay, ...s.chatOverlay };
       if (s.eventCountdown) liveState.eventCountdown = { ...liveState.eventCountdown, ...s.eventCountdown };
+      if (s.quiz && typeof s.quiz === 'object') {
+        liveState.quiz = {
+          ...liveState.quiz,
+          ...s.quiz,
+          options: {
+            ...liveState.quiz.options,
+            ...(s.quiz.options || {})
+          }
+        };
+      }
       if (s.queue) {
         if (s.queue.leftId) {
           liveState.queue.left = presenters.find(p => p.id === s.queue.leftId) || presenters[0] || null;
@@ -1115,6 +1247,16 @@ async function syncDataFromDatabase() {
       changed = true;
     } else if (modsChatHistory.length > 0) {
       await saveToDb('mods_chat', modsChatHistory);
+    }
+
+    // 8. Sincronizar Banco de Preguntas (Estilo ¿Quién Quiere Ser Millonario?)
+    if (dbData.questions && Array.isArray(dbData.questions) && dbData.questions.length > 0) {
+      questions = dbData.questions;
+      saveQuestions(questions, false);
+      io.emit('questions-updated', questions);
+      changed = true;
+    } else if (questions.length > 0) {
+      await saveToDb('questions', questions);
     }
 
     if (changed) {
@@ -1570,6 +1712,69 @@ app.delete('/api/fights/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// Rutas API REST para Banco de Preguntas (Estilo ¿Quién Quiere Ser Millonario?)
+app.get('/api/questions', async (req, res) => {
+  if (dbInitPromise) await dbInitPromise.catch(() => {});
+  res.json(questions);
+});
+
+app.post('/api/questions', requireAuth, (req, res) => {
+  const body = req.body || {};
+  const newQ = {
+    id: body.id || `quiz-${Date.now()}`,
+    category: String(body.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE').trim(),
+    question: String(body.question || '').trim(),
+    options: {
+      A: String(body.options?.A || '').trim(),
+      B: String(body.options?.B || '').trim(),
+      C: String(body.options?.C || '').trim(),
+      D: String(body.options?.D || '').trim()
+    },
+    correctOption: ['A', 'B', 'C', 'D'].includes(body.correctOption) ? body.correctOption : 'A',
+    createdAt: Date.now()
+  };
+  questions.push(newQ);
+  saveQuestions(questions);
+  io.emit('questions-updated', questions);
+  res.status(201).json(newQ);
+});
+
+app.put('/api/questions/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const body = req.body || {};
+  const idx = questions.findIndex(q => q.id === id);
+  const updatedQ = {
+    id,
+    category: String(body.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE').trim(),
+    question: String(body.question || '').trim(),
+    options: {
+      A: String(body.options?.A || '').trim(),
+      B: String(body.options?.B || '').trim(),
+      C: String(body.options?.C || '').trim(),
+      D: String(body.options?.D || '').trim()
+    },
+    correctOption: ['A', 'B', 'C', 'D'].includes(body.correctOption) ? body.correctOption : 'A',
+    updatedAt: Date.now()
+  };
+
+  if (idx === -1) {
+    questions.push(updatedQ);
+  } else {
+    questions[idx] = { ...questions[idx], ...updatedQ };
+  }
+  saveQuestions(questions);
+  io.emit('questions-updated', questions);
+  res.json(updatedQ);
+});
+
+app.delete('/api/questions/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  questions = questions.filter(q => q.id !== id);
+  saveQuestions(questions);
+  io.emit('questions-updated', questions);
+  res.json({ success: true });
+});
+
 // Endpoint de subida de imágenes (Eventos, Boxeadores, etc.) con persistencia en PostgreSQL
 app.post('/api/upload', requireAuth, async (req, res) => {
   try {
@@ -1720,6 +1925,7 @@ io.on('connection', async (socket) => {
   socket.emit('state-update', liveState);
   socket.emit('presenters-updated', presenters);
   socket.emit('fights-updated', fights);
+  socket.emit('questions-updated', questions);
   socket.emit('multicam-settings-updated', multicamSettings);
   socket.emit('master-mute-changed', { muted: !!liveState.masterMuted });
   if (currentUser) {
@@ -1895,6 +2101,155 @@ io.on('connection', async (socket) => {
     };
     saveSettings();
     io.emit('state-update', liveState);
+  });
+
+  // 5.b.3. Banco de Animaciones - Sistema de Preguntas (Estilo ¿Quién Quiere Ser Millonario?)
+  socket.on('quiz-show-hud', (data, callback) => {
+    if (!isAuthorized()) return;
+    if (data && typeof data === 'object') {
+      if (typeof data.questionId === 'string') liveState.quiz.questionId = data.questionId;
+      if (typeof data.category === 'string') liveState.quiz.category = data.category.trim();
+      if (typeof data.question === 'string') liveState.quiz.question = data.question.trim();
+      if (data.options && typeof data.options === 'object') {
+        liveState.quiz.options = {
+          A: typeof data.options.A === 'string' ? data.options.A.trim() : (liveState.quiz.options?.A || ''),
+          B: typeof data.options.B === 'string' ? data.options.B.trim() : (liveState.quiz.options?.B || ''),
+          C: typeof data.options.C === 'string' ? data.options.C.trim() : (liveState.quiz.options?.C || ''),
+          D: typeof data.options.D === 'string' ? data.options.D.trim() : (liveState.quiz.options?.D || '')
+        };
+      }
+      if (['A', 'B', 'C', 'D'].includes(data.correctOption)) {
+        liveState.quiz.correctOption = data.correctOption;
+      }
+      if (['A', 'B', 'C', 'D'].includes(data.selectedOption) || data.selectedOption === null) {
+        liveState.quiz.selectedOption = data.selectedOption;
+      }
+      if (typeof data.showCorrect === 'boolean') {
+        liveState.quiz.showCorrect = data.showCorrect;
+      } else {
+        // Por defecto al mostrar la pregunta en OBS se muestra en modo normal (sin revelar aún la respuesta)
+        liveState.quiz.showCorrect = false;
+      }
+    }
+    liveState.quiz.isVisible = true;
+    liveState.quiz.shownAt = Date.now();
+    liveState.quiz.updatedAt = Date.now();
+    saveSettings();
+    io.emit('state-update', liveState);
+    if (typeof callback === 'function') callback({ success: true, quiz: liveState.quiz });
+  });
+
+  socket.on('quiz-hide-hud', (data, callback) => {
+    const cb = typeof data === 'function' ? data : callback;
+    if (!isAuthorized()) return;
+    liveState.quiz.isVisible = false;
+    liveState.quiz.updatedAt = Date.now();
+    saveSettings();
+    io.emit('state-update', liveState);
+    if (typeof cb === 'function') cb({ success: true, quiz: liveState.quiz });
+  });
+
+  socket.on('quiz-update-data', (data, callback) => {
+    if (!isAuthorized()) return;
+    if (data && typeof data === 'object') {
+      if (typeof data.questionId === 'string') liveState.quiz.questionId = data.questionId;
+      if (typeof data.category === 'string') liveState.quiz.category = data.category.trim();
+      if (typeof data.question === 'string') liveState.quiz.question = data.question.trim();
+      if (data.options && typeof data.options === 'object') {
+        liveState.quiz.options = {
+          A: typeof data.options.A === 'string' ? data.options.A.trim() : (liveState.quiz.options?.A || ''),
+          B: typeof data.options.B === 'string' ? data.options.B.trim() : (liveState.quiz.options?.B || ''),
+          C: typeof data.options.C === 'string' ? data.options.C.trim() : (liveState.quiz.options?.C || ''),
+          D: typeof data.options.D === 'string' ? data.options.D.trim() : (liveState.quiz.options?.D || '')
+        };
+      }
+      if (['A', 'B', 'C', 'D'].includes(data.correctOption)) {
+        liveState.quiz.correctOption = data.correctOption;
+      }
+      if (['A', 'B', 'C', 'D'].includes(data.selectedOption) || data.selectedOption === null) {
+        liveState.quiz.selectedOption = data.selectedOption;
+      }
+      if (typeof data.showCorrect === 'boolean') {
+        liveState.quiz.showCorrect = data.showCorrect;
+      }
+      if (typeof data.isVisible === 'boolean') {
+        liveState.quiz.isVisible = data.isVisible;
+      }
+    }
+    liveState.quiz.updatedAt = Date.now();
+    saveSettings();
+    io.emit('state-update', liveState);
+    if (typeof callback === 'function') callback({ success: true, quiz: liveState.quiz });
+  });
+
+  socket.on('quiz-toggle-correct', (data, callback) => {
+    const cb = typeof data === 'function' ? data : callback;
+    if (!isAuthorized()) return;
+    const nextShow = (data && typeof data.showCorrect === 'boolean')
+      ? data.showCorrect
+      : !liveState.quiz.showCorrect;
+    liveState.quiz.showCorrect = nextShow;
+    // Si muestran la respuesta correcta y el HUD estaba oculto, asegurarse de que sea visible si así lo piden
+    if (data && data.ensureVisible === true) {
+      liveState.quiz.isVisible = true;
+    }
+    liveState.quiz.updatedAt = Date.now();
+    saveSettings();
+    io.emit('state-update', liveState);
+    if (nextShow) {
+      io.emit('quiz-correct-revealed', {
+        correctOption: liveState.quiz.correctOption,
+        selectedOption: liveState.quiz.selectedOption
+      });
+    }
+    if (typeof cb === 'function') cb({ success: true, quiz: liveState.quiz });
+  });
+
+  socket.on('quiz-select-option', (data, callback) => {
+    const cb = typeof data === 'function' ? data : callback;
+    if (!isAuthorized()) return;
+    const opt = data && ['A', 'B', 'C', 'D'].includes(data.option) ? data.option : null;
+    liveState.quiz.selectedOption = opt;
+    liveState.quiz.updatedAt = Date.now();
+    saveSettings();
+    io.emit('state-update', liveState);
+    if (typeof cb === 'function') cb({ success: true, quiz: liveState.quiz });
+  });
+
+  socket.on('save-question', (qData, callback) => {
+    if (!isAuthorized() || !qData) return;
+    const cleanQ = {
+      id: qData.id || `quiz-${Date.now()}`,
+      category: String(qData.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE').trim(),
+      question: String(qData.question || '').trim(),
+      options: {
+        A: String(qData.options?.A || '').trim(),
+        B: String(qData.options?.B || '').trim(),
+        C: String(qData.options?.C || '').trim(),
+        D: String(qData.options?.D || '').trim()
+      },
+      correctOption: ['A', 'B', 'C', 'D'].includes(qData.correctOption) ? qData.correctOption : 'A',
+      updatedAt: Date.now()
+    };
+
+    const idx = questions.findIndex(q => q.id === cleanQ.id);
+    if (idx !== -1) {
+      questions[idx] = { ...questions[idx], ...cleanQ };
+    } else {
+      cleanQ.createdAt = Date.now();
+      questions.push(cleanQ);
+    }
+    saveQuestions(questions);
+    io.emit('questions-updated', questions);
+    if (typeof callback === 'function') callback({ success: true, question: cleanQ });
+  });
+
+  socket.on('delete-question', (id, callback) => {
+    if (!isAuthorized()) return;
+    questions = questions.filter(q => q.id !== id);
+    saveQuestions(questions);
+    io.emit('questions-updated', questions);
+    if (typeof callback === 'function') callback({ success: true, id });
   });
 
   // 5.c. Overlay Superior Dinámico BirraVerde (HUD y Marquesina)

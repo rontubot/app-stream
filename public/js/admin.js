@@ -717,6 +717,13 @@ socket.on('state-update', (state) => {
     }
   }
 
+  // Estado del Sistema de Preguntas (Estilo ¿Quién Quiere Ser Millonario?)
+  if (state.quiz && typeof state.quiz === 'object') {
+    if (typeof syncQuizAdminUI === 'function') {
+      syncQuizAdminUI(state.quiz);
+    }
+  }
+
   refreshIcons();
 
   saveToLocalStorage();
@@ -4230,6 +4237,597 @@ if (btnHideModTts) {
     socket.emit('hide-mod-tts');
     showToast('🔇 TTS de MODS detenido y retirado de pantalla');
   });
+}
+
+// ============================================================
+// BANCO DE ANIMACIONES: SISTEMA DE PREGUNTAS (ESTILO ¿QUIÉN QUIERE SER MILLONARIO?)
+// ============================================================
+const navBadgeQuiz = document.getElementById('nav-badge-quiz');
+const cardSceneQuiz = document.getElementById('card-scene-quiz');
+const badgeQuizStatus = document.getElementById('badge-quiz-status');
+const labelQuizSavedCount = document.getElementById('label-quiz-saved-count');
+const btnToggleQuizPanel = document.getElementById('btn-toggle-quiz-panel');
+const textToggleQuizPanel = document.getElementById('text-toggle-quiz-panel');
+const iconToggleQuizPanel = document.getElementById('icon-toggle-quiz-panel');
+const btnCollapseQuizPanel = document.getElementById('btn-collapse-quiz-panel');
+const sceneModuleQuiz = document.getElementById('scene-module-quiz');
+
+const quizActiveIndicator = document.getElementById('quiz-active-indicator');
+const quizActiveDot = document.getElementById('quiz-active-dot');
+const quizActiveText = document.getElementById('quiz-active-text');
+const quizCorrectStatusPill = document.getElementById('quiz-correct-status-pill');
+
+const btnQuizShowHud = document.getElementById('btn-quiz-show-hud');
+const textBtnQuizShowHud = document.getElementById('text-btn-quiz-show-hud');
+const btnQuizRevealCorrect = document.getElementById('btn-quiz-reveal-correct');
+const textBtnQuizRevealCorrect = document.getElementById('text-btn-quiz-reveal-correct');
+const btnQuizResetNormal = document.getElementById('btn-quiz-reset-normal');
+const btnQuizHideHud = document.getElementById('btn-quiz-hide-hud');
+
+const btnQuizNewClear = document.getElementById('btn-quiz-new-clear');
+const quizFormId = document.getElementById('quiz-form-id');
+const quizInputCategory = document.getElementById('quiz-input-category');
+const quizSelectCorrect = document.getElementById('quiz-select-correct');
+const quizInputQuestion = document.getElementById('quiz-input-question');
+const btnQuizClearLocked = document.getElementById('btn-quiz-clear-locked');
+
+const quizInputOpts = {
+  A: document.getElementById('quiz-input-opt-A'),
+  B: document.getElementById('quiz-input-opt-B'),
+  C: document.getElementById('quiz-input-opt-C'),
+  D: document.getElementById('quiz-input-opt-D')
+};
+
+const quizEditorCards = {
+  A: document.getElementById('quiz-editor-card-A'),
+  B: document.getElementById('quiz-editor-card-B'),
+  C: document.getElementById('quiz-editor-card-C'),
+  D: document.getElementById('quiz-editor-card-D')
+};
+
+const btnQuizSaveBank = document.getElementById('btn-quiz-save-bank');
+const btnQuizUpdateOnly = document.getElementById('btn-quiz-update-only');
+const btnQuizLaunchNormal = document.getElementById('btn-quiz-launch-normal');
+
+const quizPreviewCorrectBadge = document.getElementById('quiz-preview-correct-badge');
+const quizMiniPreviewCat = document.getElementById('quiz-mini-preview-cat');
+const quizMiniPreviewQ = document.getElementById('quiz-mini-preview-q');
+const quizMiniOpts = {
+  A: document.getElementById('quiz-mini-opt-A'),
+  B: document.getElementById('quiz-mini-opt-B'),
+  C: document.getElementById('quiz-mini-opt-C'),
+  D: document.getElementById('quiz-mini-opt-D')
+};
+const quizMiniTexts = {
+  A: document.getElementById('quiz-mini-text-A'),
+  B: document.getElementById('quiz-mini-text-B'),
+  C: document.getElementById('quiz-mini-text-C'),
+  D: document.getElementById('quiz-mini-text-D')
+};
+
+const quizBankCountBadge = document.getElementById('quiz-bank-count-badge');
+const quizBankList = document.getElementById('quiz-bank-list');
+
+const LS_QUESTIONS_KEY = 'birraverde_quiz_questions_v1';
+let questionsBank = [];
+let isQuizPanelOpen = false;
+let hasInitializedQuizEditor = false;
+let currentEditorCorrectOption = 'A';
+
+function toggleQuizModule(forceState) {
+  if (typeof forceState === 'boolean') {
+    isQuizPanelOpen = forceState;
+  } else {
+    isQuizPanelOpen = !isQuizPanelOpen;
+  }
+
+  if (sceneModuleQuiz) {
+    if (isQuizPanelOpen) {
+      sceneModuleQuiz.classList.remove('hidden');
+      if (textToggleQuizPanel) textToggleQuizPanel.textContent = 'OCULTAR';
+      if (iconToggleQuizPanel) iconToggleQuizPanel.setAttribute('data-lucide', 'chevron-up');
+      if (cardSceneQuiz) {
+        cardSceneQuiz.classList.add('border-amber-400', 'shadow-[0_0_20px_rgba(251,191,36,0.22)]');
+      }
+      setTimeout(() => {
+        sceneModuleQuiz.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    } else {
+      sceneModuleQuiz.classList.add('hidden');
+      if (textToggleQuizPanel) textToggleQuizPanel.textContent = 'ABRIR CONSOLA';
+      if (iconToggleQuizPanel) iconToggleQuizPanel.setAttribute('data-lucide', 'chevron-down');
+      if (cardSceneQuiz) {
+        cardSceneQuiz.classList.remove('border-amber-400', 'shadow-[0_0_20px_rgba(251,191,36,0.22)]');
+      }
+    }
+    refreshIcons();
+  }
+}
+
+if (btnToggleQuizPanel) {
+  btnToggleQuizPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleQuizModule();
+  });
+}
+
+if (cardSceneQuiz) {
+  cardSceneQuiz.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-toggle-quiz-panel')) return;
+    toggleQuizModule();
+  });
+}
+
+if (btnCollapseQuizPanel) {
+  btnCollapseQuizPanel.addEventListener('click', () => {
+    toggleQuizModule(false);
+  });
+}
+
+function setEditorCorrectOptionUI(letter) {
+  const valid = ['A', 'B', 'C', 'D'].includes(letter) ? letter : 'A';
+  currentEditorCorrectOption = valid;
+  if (quizSelectCorrect && quizSelectCorrect.value !== valid) {
+    quizSelectCorrect.value = valid;
+  }
+
+  ['A', 'B', 'C', 'D'].forEach((opt) => {
+    const card = quizEditorCards[opt];
+    if (!card) return;
+    const pickBtn = card.querySelector('.btn-quiz-pick-correct');
+    if (opt === valid) {
+      card.className = 'quiz-editor-opt-card bg-[#091b18] border-2 border-cyber-green rounded-xl p-3 space-y-2 transition-all shadow-[0_0_15px_rgba(0,255,102,0.18)]';
+      if (pickBtn) {
+        pickBtn.className = 'btn-quiz-pick-correct px-2.5 py-0.5 rounded bg-cyber-green text-black text-[10px] font-chakra font-extrabold uppercase transition-all cursor-pointer';
+        pickBtn.textContent = '✓ ES LA CORRECTA';
+      }
+    } else {
+      card.className = 'quiz-editor-opt-card bg-[#091526] border border-cyber-border rounded-xl p-3 space-y-2 transition-all';
+      if (pickBtn) {
+        pickBtn.className = 'btn-quiz-pick-correct px-2.5 py-0.5 rounded bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-300 hover:text-white text-[10px] font-chakra font-bold uppercase transition-all cursor-pointer';
+        pickBtn.textContent = 'Elegir Correcta';
+      }
+    }
+  });
+}
+
+if (quizSelectCorrect) {
+  quizSelectCorrect.addEventListener('change', (e) => {
+    setEditorCorrectOptionUI(e.target.value);
+  });
+}
+
+document.querySelectorAll('.btn-quiz-pick-correct').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const opt = btn.getAttribute('data-correct-opt');
+    setEditorCorrectOptionUI(opt);
+  });
+});
+
+document.querySelectorAll('.btn-quiz-lock-opt').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const opt = btn.getAttribute('data-lock-opt');
+    const currentLocked = currentLiveState.quiz ? currentLiveState.quiz.selectedOption : null;
+    const nextLocked = currentLocked === opt ? null : opt;
+    socket.emit('quiz-select-option', { option: nextLocked }, () => {
+      if (nextLocked) {
+        showToast(`🟧 Opción ${nextLocked} marcada en naranja en OBS ("Respuesta Definitiva")`);
+      } else {
+        showToast('↩️ Marca naranja retirada en OBS');
+      }
+    });
+  });
+});
+
+if (btnQuizClearLocked) {
+  btnQuizClearLocked.addEventListener('click', () => {
+    socket.emit('quiz-select-option', { option: null }, () => {
+      showToast('↩️ Opción marcada en naranja desactivada');
+    });
+  });
+}
+
+function collectQuizEditorPayload() {
+  const category = (quizInputCategory ? quizInputCategory.value.trim() : '') || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE';
+  const question = (quizInputQuestion ? quizInputQuestion.value.trim() : '');
+  const options = {
+    A: (quizInputOpts.A ? quizInputOpts.A.value.trim() : ''),
+    B: (quizInputOpts.B ? quizInputOpts.B.value.trim() : ''),
+    C: (quizInputOpts.C ? quizInputOpts.C.value.trim() : ''),
+    D: (quizInputOpts.D ? quizInputOpts.D.value.trim() : '')
+  };
+  const correctOption = ['A', 'B', 'C', 'D'].includes(currentEditorCorrectOption) ? currentEditorCorrectOption : 'A';
+  const questionId = (quizFormId && quizFormId.value.trim()) ? quizFormId.value.trim() : `quiz-${Date.now()}`;
+
+  return {
+    questionId,
+    category,
+    question,
+    options,
+    correctOption
+  };
+}
+
+function loadQuestionIntoQuizEditor(q) {
+  if (!q) return;
+  if (quizFormId) quizFormId.value = q.id || q.questionId || '';
+  if (quizInputCategory) quizInputCategory.value = q.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE';
+  if (quizInputQuestion) quizInputQuestion.value = q.question || '';
+  if (quizInputOpts.A) quizInputOpts.A.value = (q.options && q.options.A) || '';
+  if (quizInputOpts.B) quizInputOpts.B.value = (q.options && q.options.B) || '';
+  if (quizInputOpts.C) quizInputOpts.C.value = (q.options && q.options.C) || '';
+  if (quizInputOpts.D) quizInputOpts.D.value = (q.options && q.options.D) || '';
+  setEditorCorrectOptionUI(q.correctOption || 'A');
+  hasInitializedQuizEditor = true;
+}
+
+if (btnQuizNewClear) {
+  btnQuizNewClear.addEventListener('click', () => {
+    if (quizFormId) quizFormId.value = '';
+    if (quizInputCategory) quizInputCategory.value = '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE';
+    if (quizInputQuestion) {
+      quizInputQuestion.value = '';
+      quizInputQuestion.focus();
+    }
+    ['A', 'B', 'C', 'D'].forEach((k) => {
+      if (quizInputOpts[k]) quizInputOpts[k].value = '';
+    });
+    setEditorCorrectOptionUI('A');
+    showToast('✨ Formulario limpio para escribir una nueva pregunta');
+  });
+}
+
+function handleLaunchQuizHudNormal() {
+  const payload = collectQuizEditorPayload();
+  if (!payload.question) {
+    showToast('⚠️ Escribe la pregunta antes de mostrarla en OBS', 'error');
+    if (quizInputQuestion) quizInputQuestion.focus();
+    return;
+  }
+  if (!payload.options.A || !payload.options.B || !payload.options.C || !payload.options.D) {
+    showToast('⚠️ Completa las 4 opciones (A, B, C y D) para mostrar el HUD', 'error');
+    return;
+  }
+
+  payload.showCorrect = false;
+  payload.selectedOption = null;
+
+  socket.emit('quiz-show-hud', payload, () => {
+    showToast(`🎬 Pregunta mostrada en OBS en modo normal (Correcta preparada: Opción ${payload.correctOption})`);
+  });
+}
+
+if (btnQuizShowHud) {
+  btnQuizShowHud.addEventListener('click', handleLaunchQuizHudNormal);
+}
+
+if (btnQuizLaunchNormal) {
+  btnQuizLaunchNormal.addEventListener('click', handleLaunchQuizHudNormal);
+}
+
+if (btnQuizUpdateOnly) {
+  btnQuizUpdateOnly.addEventListener('click', () => {
+    const payload = collectQuizEditorPayload();
+    if (!payload.question) {
+      showToast('⚠️ Escribe la pregunta para actualizar', 'error');
+      return;
+    }
+    socket.emit('quiz-update-data', payload, () => {
+      showToast('✅ Datos de la pregunta actualizados en tiempo real');
+    });
+  });
+}
+
+if (btnQuizRevealCorrect) {
+  btnQuizRevealCorrect.addEventListener('click', () => {
+    const isCurrentlyRevealed = !!(currentLiveState.quiz && currentLiveState.quiz.showCorrect);
+    const payload = collectQuizEditorPayload();
+
+    if (!isCurrentlyRevealed) {
+      // Asegurarnos de sincronizar la opción correcta y textos del editor y revelar la respuesta correcta en OBS
+      socket.emit('quiz-update-data', {
+        ...payload,
+        isVisible: true,
+        showCorrect: true
+      }, () => {
+        socket.emit('quiz-toggle-correct', { showCorrect: true, ensureVisible: true });
+        showToast(`✅ ¡Respuesta Correcta (Opción ${payload.correctOption}) revelada en OBS!`);
+      });
+    } else {
+      socket.emit('quiz-toggle-correct', { showCorrect: false }, () => {
+        showToast('↩️ Respuesta correcta ocultada (HUD en modo normal)');
+      });
+    }
+  });
+}
+
+if (btnQuizResetNormal) {
+  btnQuizResetNormal.addEventListener('click', () => {
+    socket.emit('quiz-update-data', { showCorrect: false, selectedOption: null }, () => {
+      showToast('↩️ HUD devuelto a estado normal sin revelar respuesta');
+    });
+  });
+}
+
+if (btnQuizHideHud) {
+  btnQuizHideHud.addEventListener('click', () => {
+    socket.emit('quiz-hide-hud', () => {
+      showToast('👁️‍🗨️ HUD de pregunta ocultado de OBS');
+    });
+  });
+}
+
+if (btnQuizSaveBank) {
+  btnQuizSaveBank.addEventListener('click', () => {
+    const payload = collectQuizEditorPayload();
+    if (!payload.question) {
+      showToast('⚠️ Escribe una pregunta antes de guardarla en el banco', 'error');
+      if (quizInputQuestion) quizInputQuestion.focus();
+      return;
+    }
+    if (!payload.options.A || !payload.options.B || !payload.options.C || !payload.options.D) {
+      showToast('⚠️ Completa las 4 opciones (A, B, C y D) antes de guardar', 'error');
+      return;
+    }
+
+    const qData = {
+      id: payload.questionId,
+      category: payload.category,
+      question: payload.question,
+      options: payload.options,
+      correctOption: payload.correctOption
+    };
+
+    socket.emit('save-question', qData, (res) => {
+      if (res && res.question && quizFormId) {
+        quizFormId.value = res.question.id;
+      }
+      showToast(`💾 Pregunta guardada en el banco (Correcta: ${qData.correctOption})`);
+    });
+  });
+}
+
+function syncQuizAdminUI(quiz) {
+  if (!quiz) return;
+
+  // Poblar el editor por primera vez con la pregunta activa del servidor
+  if (!hasInitializedQuizEditor && quiz.question) {
+    loadQuestionIntoQuizEditor(quiz);
+  }
+
+  const isVisible = !!quiz.isVisible;
+  const showCorrect = !!quiz.showCorrect;
+  const correctOpt = ['A', 'B', 'C', 'D'].includes(quiz.correctOption) ? quiz.correctOption : 'A';
+  const selectedOpt = ['A', 'B', 'C', 'D'].includes(quiz.selectedOption) ? quiz.selectedOption : null;
+
+  // Navbar badge
+  if (navBadgeQuiz) {
+    if (isVisible) navBadgeQuiz.classList.remove('hidden');
+    else navBadgeQuiz.classList.add('hidden');
+  }
+
+  // Catálogo de escenas badge
+  if (badgeQuizStatus) {
+    if (isVisible) {
+      badgeQuizStatus.className = 'px-2 py-0.5 rounded bg-amber-400 text-black text-[10px] font-mono font-extrabold animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.7)]';
+      badgeQuizStatus.textContent = showCorrect ? `EN VIVO (RESP: ${correctOpt})` : 'EN VIVO OBS';
+    } else {
+      badgeQuizStatus.className = 'px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px] font-mono border border-gray-700';
+      badgeQuizStatus.textContent = 'DISPONIBLE';
+    }
+  }
+
+  // Indicador superior de la consola
+  if (quizActiveIndicator) {
+    if (isVisible) {
+      quizActiveIndicator.className = showCorrect
+        ? 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-green/20 text-cyber-green border border-cyber-green/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(0,255,102,0.3)]'
+        : 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/60 text-xs font-chakra font-bold uppercase shadow-[0_0_15px_rgba(251,191,36,0.3)]';
+      if (quizActiveDot) {
+        quizActiveDot.className = showCorrect
+          ? 'w-2.5 h-2.5 rounded-full bg-cyber-green animate-ping shrink-0'
+          : 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0';
+      }
+      if (quizActiveText) {
+        quizActiveText.textContent = showCorrect
+          ? `HUD EN OBS • RESPUESTA REVELADA (${correctOpt})`
+          : 'HUD EN PANTALLA OBS (MODO NORMAL)';
+      }
+    } else {
+      quizActiveIndicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase';
+      if (quizActiveDot) quizActiveDot.className = 'w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0';
+      if (quizActiveText) quizActiveText.textContent = 'HUD OCULTO EN OBS';
+    }
+  }
+
+  // Pill de estado de la respuesta correcta
+  if (quizCorrectStatusPill) {
+    if (showCorrect) {
+      quizCorrectStatusPill.className = 'px-2 py-0.5 rounded bg-cyber-green text-black font-extrabold text-[10px] font-mono shadow-[0_0_10px_rgba(0,255,102,0.6)]';
+      quizCorrectStatusPill.textContent = `✓ REVELADA EN OBS: OPCIÓN ${correctOpt}`;
+    } else if (selectedOpt) {
+      quizCorrectStatusPill.className = 'px-2 py-0.5 rounded bg-amber-400 text-black font-extrabold text-[10px] font-mono';
+      quizCorrectStatusPill.textContent = `🟧 MARCADA EN OBS: OPCIÓN ${selectedOpt}`;
+    } else {
+      quizCorrectStatusPill.className = 'px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700 text-[10px] font-mono';
+      quizCorrectStatusPill.textContent = `OCULTA (CORRECTA: ${correctOpt})`;
+    }
+  }
+
+  // Botón Mostrar Respuesta Correcta y Botón Volver a Normal
+  if (btnQuizRevealCorrect && textBtnQuizRevealCorrect) {
+    if (showCorrect) {
+      btnQuizRevealCorrect.className = 'px-4 py-2.5 rounded-xl bg-emerald-950 border-2 border-cyber-green text-cyber-green hover:bg-cyber-green hover:text-black font-chakra font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer';
+      textBtnQuizRevealCorrect.textContent = `OCULTAR RESPUESTA CORRECTA (${correctOpt})`;
+    } else {
+      btnQuizRevealCorrect.className = 'px-4 py-2.5 rounded-xl bg-cyber-green hover:bg-emerald-400 text-black font-chakra font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_18px_rgba(0,255,102,0.4)] cursor-pointer';
+      textBtnQuizRevealCorrect.textContent = `MOSTRAR RESPUESTA CORRECTA (${correctOpt})`;
+    }
+  }
+
+  if (btnQuizResetNormal) {
+    if (showCorrect || selectedOpt) {
+      btnQuizResetNormal.classList.remove('hidden');
+    } else {
+      btnQuizResetNormal.classList.add('hidden');
+    }
+  }
+
+  if (btnQuizClearLocked) {
+    if (selectedOpt) btnQuizClearLocked.classList.remove('hidden');
+    else btnQuizClearLocked.classList.add('hidden');
+  }
+
+  // Actualizar botones "Marcar"
+  document.querySelectorAll('.btn-quiz-lock-opt').forEach((btn) => {
+    const opt = btn.getAttribute('data-lock-opt');
+    if (selectedOpt === opt) {
+      btn.className = 'btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-400 text-black text-[10px] font-chakra font-extrabold transition-all cursor-pointer shadow-[0_0_8px_rgba(251,191,36,0.6)]';
+      btn.textContent = '🟧 Marcada';
+    } else {
+      btn.className = 'btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer';
+      btn.textContent = 'Marcar';
+    }
+  });
+
+  // Mini Vista Previa en Consola
+  if (quizPreviewCorrectBadge) {
+    quizPreviewCorrectBadge.textContent = `Correcta: Opción ${correctOpt}`;
+  }
+  if (quizMiniPreviewCat) {
+    quizMiniPreviewCat.textContent = quiz.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE';
+  }
+  if (quizMiniPreviewQ) {
+    quizMiniPreviewQ.textContent = quiz.question || '(Sin pregunta activa)';
+  }
+
+  ['A', 'B', 'C', 'D'].forEach((letter) => {
+    const box = quizMiniOpts[letter];
+    const txt = quizMiniTexts[letter];
+    if (txt) txt.textContent = (quiz.options && quiz.options[letter]) || `Opción ${letter}`;
+    if (!box) return;
+
+    if (showCorrect && letter === correctOpt) {
+      box.className = 'px-2.5 py-1.5 rounded-lg bg-emerald-600/40 border-2 border-cyber-green text-white truncate shadow-[0_0_12px_rgba(0,255,102,0.4)]';
+    } else if (selectedOpt === letter) {
+      box.className = 'px-2.5 py-1.5 rounded-lg bg-amber-500/35 border-2 border-amber-400 text-white truncate';
+    } else if (letter === correctOpt) {
+      box.className = 'px-2.5 py-1.5 rounded-lg bg-[#0c1a30] border border-cyber-green/50 text-gray-200 truncate';
+    } else {
+      box.className = 'px-2.5 py-1.5 rounded-lg bg-[#0c1a30] border border-sky-500/30 text-gray-300 truncate';
+    }
+  });
+}
+
+// Sincronizar Banco de Preguntas desde el Servidor
+socket.on('questions-updated', (list) => {
+  if (Array.isArray(list) && list.length > 0) {
+    questionsBank = list;
+    try {
+      localStorage.setItem(LS_QUESTIONS_KEY, JSON.stringify(questionsBank));
+    } catch (e) {}
+  } else {
+    questionsBank = Array.isArray(list) ? list : [];
+  }
+  renderQuestionsBankList();
+});
+
+function renderQuestionsBankList() {
+  const count = questionsBank.length;
+  if (labelQuizSavedCount) {
+    labelQuizSavedCount.textContent = `${count} ${count === 1 ? 'pregunta lista' : 'preguntas listas'}`;
+  }
+  if (quizBankCountBadge) {
+    quizBankCountBadge.textContent = `${count} ${count === 1 ? 'guardada' : 'guardadas'}`;
+  }
+
+  if (!quizBankList) return;
+  if (count === 0) {
+    quizBankList.innerHTML = `
+      <div class="p-4 text-center bg-cyber-card/40 border border-dashed border-cyber-border rounded-xl text-gray-400 text-xs font-chakra">
+        No hay preguntas guardadas en el banco. Escribe una pregunta a la izquierda y pulsa "Guardar en Banco".
+      </div>
+    `;
+    return;
+  }
+
+  quizBankList.innerHTML = '';
+  questionsBank.forEach((q, idx) => {
+    const item = document.createElement('div');
+    const isCurrentActive = currentLiveState.quiz && currentLiveState.quiz.question === q.question && currentLiveState.quiz.isVisible;
+    item.className = `p-3 rounded-xl border transition-all flex flex-col gap-2 ${
+      isCurrentActive
+        ? 'bg-amber-500/10 border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.15)]'
+        : 'bg-cyber-card/80 border-cyber-border hover:border-amber-400/50'
+    }`;
+
+    const correctLetter = ['A', 'B', 'C', 'D'].includes(q.correctOption) ? q.correctOption : 'A';
+    const correctText = (q.options && q.options[correctLetter]) || '';
+
+    item.innerHTML = `
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
+            <span class="px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 text-[9px] font-mono font-bold">#${idx + 1}</span>
+            <span class="px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/40 text-[9px] font-mono font-bold">
+              ✓ CORRECTA: ${correctLetter} (${escapeModsHtml(correctText.slice(0, 26))}${correctText.length > 26 ? '...' : ''})
+            </span>
+          </div>
+          <p class="text-xs font-rajdhani font-bold text-white uppercase leading-snug line-clamp-2">
+            ${escapeModsHtml(q.question || 'Sin título')}
+          </p>
+        </div>
+        <button type="button" class="btn-del-bank-q text-gray-500 hover:text-red-400 p-1 rounded transition-colors shrink-0 cursor-pointer" title="Eliminar pregunta">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-1.5 pt-1 border-t border-cyber-border/50">
+        <button type="button" class="btn-load-bank-q flex-1 py-1.5 px-2.5 rounded-lg bg-cyber-dark border border-cyber-border hover:border-amber-400 text-gray-200 hover:text-amber-300 font-chakra font-bold text-[11px] uppercase transition-all flex items-center justify-center gap-1 cursor-pointer">
+          <i data-lucide="edit-2" class="w-3 h-3"></i>
+          <span>Cargar en Editor</span>
+        </button>
+        <button type="button" class="btn-launch-bank-q flex-1 py-1.5 px-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-[11px] uppercase transition-all flex items-center justify-center gap-1 cursor-pointer">
+          <i data-lucide="play" class="w-3 h-3 fill-black"></i>
+          <span>Lanzar a OBS</span>
+        </button>
+      </div>
+    `;
+
+    const btnLoad = item.querySelector('.btn-load-bank-q');
+    btnLoad.addEventListener('click', () => {
+      loadQuestionIntoQuizEditor(q);
+      showToast(`📝 Pregunta #${idx + 1} cargada en el editor`);
+    });
+
+    const btnLaunch = item.querySelector('.btn-launch-bank-q');
+    btnLaunch.addEventListener('click', () => {
+      loadQuestionIntoQuizEditor(q);
+      socket.emit('quiz-show-hud', {
+        questionId: q.id,
+        category: q.category || '¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE',
+        question: q.question,
+        options: q.options,
+        correctOption: q.correctOption || 'A',
+        selectedOption: null,
+        showCorrect: false
+      }, () => {
+        showToast(`🎬 Pregunta #${idx + 1} lanzada a OBS en modo normal`);
+      });
+    });
+
+    const btnDel = item.querySelector('.btn-del-bank-q');
+    btnDel.addEventListener('click', () => {
+      if (!confirm(`¿Eliminar la pregunta "${q.question}" del banco?`)) return;
+      socket.emit('delete-question', q.id, () => {
+        showToast('🗑️ Pregunta eliminada del banco');
+      });
+    });
+
+    quizBankList.appendChild(item);
+  });
+
+  refreshIcons();
 }
 
 verifyCurrentSession();

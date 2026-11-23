@@ -2736,5 +2736,449 @@ body.multicam-grid-active #stream-top-hud {
   text-shadow: 0 0 10px rgba(0, 255, 102, 0.5) !important;
 }
 
+/* ============================================================
+   SISTEMA DE PREGUNTAS ESTILO ¿QUIÉN QUIERE SER MILLONARIO? (HUD OBS)
+   ============================================================ */
+.millionaire-quiz-hud {
+  position: fixed;
+  bottom: 34px;
+  left: 0;
+  width: 100vw;
+  z-index: 4800;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(45px) scale(0.97);
+  transition:
+    opacity 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.48s ease;
+}
+
+.millionaire-quiz-hud.is-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Si hay una escena de pantalla completa o tabla VS activa, ocultar el HUD de preguntas */
+body.scene-active .millionaire-quiz-hud,
+body.vs-active .millionaire-quiz-hud {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translateY(50px) scale(0.95) !important;
+}
+
+/* Cuando el HUD de preguntas está visible, ocultar temporalmente los lower thirds (slots) para que no se solapen */
+body.quiz-hud-active .slot-wrapper {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: opacity 0.3s ease !important;
+}
+
+.quiz-ambient-glow {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1500px;
+  height: 310px;
+  background: radial-gradient(ellipse at 50% 60%, rgba(14, 116, 144, 0.34) 0%, rgba(0, 255, 102, 0.14) 45%, transparent 75%);
+  filter: blur(28px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Barra Superior de Categoría / Ronda */
+.quiz-top-meta-row {
+  position: relative;
+  z-index: 3;
+  margin-bottom: -2px;
+  display: flex;
+  justify-content: center;
+}
+
+.quiz-category-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 28px;
+  background: linear-gradient(180deg, #0d1f38 0%, #060e1a 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.65);
+  border-bottom: none;
+  clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #e2e8f0;
+  text-transform: uppercase;
+  box-shadow: 0 -4px 18px rgba(14, 165, 233, 0.35);
+}
+
+.quiz-brand-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(0, 255, 102, 0.7));
+}
+
+.quiz-diamond-bullet {
+  color: #fbbf24;
+  font-size: 13px;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+}
+
+.quiz-status-tag {
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: rgba(0, 255, 102, 0.18);
+  border: 1px solid rgba(0, 255, 102, 0.55);
+  color: #00ff66;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  transition: all 0.3s ease;
+}
+
+.millionaire-quiz-hud.is-answer-revealed .quiz-status-tag {
+  background: rgba(0, 255, 102, 0.95);
+  color: #04130a;
+  border-color: #ffffff;
+  box-shadow: 0 0 14px rgba(0, 255, 102, 0.8);
+}
+
+/* Fila Principal de la Pregunta (Con Líneas Horizontales estilo Millonario) */
+.quiz-question-row {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.quiz-wing-line {
+  flex: 1;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.15) 0%, #38bdf8 50%, #fbbf24 100%);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.75);
+}
+
+.quiz-wing-right {
+  background: linear-gradient(90deg, #fbbf24 0%, #38bdf8 50%, rgba(56, 189, 248, 0.15) 100%);
+}
+
+/* Marco Hexagonal Exterior de la Pregunta */
+.quiz-question-hex-border {
+  width: 1480px;
+  max-width: 90vw;
+  padding: 3px;
+  background: linear-gradient(90deg, #fbbf24 0%, #38bdf8 22%, #e2e8f0 50%, #38bdf8 78%, #fbbf24 100%);
+  clip-path: polygon(42px 0, calc(100% - 42px) 0, 100% 50%, calc(100% - 42px) 100%, 42px 100%, 0 50%);
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.92)) drop-shadow(0 0 18px rgba(56, 189, 248, 0.35));
+}
+
+.quiz-question-hex {
+  position: relative;
+  width: 100%;
+  min-height: 98px;
+  padding: 16px 64px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(30, 64, 175, 0.55) 0%, transparent 70%),
+    linear-gradient(180deg, #0b192e 0%, #050c17 52%, #0a182d 100%);
+  clip-path: polygon(40px 0, calc(100% - 40px) 0, calc(100% - 1px) 50%, calc(100% - 40px) 100%, 40px 100%, 1px 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.quiz-hex-shimmer {
+  position: absolute;
+  top: -50%;
+  left: -120%;
+  width: 45%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    rgba(56, 189, 248, 0.18) 50%,
+    rgba(255, 255, 255, 0.04) 60%,
+    transparent 100%
+  );
+  transform: rotate(25deg);
+  animation: shimmerSweep 7s infinite ease-in-out;
+  pointer-events: none;
+}
+
+.quiz-question-text {
+  position: relative;
+  z-index: 2;
+  color: #ffffff;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.95), 0 0 18px rgba(255, 255, 255, 0.2);
+}
+
+.quiz-question-text.is-long-text {
+  font-size: 26px;
+}
+
+/* Grid 2x2 de las 4 Opciones (A, B, C, D) */
+.quiz-options-grid {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-options-row {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+
+/* Línea horizontal que atraviesa toda la fila de opciones de lado a lado */
+.quiz-row-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(56, 189, 248, 0.1) 0%,
+    #38bdf8 15%,
+    #94a3b8 50%,
+    #38bdf8 85%,
+    rgba(56, 189, 248, 0.1) 100%
+  );
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.65);
+  z-index: 0;
+}
+
+.quiz-option-wrapper {
+  position: relative;
+  z-index: 2;
+  width: 726px;
+  max-width: 44vw;
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.32s ease, filter 0.32s ease;
+}
+
+/* Animación escalonada al aparecer el HUD */
+.millionaire-quiz-hud.is-visible .quiz-option-wrapper[data-opt="A"] {
+  animation: quizOptSlideIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+.millionaire-quiz-hud.is-visible .quiz-option-wrapper[data-opt="B"] {
+  animation: quizOptSlideIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.11s both;
+}
+.millionaire-quiz-hud.is-visible .quiz-option-wrapper[data-opt="C"] {
+  animation: quizOptSlideIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.17s both;
+}
+.millionaire-quiz-hud.is-visible .quiz-option-wrapper[data-opt="D"] {
+  animation: quizOptSlideIn 0.42s cubic-bezier(0.16, 1, 0.3, 1) 0.23s both;
+}
+
+@keyframes quizOptSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.quiz-option-hex-border {
+  width: 100%;
+  padding: 2.5px;
+  background: linear-gradient(90deg, #fbbf24 0%, #38bdf8 20%, #cbd5e1 50%, #38bdf8 80%, #fbbf24 100%);
+  clip-path: polygon(28px 0, calc(100% - 28px) 0, 100% 50%, calc(100% - 28px) 100%, 28px 100%, 0 50%);
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.88));
+  transition: all 0.3s ease;
+}
+
+.quiz-option-hex {
+  position: relative;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 36px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(30, 58, 138, 0.45) 0%, transparent 72%),
+    linear-gradient(180deg, #0c1a30 0%, #050c16 55%, #091629 100%);
+  clip-path: polygon(26px 0, calc(100% - 26px) 0, calc(100% - 1px) 50%, calc(100% - 26px) 100%, 26px 100%, 1px 50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: background 0.3s ease;
+}
+
+.quiz-opt-prefix {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.quiz-opt-diamond {
+  color: #fbbf24;
+  font-size: 16px;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.75);
+  transition: color 0.25s ease;
+}
+
+.quiz-opt-letter {
+  color: #fbbf24;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 800;
+  font-size: 25px;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  transition: color 0.25s ease;
+}
+
+.quiz-opt-text {
+  flex: 1;
+  color: #f8fafc;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 25px;
+  line-height: 1.15;
+  letter-spacing: 0.6px;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  transition: color 0.25s ease;
+}
+
+.quiz-opt-badge {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(4, 19, 10, 0.88);
+  border: 1.5px solid #ffffff;
+  color: #00ff66;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================================
+   ESTADO 1: OPCIÓN MARCADA / BLOQUEADA (NARANJA MILLONARIO "RESPUESTA DEFINITIVA")
+   ============================================================ */
+.quiz-option-wrapper.is-selected .quiz-option-hex-border {
+  background: linear-gradient(90deg, #ffffff 0%, #fbbf24 30%, #f59e0b 70%, #ffffff 100%);
+  filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.85));
+}
+
+.quiz-option-wrapper.is-selected .quiz-option-hex {
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 52%, #d97706 100%);
+}
+
+.quiz-option-wrapper.is-selected .quiz-opt-diamond,
+.quiz-option-wrapper.is-selected .quiz-opt-letter {
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+}
+
+.quiz-option-wrapper.is-selected .quiz-opt-text {
+  color: #05080c;
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* ============================================================
+   ESTADO 2: RESPUESTA CORRECTA REVELADA (VERDE MILLONARIO + DESTELLO)
+   ============================================================ */
+.quiz-option-wrapper.is-correct-revealed {
+  transform: scale(1.025);
+  z-index: 5;
+}
+
+.quiz-option-wrapper.is-correct-revealed .quiz-option-hex-border {
+  background: linear-gradient(90deg, #ffffff 0%, #00ff66 25%, #a7f3d0 50%, #00ff66 75%, #ffffff 100%);
+  filter:
+    drop-shadow(0 0 22px rgba(0, 255, 102, 0.95))
+    drop-shadow(0 0 42px rgba(0, 255, 102, 0.55));
+}
+
+.quiz-option-wrapper.is-correct-revealed .quiz-option-hex {
+  background: linear-gradient(180deg, #00e65c 0%, #047857 52%, #00cc52 100%);
+  animation: quizMillionaireWinFlash 1.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes quizMillionaireWinFlash {
+  0%, 28%, 56% {
+    background: linear-gradient(180deg, #fbbf24 0%, #d97706 52%, #f59e0b 100%);
+  }
+  14%, 42%, 100% {
+    background: linear-gradient(180deg, #00e65c 0%, #047857 52%, #00b848 100%);
+  }
+}
+
+.quiz-option-wrapper.is-correct-revealed .quiz-opt-diamond {
+  color: #ffffff;
+  text-shadow: 0 0 12px #ffffff;
+}
+
+.quiz-option-wrapper.is-correct-revealed .quiz-opt-letter {
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.quiz-option-wrapper.is-correct-revealed .quiz-opt-text {
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
+}
+
+.quiz-option-wrapper.is-correct-revealed .quiz-opt-badge {
+  display: inline-flex;
+}
+
+/* Si una opción incorrecta había sido marcada y se revela la correcta */
+.quiz-option-wrapper.is-wrong-revealed .quiz-option-hex-border {
+  background: linear-gradient(90deg, #f87171 0%, #dc2626 50%, #f87171 100%);
+  filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.7));
+}
+
+.quiz-option-wrapper.is-wrong-revealed .quiz-option-hex {
+  background: linear-gradient(180deg, #991b1b 0%, #450a0a 55%, #7f1d1d 100%);
+}
+
+/* Atenuar ligeramente las opciones no ganadoras cuando se muestra la respuesta correcta */
+.millionaire-quiz-hud.is-answer-revealed .quiz-option-wrapper.is-dimmed {
+  opacity: 0.48;
+  filter: saturate(0.6);
+}
+
+
 
 

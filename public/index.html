@@ -94,6 +94,7 @@
           <span id="nav-badge-waiting" class="hidden px-1.5 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-mono font-extrabold animate-bounce shadow-[0_0_10px_rgba(251,191,36,0.8)]">🔔 1 EN ESPERA</span>
           <span id="nav-badge-vs" class="hidden px-1.5 py-0.5 rounded-full bg-cyber-green text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(0,255,102,0.5)]">VS VIVO</span>
           <span id="nav-badge-multicam-count" class="hidden px-1.5 py-0.5 rounded-full bg-cyan-400 text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(6,182,212,0.5)]">CAMS EN VIVO</span>
+          <span id="nav-badge-quiz" class="hidden px-1.5 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-mono font-extrabold shadow-[0_0_8px_rgba(251,191,36,0.6)]">TRIVIA OBS</span>
         </button>
 
         <button id="nav-tab-announcements" type="button" class="nav-tab flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-chakra font-bold text-gray-300 hover:text-white hover:bg-cyber-card transition-all">
@@ -528,7 +529,7 @@
         <div class="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
           <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyber-card border border-cyber-border text-xs font-mono text-gray-300">
             <span class="w-2 h-2 rounded-full bg-cyber-green"></span>
-            <span id="label-total-scenes">2 Escenas Configuradas</span>
+            <span id="label-total-scenes">3 Escenas Configuradas</span>
           </div>
         </div>
       </div>
@@ -618,6 +619,46 @@
               <button id="btn-toggle-multicam-panel" type="button" class="px-3 py-1.5 rounded-lg bg-cyan-400/10 border border-cyan-400/40 hover:bg-cyan-400 hover:text-black text-cyan-400 text-xs font-chakra font-bold transition-all flex items-center gap-1.5">
                 <span id="text-toggle-multicam-panel">ABRIR CONSOLA</span>
                 <i data-lucide="chevron-down" id="icon-toggle-multicam-panel" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tarjeta 3: Sistema de Preguntas (Estilo ¿Quién Quiere Ser Millonario?) -->
+          <div id="card-scene-quiz" class="scene-catalog-card group cursor-pointer bg-cyber-card border border-cyber-border hover:border-amber-400 rounded-xl p-4 transition-all duration-200 hover:shadow-[0_0_20px_rgba(251,191,36,0.18)] flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-amber-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-amber-500/20 transition-all"></div>
+
+            <div>
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="w-14 h-14 rounded-xl bg-black/60 border border-cyber-border flex items-center justify-center p-1.5 shrink-0 group-hover:border-amber-400/60 transition-colors">
+                  <div class="w-9 h-9 rounded-lg bg-amber-400/10 border border-amber-400 flex items-center justify-center text-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.3)]">
+                    <i data-lucide="help-circle" class="w-5 h-5"></i>
+                  </div>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                  <span class="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 text-[10px] font-mono font-bold border border-amber-400/40 uppercase">
+                    ESTILO MILLONARIO
+                  </span>
+                  <span id="badge-quiz-status" class="px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[10px] font-mono border border-gray-700">
+                    DISPONIBLE
+                  </span>
+                </div>
+              </div>
+
+              <h4 class="text-base font-bold font-chakra text-white group-hover:text-amber-400 transition-colors uppercase tracking-wide">
+                Preguntas Millonario
+              </h4>
+              <p class="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                HUD de pregunta con 4 opciones (A, B, C, D) estilo ¿Quién Quiere Ser Millonario?, revelación de respuesta correcta y control en OBS.
+              </p>
+            </div>
+
+            <div class="pt-4 mt-3 border-t border-cyber-border/60 flex items-center justify-between">
+              <span id="card-quiz-count" class="text-[11px] text-gray-400 font-mono flex items-center gap-1">
+                <i data-lucide="list-checks" class="w-3.5 h-3.5 text-amber-400"></i> <span id="label-quiz-saved-count">Preguntas listas</span>
+              </span>
+              <button id="btn-toggle-quiz-panel" type="button" class="px-3 py-1.5 rounded-lg bg-amber-400/10 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-xs font-chakra font-bold transition-all flex items-center gap-1.5">
+                <span id="text-toggle-quiz-panel">ABRIR CONSOLA</span>
+                <i data-lucide="chevron-down" id="icon-toggle-quiz-panel" class="w-3.5 h-3.5"></i>
               </button>
             </div>
           </div>
@@ -1007,6 +1048,327 @@
                 </a>
               </div>
             </div>
+          </div>
+
+        </section>
+      </div>
+
+      <!-- ============================================================
+           MÓDULO DE LA ESCENA: SISTEMA DE PREGUNTAS ESTILO ¿QUIÉN QUIERE SER MILLONARIO?
+           ============================================================ -->
+      <div id="scene-module-quiz" class="hidden">
+        <section class="bg-gradient-to-br from-cyber-dark via-[#0a1322] to-[#121007] border border-amber-400/50 rounded-xl p-4 sm:p-6 shadow-[0_0_30px_rgba(251,191,36,0.14)] space-y-5 relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+
+          <!-- Cabecera de la Consola de Preguntas Millonario -->
+          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-cyber-border/70">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-amber-400/15 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)] shrink-0">
+                <i data-lucide="help-circle" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-sm sm:text-base font-bold font-chakra uppercase tracking-wide text-white">
+                    CONSOLA: SISTEMA DE PREGUNTAS (ESTILO ¿QUIÉN QUIERE SER MILLONARIO?)
+                  </h2>
+                  <span class="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 text-[10px] font-mono font-bold border border-amber-400/40 uppercase">
+                    4 OPCIONES (A, B, C, D)
+                  </span>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-0.5">
+                  Escribe la pregunta y sus 4 opciones, selecciona cuál es la correcta, muéstrala en OBS normal, revela la respuesta correcta cuando quieras y muestra u oculta el HUD.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
+              <!-- Indicador de Estado del HUD de Pregunta en OBS -->
+              <div id="quiz-active-indicator" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700 text-xs font-chakra font-bold uppercase transition-all">
+                <span class="w-2.5 h-2.5 rounded-full bg-gray-500 shrink-0" id="quiz-active-dot"></span>
+                <span id="quiz-active-text" class="truncate">HUD OCULTO EN OBS</span>
+              </div>
+
+              <!-- Botón Contraer Panel -->
+              <button id="btn-collapse-quiz-panel" type="button" class="px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-gray-500 text-gray-400 hover:text-white text-xs font-mono transition-all flex items-center gap-1 cursor-pointer" title="Contraer consola de preguntas">
+                <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Contraer</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- BARRA DE CONTROL EN VIVO PARA OBS (MOSTRAR/OCULTAR HUD + MOSTRAR RESPUESTA CORRECTA) -->
+          <div class="bg-black/60 border border-amber-400/40 rounded-xl p-4 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 shadow-inner">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-amber-400/10 border border-amber-400/40 flex items-center justify-center text-amber-300 shrink-0">
+                <i data-lucide="tv" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="text-xs font-chakra font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                  <span>CONTROL DIRECTO DEL HUD EN OBS (/OVERLAY)</span>
+                  <span id="quiz-correct-status-pill" class="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700 text-[10px] font-mono">
+                    RESPUESTA: OCULTA
+                  </span>
+                </div>
+                <p class="text-[11px] text-gray-400">
+                  Controla en tiempo real cuándo aparece el HUD en pantalla y el momento exacto en que se ilumina la respuesta correcta.
+                </p>
+              </div>
+            </div>
+
+            <!-- Botones Maestros de Control en Vivo -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-2.5">
+              <!-- 1. Mostrar en OBS Normal -->
+              <button id="btn-quiz-show-hud" type="button" class="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.35)] cursor-pointer">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+                <span id="text-btn-quiz-show-hud">MOSTRAR HUD EN OBS (NORMAL)</span>
+              </button>
+
+              <!-- 2. Mostrar / Ocultar Respuesta Correcta -->
+              <button id="btn-quiz-reveal-correct" type="button" class="px-4 py-2.5 rounded-xl bg-cyber-green hover:bg-emerald-400 text-black font-chakra font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_18px_rgba(0,255,102,0.4)] cursor-pointer">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                <span id="text-btn-quiz-reveal-correct">MOSTRAR RESPUESTA CORRECTA</span>
+              </button>
+
+              <!-- 3. Ocultar Respuesta (Volver a Normal sin quitar el HUD) -->
+              <button id="btn-quiz-reset-normal" type="button" class="hidden px-3.5 py-2.5 rounded-xl bg-cyber-card border border-amber-400/50 hover:bg-amber-400/20 text-amber-300 font-chakra font-bold text-xs uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Ocultar el resaltado verde y volver la pregunta a estado normal">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span>VOLVER A NORMAL</span>
+              </button>
+
+              <!-- 4. Ocultar HUD de OBS -->
+              <button id="btn-quiz-hide-hud" type="button" class="px-4 py-2.5 rounded-xl bg-red-600/85 hover:bg-red-600 text-white font-chakra font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                <i data-lucide="eye-off" class="w-4 h-4"></i>
+                <span>OCULTAR HUD</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- CONTENEDOR PRINCIPAL: EDITOR DE PREGUNTA Y 4 OPCIONES (7 COLS) + BANCO & PREVIEW EN VIVO (5 COLS) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+            <!-- COLUMNA IZQUIERDA (7 COLS): FORMULARIO DE PREGUNTA, 4 OPCIONES Y ELECCIÓN DE LA CORRECTA -->
+            <div class="lg:col-span-7 bg-cyber-black/60 border border-cyber-border rounded-xl p-4 sm:p-5 space-y-4">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3 border-b border-cyber-border">
+                <div>
+                  <h3 class="text-xs sm:text-sm font-bold font-chakra text-white uppercase flex items-center gap-2">
+                    <i data-lucide="edit-3" class="w-4 h-4 text-amber-400"></i>
+                    <span>CONFIGURAR PREGUNTA Y 4 OPCIONES</span>
+                  </h3>
+                  <p class="text-[11px] text-gray-400">Escribe la pregunta, completa las opciones A, B, C, D y marca cuál es la correcta.</p>
+                </div>
+                <button id="btn-quiz-new-clear" type="button" class="px-2.5 py-1.5 rounded-lg bg-cyber-card border border-cyber-border hover:border-amber-400 text-gray-300 hover:text-amber-300 text-xs font-chakra font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+                  <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-amber-400"></i>
+                  <span>Nueva / Limpiar</span>
+                </button>
+              </div>
+
+              <input type="hidden" id="quiz-form-id" value="">
+
+              <!-- Categoría / Encabezado Superior -->
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <div class="sm:col-span-8 space-y-1">
+                  <label class="text-[11px] font-chakra font-bold text-gray-300 uppercase flex items-center gap-1.5">
+                    <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Encabezado / Ronda / Premio (Opcional)</span>
+                  </label>
+                  <input type="text" id="quiz-input-category" value="¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE" placeholder="Ej: PREGUNTA POR $1.000.000 • BIRRAVERDE" class="w-full bg-cyber-card border border-cyber-border focus:border-amber-400 rounded-lg px-3 py-2 text-xs text-amber-300 font-chakra font-bold uppercase tracking-wider focus:outline-none">
+                </div>
+
+                <!-- Selector Rápido de Respuesta Correcta -->
+                <div class="sm:col-span-4 space-y-1">
+                  <label class="text-[11px] font-chakra font-bold text-cyber-green uppercase flex items-center gap-1.5">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5 text-cyber-green"></i>
+                    <span>Opción Correcta *</span>
+                  </label>
+                  <select id="quiz-select-correct" class="w-full bg-cyber-card border-2 border-cyber-green/70 focus:border-cyber-green rounded-lg px-3 py-2 text-xs text-cyber-green font-chakra font-extrabold uppercase focus:outline-none cursor-pointer">
+                    <option value="A">✓ OPCIÓN A (Correcta)</option>
+                    <option value="B">✓ OPCIÓN B (Correcta)</option>
+                    <option value="C">✓ OPCIÓN C (Correcta)</option>
+                    <option value="D">✓ OPCIÓN D (Correcta)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Pregunta Principal -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-chakra font-bold text-white uppercase flex items-center justify-between">
+                  <span class="flex items-center gap-1.5">
+                    <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
+                    <span>Pregunta que se verá en OBS *</span>
+                  </span>
+                  <span class="text-[10px] font-mono text-gray-400">Hexágono central</span>
+                </label>
+                <textarea id="quiz-input-question" rows="2" maxlength="220" placeholder="Escribe aquí la pregunta estilo ¿Quién Quiere Ser Millonario?..." class="w-full bg-[#071120] border-2 border-sky-500/40 focus:border-amber-400 rounded-xl px-4 py-2.5 text-sm sm:text-base text-white font-rajdhani font-extrabold uppercase tracking-wide focus:outline-none resize-none shadow-inner"></textarea>
+              </div>
+
+              <!-- Las 4 Opciones (Grid 2x2 idéntico al HUD de OBS) -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-chakra font-bold text-gray-200 uppercase flex items-center gap-1.5">
+                    <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>Las 4 Opciones a Escoger (Haz clic en "Es la Correcta" en la opción ganadora)</span>
+                  </label>
+                  <button id="btn-quiz-clear-locked" type="button" class="hidden text-[11px] font-mono text-amber-400 hover:underline cursor-pointer">
+                    Quitar opción marcada en naranja
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <!-- OPCIÓN A -->
+                  <div id="quiz-editor-card-A" class="quiz-editor-opt-card bg-[#091526] border-2 border-cyber-green rounded-xl p-3 space-y-2 transition-all">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
+                        <span>◆</span> <span>OPCIÓN A:</span>
+                      </span>
+                      <div class="flex items-center gap-1.5">
+                        <button type="button" data-lock-opt="A" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción A en color naranja en OBS antes de revelar">
+                          Marcar
+                        </button>
+                        <button type="button" data-correct-opt="A" class="btn-quiz-pick-correct px-2.5 py-0.5 rounded bg-cyber-green text-black text-[10px] font-chakra font-extrabold uppercase transition-all cursor-pointer">
+                          ✓ CORRECTA
+                        </button>
+                      </div>
+                    </div>
+                    <input type="text" id="quiz-input-opt-A" placeholder="Escribe la Opción A..." class="w-full bg-black/50 border border-cyber-border focus:border-amber-400 rounded-lg px-3 py-2 text-xs sm:text-sm text-white font-rajdhani font-bold focus:outline-none">
+                  </div>
+
+                  <!-- OPCIÓN B -->
+                  <div id="quiz-editor-card-B" class="quiz-editor-opt-card bg-[#091526] border border-cyber-border rounded-xl p-3 space-y-2 transition-all">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
+                        <span>◆</span> <span>OPCIÓN B:</span>
+                      </span>
+                      <div class="flex items-center gap-1.5">
+                        <button type="button" data-lock-opt="B" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción B en color naranja en OBS antes de revelar">
+                          Marcar
+                        </button>
+                        <button type="button" data-correct-opt="B" class="btn-quiz-pick-correct px-2.5 py-0.5 rounded bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-300 text-[10px] font-chakra font-bold uppercase transition-all cursor-pointer">
+                          Elegir Correcta
+                        </button>
+                      </div>
+                    </div>
+                    <input type="text" id="quiz-input-opt-B" placeholder="Escribe la Opción B..." class="w-full bg-black/50 border border-cyber-border focus:border-amber-400 rounded-lg px-3 py-2 text-xs sm:text-sm text-white font-rajdhani font-bold focus:outline-none">
+                  </div>
+
+                  <!-- OPCIÓN C -->
+                  <div id="quiz-editor-card-C" class="quiz-editor-opt-card bg-[#091526] border border-cyber-border rounded-xl p-3 space-y-2 transition-all">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
+                        <span>◆</span> <span>OPCIÓN C:</span>
+                      </span>
+                      <div class="flex items-center gap-1.5">
+                        <button type="button" data-lock-opt="C" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción C en color naranja en OBS antes de revelar">
+                          Marcar
+                        </button>
+                        <button type="button" data-correct-opt="C" class="btn-quiz-pick-correct px-2.5 py-0.5 rounded bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-300 text-[10px] font-chakra font-bold uppercase transition-all cursor-pointer">
+                          Elegir Correcta
+                        </button>
+                      </div>
+                    </div>
+                    <input type="text" id="quiz-input-opt-C" placeholder="Escribe la Opción C..." class="w-full bg-black/50 border border-cyber-border focus:border-amber-400 rounded-lg px-3 py-2 text-xs sm:text-sm text-white font-rajdhani font-bold focus:outline-none">
+                  </div>
+
+                  <!-- OPCIÓN D -->
+                  <div id="quiz-editor-card-D" class="quiz-editor-opt-card bg-[#091526] border border-cyber-border rounded-xl p-3 space-y-2 transition-all">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="font-chakra font-extrabold text-sm text-amber-400 flex items-center gap-1">
+                        <span>◆</span> <span>OPCIÓN D:</span>
+                      </span>
+                      <div class="flex items-center gap-1.5">
+                        <button type="button" data-lock-opt="D" class="btn-quiz-lock-opt px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 hover:bg-amber-400 hover:text-black text-amber-300 text-[10px] font-chakra font-bold transition-all cursor-pointer" title="Marcar opción D en color naranja en OBS antes de revelar">
+                          Marcar
+                        </button>
+                        <button type="button" data-correct-opt="D" class="btn-quiz-pick-correct px-2.5 py-0.5 rounded bg-cyber-card border border-cyber-border hover:border-cyber-green text-gray-300 text-[10px] font-chakra font-bold uppercase transition-all cursor-pointer">
+                          Elegir Correcta
+                        </button>
+                      </div>
+                    </div>
+                    <input type="text" id="quiz-input-opt-D" placeholder="Escribe la Opción D..." class="w-full bg-black/50 border border-cyber-border focus:border-amber-400 rounded-lg px-3 py-2 text-xs sm:text-sm text-white font-rajdhani font-bold focus:outline-none">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botones Inferiores del Editor -->
+              <div class="pt-3 border-t border-cyber-border/70 flex flex-wrap items-center justify-between gap-2.5">
+                <button id="btn-quiz-save-bank" type="button" class="px-4 py-2.5 rounded-xl bg-cyber-card border border-amber-400/50 hover:bg-amber-400/15 text-amber-300 font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer">
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <span>Guardar en Banco</span>
+                </button>
+
+                <div class="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
+                  <button id="btn-quiz-update-only" type="button" class="px-3.5 py-2.5 rounded-xl bg-cyber-card border border-cyber-border hover:border-sky-400 text-gray-200 hover:text-white font-chakra font-bold text-xs uppercase transition-all flex items-center gap-1.5 cursor-pointer" title="Actualizar los textos sin cambiar si el HUD está visible u oculto">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i>
+                    <span>Actualizar Datos</span>
+                  </button>
+
+                  <button id="btn-quiz-launch-normal" type="button" class="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-chakra font-extrabold text-xs uppercase transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.35)] cursor-pointer">
+                    <i data-lucide="play" class="w-4 h-4 fill-black"></i>
+                    <span>LANZAR PREGUNTA A OBS (NORMAL)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- COLUMNA DERECHA (5 COLS): VISTA PREVIA DEL HUD ACTIVO + BANCO DE PREGUNTAS GUARDADAS -->
+            <div class="lg:col-span-5 space-y-4 flex flex-col justify-between">
+
+              <!-- Tarjeta de Vista Previa Rápida del HUD en OBS -->
+              <div class="bg-cyber-black/70 border border-sky-500/40 rounded-xl p-4 space-y-3 shadow-inner">
+                <div class="flex items-center justify-between pb-2 border-b border-cyber-border">
+                  <span class="text-xs font-chakra font-bold text-sky-400 uppercase flex items-center gap-1.5">
+                    <i data-lucide="monitor" class="w-4 h-4"></i>
+                    <span>VISTA PREVIA DE PREGUNTA ACTIVA EN OBS</span>
+                  </span>
+                  <span id="quiz-preview-correct-badge" class="px-2 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/40 text-[10px] font-mono font-bold">
+                    Correcta: A
+                  </span>
+                </div>
+
+                <!-- Mini Simulación Hexagonal Estilo Millonario -->
+                <div class="bg-[#060d18] border border-sky-500/50 rounded-xl p-3 space-y-2.5">
+                  <div class="text-[10px] font-chakra font-bold text-amber-300 text-center uppercase tracking-wider truncate" id="quiz-mini-preview-cat">
+                    ¿QUIÉN QUIERE SER MILLONARIO? • BIRRAVERDE
+                  </div>
+                  <div class="bg-[#0b192e] border border-sky-400/60 rounded-lg px-3 py-2 text-center text-xs sm:text-sm font-rajdhani font-extrabold text-white uppercase" id="quiz-mini-preview-q">
+                    ¿EN QUÉ PLATAFORMA SE TRANSMITE OFICIALMENTE LA VELADA DEL CAOS?
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 text-xs font-rajdhani font-bold">
+                    <div id="quiz-mini-opt-A" class="px-2.5 py-1.5 rounded-lg bg-[#0c1a30] border border-sky-500/40 text-gray-200 truncate">
+                      <span class="text-amber-400 font-chakra font-extrabold mr-1">◆ A:</span>
+                      <span id="quiz-mini-text-A">En el canal oficial de BirraVerde en Kick</span>
+                    </div>
+                    <div id="quiz-mini-opt-B" class="px-2.5 py-1.5 rounded-lg bg-[#0c1a30] border border-sky-500/40 text-gray-200 truncate">
+                      <span class="text-amber-400 font-chakra font-extrabold mr-1">◆ B:</span>
+                      <span id="quiz-mini-text-B">Por televisión por cable tradicional</span>
+                    </div>
+                    <div id="quiz-mini-opt-C" class="px-2.5 py-1.5 rounded-lg bg-[#0c1a30] border border-sky-500/40 text-gray-200 truncate">
+                      <span class="text-amber-400 font-chakra font-extrabold mr-1">◆ C:</span>
+                      <span id="quiz-mini-text-C">Solo por radio AM</span>
+                    </div>
+                    <div id="quiz-mini-opt-D" class="px-2.5 py-1.5 rounded-lg bg-[#0c1a30] border border-sky-500/40 text-gray-200 truncate">
+                      <span class="text-amber-400 font-chakra font-extrabold mr-1">◆ D:</span>
+                      <span id="quiz-mini-text-D">En ninguna plataforma</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Banco de Preguntas Guardadas -->
+              <div class="bg-cyber-black/60 border border-cyber-border rounded-xl p-4 space-y-3 flex-1">
+                <div class="flex items-center justify-between pb-2 border-b border-cyber-border">
+                  <h3 class="text-xs font-chakra font-bold text-white uppercase flex items-center gap-1.5">
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span>BANCO DE PREGUNTAS PREPARADAS</span>
+                  </h3>
+                  <span id="quiz-bank-count-badge" class="text-[11px] font-mono text-gray-400">0 guardadas</span>
+                </div>
+
+                <div id="quiz-bank-list" class="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                  <!-- Renderizado dinámico desde admin.js -->
+                </div>
+              </div>
+
+            </div>
+
           </div>
 
         </section>
@@ -2358,6 +2720,6 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/admin.js?v=20261119d"></script>
+  <script src="/js/admin.js?v=20261123a"></script>
 </body>
 </html>
